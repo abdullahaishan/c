@@ -14,16 +14,16 @@ import {
   X,
   User,
   Code,
-  FileText,
   ChevronDown,
-  Bell
+  Bell,
+  Loader
 } from 'lucide-react'
 
 const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const { user, logout } = useAuth()
-  const { developer, getProfileImage } = useDeveloper()
+  const { developer, loading: developerLoading } = useDeveloper()
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -44,6 +44,18 @@ const DashboardLayout = () => {
 
   const isActive = (path) => {
     return location.pathname === path
+  }
+
+  // عرض شاشة التحميل إذا كان developer لا يزال يُجلب
+  if (developerLoading) {
+    return (
+      <div className="min-h-screen bg-[#030014] flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="w-12 h-12 text-[#6366f1] animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">جاري تحميل بيانات المطور...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -98,15 +110,17 @@ const DashboardLayout = () => {
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
           <div className="flex items-center gap-3">
             <img
-              src={getProfileImage()}
-              alt={developer?.full_name}
+              src={developer?.profile_image || user?.avatar || '/default-avatar.png'}
+              alt={developer?.full_name || user?.full_name || 'User'}
               className="w-10 h-10 rounded-full object-cover border-2 border-[#a855f7]/30"
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">
-                {developer?.full_name || user?.full_name}
+                {developer?.full_name || user?.full_name || 'مستخدم'}
               </p>
-              <p className="text-xs text-gray-400 truncate">@{developer?.username}</p>
+              <p className="text-xs text-gray-400 truncate">
+                @{developer?.username || user?.username || 'user'}
+              </p>
             </div>
           </div>
         </div>
@@ -140,12 +154,12 @@ const DashboardLayout = () => {
                   className="flex items-center gap-2 p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg"
                 >
                   <img
-                    src={getProfileImage()}
-                    alt={developer?.full_name}
+                    src={developer?.profile_image || user?.avatar || '/default-avatar.png'}
+                    alt={developer?.full_name || user?.full_name || 'User'}
                     className="w-8 h-8 rounded-full object-cover"
                   />
                   <span className="hidden sm:block text-sm">
-                    {developer?.full_name?.split(' ')[0] || 'User'}
+                    {developer?.full_name?.split(' ')[0] || user?.full_name?.split(' ')[0] || 'User'}
                   </span>
                   <ChevronDown className="w-4 h-4" />
                 </button>
@@ -154,12 +168,12 @@ const DashboardLayout = () => {
                 {profileMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-gray-900 border border-white/10 rounded-xl shadow-xl z-50">
                     <Link
-                      to={`/u/${developer?.username}`}
+                      to={`/u/${developer?.username || user?.username || ''}`}
                       className="flex items-center gap-2 px-4 py-3 text-sm text-gray-300 hover:bg-white/5 hover:text-white"
                       onClick={() => setProfileMenuOpen(false)}
                     >
                       <User className="w-4 h-4" />
-                      View Profile
+                      عرض الملف الشخصي
                     </Link>
                     <Link
                       to="/dashboard/settings"
@@ -167,7 +181,7 @@ const DashboardLayout = () => {
                       onClick={() => setProfileMenuOpen(false)}
                     >
                       <Settings className="w-4 h-4" />
-                      Settings
+                      الإعدادات
                     </Link>
                     <hr className="border-white/10" />
                     <button
@@ -175,7 +189,7 @@ const DashboardLayout = () => {
                       className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10"
                     >
                       <LogOut className="w-4 h-4" />
-                      Logout
+                      تسجيل خروج
                     </button>
                   </div>
                 )}
