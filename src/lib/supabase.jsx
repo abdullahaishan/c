@@ -93,7 +93,110 @@ export const developerService = {
     if (error) console.error('Error tracking visit:', error)
   }
 }
+// ===========================================
+// خدمات الخبرات (Experience)
+// ===========================================
+export const experienceService = {
+  async getByDeveloperId(developerId) {
+    const { data, error } = await supabase
+      .from('experience')
+      .select('*')
+      .eq('developer_id', developerId)
+      .order('display_order', { ascending: true })
+    
+    if (error) throw error
+    return data
+  },
 
+  async create(developerId, experienceData) {
+    const { data, error } = await supabase
+      .from('experience')
+      .insert([{
+        developer_id: developerId,
+        ...experienceData,
+        created_at: new Date(),
+        updated_at: new Date()
+      }])
+      .select()
+    
+    if (error) throw error
+    return data[0]
+  },
+
+  async update(id, updates) {
+    const { data, error } = await supabase
+      .from('experience')
+      .update({
+        ...updates,
+        updated_at: new Date()
+      })
+      .eq('id', id)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async delete(id) {
+    const { error } = await supabase
+      .from('experience')
+      .delete()
+      .eq('id', id)
+    
+    if (error) throw error
+  }
+}
+// ===========================================
+// خدمات التعليم (Education)
+// ===========================================
+export const educationService = {
+  async getByDeveloperId(developerId) {
+    const { data, error } = await supabase
+      .from('education')
+      .select('*')
+      .eq('developer_id', developerId)
+      .order('display_order', { ascending: true })
+    
+    if (error) throw error
+    return data
+  },
+
+  async create(developerId, educationData) {
+    const { data, error } = await supabase
+      .from('education')
+      .insert([{
+        developer_id: developerId,
+        ...educationData,
+        created_at: new Date()
+      }])
+      .select()
+    
+    if (error) throw error
+    return data[0]
+  },
+
+  async update(id, updates) {
+    const { data, error } = await supabase
+      .from('education')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async delete(id) {
+    const { error } = await supabase
+      .from('education')
+      .delete()
+      .eq('id', id)
+    
+    if (error) throw error
+  }
+}
 // ===========================================
 // خدمات المشاريع
 // ===========================================
