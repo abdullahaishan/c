@@ -65,8 +65,7 @@ const MainLayout = ({ children, showWelcome, setShowWelcome }) => {
 
       {!showWelcome && (
         <>
-          <Navbar />
-          <AnimatedBackground />
+          
           {children}
           <footer>
             <center>
