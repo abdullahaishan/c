@@ -89,16 +89,13 @@ function App() {
     <DeveloperProvider>
       <BrowserRouter>
         <Routes>
-          {/* المسارات العامة - صفحة المطور */}
-          <Route path="/" element={
-            <MainLayout showWelcome={showWelcome} setShowWelcome={setShowWelcome}>
-              <Home />
-              <About />
-              <Portofolio />
-              <ContactPage />
-            </MainLayout>
-          } />
           
+          <Route path="/" element={
+  <MainLayout showWelcome={showWelcome} setShowWelcome={setShowWelcome}>
+    <Home />
+    <About />
+  </MainLayout>
+} />
           <Route path="/u/:username" element={
             <MainLayout showWelcome={showWelcome} setShowWelcome={setShowWelcome}>
               <Home />
