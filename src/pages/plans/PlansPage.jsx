@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { PLANS } from '../../utils/constants'
 import { Check, Sparkles, Crown, Zap, Infinity, ArrowRight } from 'lucide-react'
-import PaymentModal from './PaymentModal'
+import PaymentModal from './paymentModal'
 
 const PlansPage = () => {
   const [selectedPlan, setSelectedPlan] = useState(null)
