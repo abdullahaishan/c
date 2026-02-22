@@ -82,13 +82,65 @@ const MainLayout = ({ children, showWelcome, setShowWelcome }) => {
   )
 }
 
-// ابدأ بأبسط شكل
 function App() {
+  const [showWelcome, setShowWelcome] = useState(true)
+
   return (
-    <div style={{ background: '#030014', color: 'white', minHeight: '100vh', padding: '20px' }}>
-      <h1>Hello World</h1>
-    </div>
-  )
+    <DeveloperProvider>
+      <BrowserRouter>
+        <Routes>
+          
+          {/* المسارات العامة - صفحة المطور */}
+          <Route path="/" element={
+            <MainLayout showWelcome={showWelcome} setShowWelcome={setShowWelcome}>
+              <Home />
+              <About />
+              <Portofolio />
+              <ContactPage />
+            </MainLayout>
+          } />
+          <Route path="/u/:username" element={
+            <MainLayout showWelcome={showWelcome} setShowWelcome={setShowWelcome}>
+              <Home />
+              <About />
+              <Portofolio />
+              <ContactPage />
+            </MainLayout>
+          } />
+          
+          <Route path="/project/:id" element={<ProjectDetails />} />
+          <Route path="/u/:username/project/:id" element={<ProjectDetails />} />
+          
+          <Route path="/thank-you" element={<ThankYouPage />} />
+          
+          {/* مسارات المصادقة */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          
+          {/* مسارات لوحة التحكم (محمية) */}
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<Overview />} />
+            <Route path="projects" element={<Projects />} />
+            <Route path="skills" element={<Skills />} />
+            <Route path="certificates" element={<Certificates />} />
+            <Route path="experience" element={<Experience />} />
+            <Route path="education" element={<Education />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
+          
+          {/* صفحة الباقات */}
+          <Route path="/plans" element={<PlansPage />} />
+          
+          {/* صفحة 404 */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </DeveloperProvider>
+  );
 }
 
 export default App;
