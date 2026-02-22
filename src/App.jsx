@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import React, { useState } from 'react'
 import "./index.css"
-
+import LandingPage from './pages/LandingPage'
 // الصفحات الحالية
 import Home from "./pages/Home"
 import About from "./pages/About"
@@ -88,16 +88,27 @@ function App() {
     <DeveloperProvider>
       <BrowserRouter>
         <Routes>
-          
-          {/* المسارات العامة - صفحة المطور */}
           <Route path="/" element={
+  currentUsername ? (
+    <MainLayout showWelcome={showWelcome} setShowWelcome={setShowWelcome}>
+      <Home />
+      <About />
+      <Portofolio />
+      <ContactPage />
+    </MainLayout>
+  ) : (
+    <LandingPage />
+  )
+} />
+          {/* المسارات العامة - صفحة المطور */}
+          {/*  <Route path="/" element={
             <MainLayout showWelcome={showWelcome} setShowWelcome={setShowWelcome}>
               <Home />
               <About />
               <Portofolio />
               <ContactPage />
             </MainLayout>
-          } />
+          } />*/}
           <Route path="/u/:username" element={
             <MainLayout showWelcome={showWelcome} setShowWelcome={setShowWelcome}>
               <Home />
