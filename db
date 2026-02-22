@@ -1,0 +1,448 @@
+-- =====================================================
+-- ملف: supabase-schema.sql
+-- التاريخ: 2024
+-- الوصف: إنشاء قاعدة بيانات منصة المطورين
+-- =====================================================
+
+-- 1. تمكين الامتدادات المطلوبة
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- =====================================================
+-- جدول: plans (الباقات)
+-- =====================================================
+CREATE TABLE plans (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    name_ar VARCHAR(50),
+    description TEXT,
+    
+    -- الأسعار
+    price_monthly DECIMAL(10,2) NOT NULL DEFAULT 0,
+    price_yearly DECIMAL(10,2),
+    currency VARCHAR(3) DEFAULT 'USD',
+    
+    -- حدود الباقة
+    max_projects INTEGER DEFAULT 3,
+    max_skills INTEGER DEFAULT 10,
+    max_certificates INTEGER DEFAULT 3,
+    max_experience INTEGER DEFAULT 5,
+    max_education INTEGER DEFAULT 5,
+    storage_limit INTEGER DEFAULT 50, -- بالميجابايت
+    
+    -- ميزات
+    custom_domain BOOLEAN DEFAULT FALSE,
+    remove_branding BOOLEAN DEFAULT FALSE,
+    analytics BOOLEAN DEFAULT FALSE,
+    priority_support BOOLEAN DEFAULT FALSE,
+    ai_analysis BOOLEAN DEFAULT FALSE,
+    
+    -- إعدادات العرض
+    sort_order INTEGER DEFAULT 0,
+    is_popular BOOLEAN DEFAULT FALSE,
+    is_active BOOLEAN DEFAULT TRUE,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- جدول: developers (المطورين)
+-- =====================================================
+CREATE TABLE developers (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    
+    -- المعلومات الشخصية
+    full_name VARCHAR(100),
+    title VARCHAR(100),
+    bio TEXT,
+    location VARCHAR(100),
+    phone VARCHAR(20),
+    
+    -- الصور (كلها من رفع المستخدم)
+    profile_image TEXT,
+    cover_image TEXT,
+    resume_file TEXT,
+    
+    -- إحصائيات
+    views_count INTEGER DEFAULT 0,
+    likes_count INTEGER DEFAULT 0,
+    
+    -- الباقة
+    plan_id INTEGER REFERENCES plans(id) DEFAULT 1,
+    plan_expires_at TIMESTAMP WITH TIME ZONE,
+    
+    -- حالة الحساب
+    is_active BOOLEAN DEFAULT TRUE,
+    email_verified BOOLEAN DEFAULT FALSE,
+    verification_token TEXT,
+    reset_token TEXT,
+    reset_expires TIMESTAMP WITH TIME ZONE,
+    
+    -- تواريخ
+    last_login TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- جدول: social_links (روابط التواصل)
+-- =====================================================
+CREATE TABLE social_links (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    developer_id UUID REFERENCES developers(id) ON DELETE CASCADE,
+    
+    platform VARCHAR(50) NOT NULL, -- github, linkedin, twitter, instagram, facebook, youtube
+    url TEXT NOT NULL,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(developer_id, platform)
+);
+
+-- =====================================================
+-- جدول: projects (المشاريع)
+-- =====================================================
+CREATE TABLE projects (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    developer_id UUID REFERENCES developers(id) ON DELETE CASCADE,
+    
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    image TEXT, -- صورة المشروع (من رفع المستخدم)
+    technologies TEXT[], -- ['React', 'Node.js', 'Firebase']
+    
+    github_url TEXT,
+    live_url TEXT,
+    features TEXT[], -- الميزات الرئيسية
+    
+    display_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- جدول: skills (المهارات)
+-- =====================================================
+CREATE TABLE skills (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    developer_id UUID REFERENCES developers(id) ON DELETE CASCADE,
+    
+    name VARCHAR(100) NOT NULL,
+    category VARCHAR(50), -- Frontend, Backend, Database, DevOps, Design, Tools
+    proficiency INTEGER CHECK (proficiency >= 0 AND proficiency <= 100),
+    icon VARCHAR(50), -- اسم الأيقونة (html.svg, css.svg, etc)
+    
+    display_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- جدول: certificates (الشهادات)
+-- =====================================================
+CREATE TABLE certificates (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    developer_id UUID REFERENCES developers(id) ON DELETE CASCADE,
+    
+    name VARCHAR(200) NOT NULL,
+    issuer VARCHAR(200),
+    image TEXT, -- صورة الشهادة (من رفع المستخدم)
+    issue_date DATE,
+    credential_url TEXT,
+    
+    display_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- جدول: experience (الخبرات)
+-- =====================================================
+CREATE TABLE experience (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    developer_id UUID REFERENCES developers(id) ON DELETE CASCADE,
+    
+    job_title VARCHAR(200) NOT NULL,
+    company VARCHAR(200),
+    company_logo TEXT, -- شعار الشركة
+    location VARCHAR(100),
+    
+    start_date DATE,
+    end_date DATE,
+    is_current BOOLEAN DEFAULT FALSE,
+    
+    description TEXT,
+    achievements TEXT[],
+    technologies TEXT[],
+    
+    display_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- جدول: education (التعليم)
+-- =====================================================
+CREATE TABLE education (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    developer_id UUID REFERENCES developers(id) ON DELETE CASCADE,
+    
+    degree VARCHAR(200) NOT NULL,
+    field_of_study VARCHAR(200),
+    institution VARCHAR(200),
+    location VARCHAR(100),
+    
+    start_date DATE,
+    end_date DATE,
+    is_current BOOLEAN DEFAULT FALSE,
+    
+    grade VARCHAR(50),
+    description TEXT,
+    activities TEXT,
+    
+    display_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- جدول: visitors (الزوار)
+-- =====================================================
+CREATE TABLE visitors (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    developer_id UUID REFERENCES developers(id) ON DELETE CASCADE,
+    
+    visitor_ip VARCHAR(45),
+    visitor_country VARCHAR(100),
+    visitor_city VARCHAR(100),
+    device_type VARCHAR(20), -- desktop, tablet, mobile
+    browser VARCHAR(50),
+    os VARCHAR(50),
+    
+    referrer TEXT,
+    visited_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- جدول: messages (الرسائل)
+-- =====================================================
+CREATE TABLE messages (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    developer_id UUID REFERENCES developers(id) ON DELETE CASCADE,
+    
+    sender_name VARCHAR(100) NOT NULL,
+    sender_email VARCHAR(100) NOT NULL,
+    sender_phone VARCHAR(20),
+    subject VARCHAR(200),
+    message TEXT NOT NULL,
+    
+    is_read BOOLEAN DEFAULT FALSE,
+    read_at TIMESTAMP WITH TIME ZONE,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =====================================================
+-- جدول: likes (الإعجابات)
+-- =====================================================
+CREATE TABLE likes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    developer_id UUID REFERENCES developers(id) ON DELETE CASCADE,
+    visitor_ip VARCHAR(45) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    UNIQUE(developer_id, visitor_ip)
+);
+
+-- =====================================================
+-- جدول: payments (المدفوعات)
+-- =====================================================
+CREATE TABLE payments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    developer_id UUID REFERENCES developers(id) ON DELETE CASCADE,
+    plan_id INTEGER REFERENCES plans(id),
+    
+    amount DECIMAL(10,2) NOT NULL,
+    currency VARCHAR(3) DEFAULT 'USD',
+    payment_method VARCHAR(50), -- crypto, onecash, bank_transfer
+    transaction_image TEXT, -- صورة التحويل
+    transaction_id VARCHAR(100),
+    
+    status VARCHAR(20) DEFAULT 'pending', -- pending, approved, rejected
+    admin_notes TEXT,
+    
+    start_date DATE,
+    end_date DATE,
+    
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    approved_at TIMESTAMP WITH TIME ZONE,
+    approved_by UUID REFERENCES developers(id)
+);
+
+-- =====================================================
+-- إنشاء الدوال (Functions)
+-- =====================================================
+
+-- دالة لزيادة عدد المشاهدات
+CREATE OR REPLACE FUNCTION increment_views(developer_id UUID)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE developers 
+    SET views_count = views_count + 1 
+    WHERE id = developer_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- دالة لزيادة عدد الإعجابات
+CREATE OR REPLACE FUNCTION increment_likes(developer_id UUID)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE developers 
+    SET likes_count = likes_count + 1 
+    WHERE id = developer_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =====================================================
+-- إدراج البيانات الافتراضية
+-- =====================================================
+
+-- إدراج الباقات
+INSERT INTO plans (name, name_ar, price_monthly, max_projects, max_skills, max_certificates, storage_limit, is_popular, sort_order) VALUES
+('Free', 'مجاني', 0, 3, 10, 3, 50, FALSE, 1),
+('Basic', 'أساسي', 9.99, 10, 20, 10, 200, FALSE, 2),
+('Pro', 'محترف', 19.99, 30, 50, 30, 500, TRUE, 3),
+('Enterprise', 'مؤسسات', 49.99, 100, 100, 100, 2000, FALSE, 4);
+
+-- إنشاء مستخدم أدمن (كلمة المرور: admin123)
+-- سنقوم بتشفيرها لاحقاً في الكود
+
+-- =====================================================
+-- إنشاء الفهارس (Indexes) لتحسين الأداء
+-- =====================================================
+
+CREATE INDEX idx_developers_username ON developers(username);
+CREATE INDEX idx_developers_email ON developers(email);
+CREATE INDEX idx_developers_plan ON developers(plan_id);
+
+CREATE INDEX idx_projects_developer ON projects(developer_id);
+CREATE INDEX idx_skills_developer ON skills(developer_id);
+CREATE INDEX idx_certificates_developer ON certificates(developer_id);
+CREATE INDEX idx_experience_developer ON experience(developer_id);
+CREATE INDEX idx_education_developer ON education(developer_id);
+CREATE INDEX idx_social_links_developer ON social_links(developer_id);
+
+CREATE INDEX idx_visitors_developer ON visitors(developer_id);
+CREATE INDEX idx_visitors_date ON visitors(visited_at);
+CREATE INDEX idx_messages_developer ON messages(developer_id);
+CREATE INDEX idx_messages_read ON messages(is_read);
+CREATE INDEX idx_likes_developer ON likes(developer_id);
+CREATE INDEX idx_payments_developer ON payments(developer_id);
+CREATE INDEX idx_payments_status ON payments(status);
+
+-- =====================================================
+-- إنشاء Row Level Security (RLS) policies
+-- =====================================================
+
+-- تفعيل RLS على جميع الجداول
+ALTER TABLE developers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE skills ENABLE ROW LEVEL SECURITY;
+ALTER TABLE certificates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE experience ENABLE ROW LEVEL SECURITY;
+ALTER TABLE education ENABLE ROW LEVEL SECURITY;
+ALTER TABLE social_links ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE likes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+
+-- سياسات للمطورين (يمكن للجميع قراءة المطورين النشطين)
+CREATE POLICY "المطورين النشطين مرئيون للجميع" ON developers
+    FOR SELECT USING (is_active = true);
+
+-- سياسات للمشاريع (يمكن للجميع قراءة مشاريع المطورين النشطين)
+CREATE POLICY "المشاريع مرئية للجميع" ON projects
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM developers 
+            WHERE id = projects.developer_id 
+            AND is_active = true
+        )
+    );
+
+-- سياسات للمهارات
+CREATE POLICY "المهارات مرئية للجميع" ON skills
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM developers 
+            WHERE id = skills.developer_id 
+            AND is_active = true
+        )
+    );
+
+-- سياسات للشهادات
+CREATE POLICY "الشهادات مرئية للجميع" ON certificates
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM developers 
+            WHERE id = certificates.developer_id 
+            AND is_active = true
+        )
+    );
+
+
+
+اعداد المشروع محليا
+    ------------
+    # تثبيت Supabase
+npm install @supabase/supabase-js
+
+# تثبيت حزم إضافية قد تحتاجها
+npm install react-router-dom
+npm install lucide-react
+npm install framer-motion
+npm install aos
+
+------------
+# مجلدات الخدمات
+mkdir -p src/lib
+mkdir -p src/hooks
+mkdir -p src/context
+mkdir -p src/utils
+
+# مجلدات المصادقة
+mkdir -p src/pages/auth
+
+# مجلدات لوحة التحكم
+mkdir -p src/pages/dashboard
+mkdir -p src/pages/dashboard/components
+
+# مجلدات الباقات
+mkdir -p src/pages/plans
+mkdir -p src/pages/admin
+
+--------
+
+
+-- تشفير كلمة المرور (كلمة المرور: admin123)
+-- ملاحظة: هذا تشفير بسيط، في الإنتاج استخدم auth المدمج
+INSERT INTO developers (
+  username,
+  email,
+  password_hash,
+  full_name,
+  role,
+  is_owner,
+  plan_id,
+  is_active,
+  email_verified
+) VALUES (
+  'eki',
+  'eki@yourdomain.com',
+  '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', -- admin123 بعد التشفير
+  'Eki Zulfar Rachman',
+  'admin',
+  true,
+  999,
+  true,
+  true
+);
