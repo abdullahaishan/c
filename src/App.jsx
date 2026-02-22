@@ -140,7 +140,7 @@ function App() {
         </Routes>
       </BrowserRouter>
     </DeveloperProvider>
-  )
+  );
 }
 
-export default App
+export default App;
