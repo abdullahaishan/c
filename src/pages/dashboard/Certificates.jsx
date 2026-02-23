@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { useDeveloper } from '../../context/DeveloperContext'
+import React, { useState, useEffect } from 'react'
+import { useAuth } from '../../hooks/useAuth'
 import { usePlan } from '../../hooks/usePlan'
 import { certificateService, storageService } from '../../lib/supabase'
 import {
@@ -17,13 +17,34 @@ import {
 } from 'lucide-react'
 
 const Certificates = () => {
-  const { developer, getCertificates, refresh } = useDeveloper()
+  const { user } = useAuth() // ✅ استخدم useAuth بدلاً من useDeveloper
   const { checkLimit, limits } = usePlan()
-  const [certificates, setCertificates] = useState(getCertificates())
-  const [editingId, setEditingId] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [certificates, setCertificates] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
+  const [editingId, setEditingId] = useState(null)
+
+  // جلب الشهادات عند تحميل الصفحة
+  useEffect(() => {
+    fetchCertificates()
+  }, [user])
+
+  const fetchCertificates = async () => {
+    if (!user) return
+    
+    setLoading(true)
+    try {
+      const data = await certificateService.getByDeveloperId(user.id)
+      setCertificates(data || [])
+    } catch (err) {
+      console.error('Error fetching certificates:', err)
+      setError('فشل في جلب الشهادات')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // نموذج شهادة جديدة
   const [newCertificate, setNewCertificate] = useState({
@@ -41,12 +62,12 @@ const Certificates = () => {
     try {
       const imageUrl = await storageService.uploadImage(
         file,
-        `certificates/${developer.id}`
+        `certificates/${user.id}`
       )
       return imageUrl
     } catch (err) {
       console.error('Error uploading image:', err)
-      setError('Failed to upload image')
+      setError('فشل في رفع الصورة')
       return null
     } finally {
       setUploading(false)
@@ -56,16 +77,16 @@ const Certificates = () => {
   const handleAddCertificate = async () => {
     // التحقق من حدود الباقة
     if (!checkLimit('certificates', certificates.length)) {
-      setError(`You've reached the maximum limit of ${limits.maxCertificates} certificates`)
+      setError(`لقد وصلت للحد الأقصى (${limits.maxCertificates} شهادة)`)
       return
     }
 
     if (!newCertificate.name || !newCertificate.issuer) {
-      setError('Certificate name and issuer are required')
+      setError('اسم الشهادة والجهة المانحة مطلوبان')
       return
     }
 
-    setLoading(true)
+    setSaving(true)
     setError('')
 
     try {
@@ -83,7 +104,7 @@ const Certificates = () => {
         display_order: certificates.length
       }
 
-      const created = await certificateService.create(developer.id, certificateData)
+      const created = await certificateService.create(user.id, certificateData)
       setCertificates([...certificates, created])
       
       // إعادة تعيين النموذج
@@ -96,38 +117,35 @@ const Certificates = () => {
       })
     } catch (err) {
       console.error('Error adding certificate:', err)
-      setError('Failed to add certificate')
+      setError('فشل في إضافة الشهادة')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
   const handleUpdateCertificate = async (id, updates) => {
-    setLoading(true)
+    setSaving(true)
     try {
       const updated = await certificateService.update(id, updates)
       setCertificates(certificates.map(c => c.id === id ? updated : c))
       setEditingId(null)
     } catch (err) {
       console.error('Error updating certificate:', err)
-      setError('Failed to update certificate')
+      setError('فشل في تحديث الشهادة')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
   const handleDeleteCertificate = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this certificate?')) return
+    if (!window.confirm('هل أنت متأكد من حذف هذه الشهادة؟')) return
 
-    setLoading(true)
     try {
       await certificateService.delete(id)
       setCertificates(certificates.filter(c => c.id !== id))
     } catch (err) {
       console.error('Error deleting certificate:', err)
-      setError('Failed to delete certificate')
-    } finally {
-      setLoading(false)
+      setError('فشل في حذف الشهادة')
     }
   }
 
@@ -159,11 +177,22 @@ const Certificates = () => {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#030014] flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="w-12 h-12 text-[#6366f1] animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">جاري تحميل شهاداتك...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Certificates</h1>
+        <h1 className="text-2xl font-bold text-white">الشهادات</h1>
         <div className="text-sm text-gray-400">
           {certificates.length} / {limits.maxCertificates === -1 ? '∞' : limits.maxCertificates}
         </div>
@@ -177,136 +206,134 @@ const Certificates = () => {
         </div>
       )}
 
-      {/* Add new certificate form */}
-      {checkLimit('certificates', certificates.length) && (
-        <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-          <h2 className="text-lg font-semibold text-white mb-4">Add New Certificate</h2>
-          
-          <div className="space-y-4">
-            {/* Image upload */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Certificate Image</label>
-              <div className="flex items-center gap-4">
-                {newCertificate.image ? (
-                  <div className="relative">
-                    <img
-                      src={URL.createObjectURL(newCertificate.image)}
-                      alt="Preview"
-                      className="w-32 h-32 object-cover rounded-lg"
-                    />
-                    <button
-                      onClick={() => setNewCertificate({ ...newCertificate, image: null })}
-                      className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <label className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg cursor-pointer hover:bg-white/10">
-                    <Upload className="w-5 h-5 text-gray-400" />
-                    <span className="text-gray-300">Upload Image</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setNewCertificate({ ...newCertificate, image: e.target.files[0] })}
-                      className="hidden"
-                    />
-                  </label>
-                )}
-                {uploading && <Loader className="w-5 h-5 text-[#6366f1] animate-spin" />}
-              </div>
+      {/* Add new certificate form - يظهر دائماً */}
+      <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
+        <h2 className="text-lg font-semibold text-white mb-4">إضافة شهادة جديدة</h2>
+        
+        <div className="space-y-4">
+          {/* Image upload */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">صورة الشهادة</label>
+            <div className="flex items-center gap-4">
+              {newCertificate.image ? (
+                <div className="relative">
+                  <img
+                    src={URL.createObjectURL(newCertificate.image)}
+                    alt="Preview"
+                    className="w-32 h-32 object-cover rounded-lg"
+                  />
+                  <button
+                    onClick={() => setNewCertificate({ ...newCertificate, image: null })}
+                    className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg cursor-pointer hover:bg-white/10">
+                  <Upload className="w-5 h-5 text-gray-400" />
+                  <span className="text-gray-300">رفع صورة</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setNewCertificate({ ...newCertificate, image: e.target.files[0] })}
+                    className="hidden"
+                  />
+                </label>
+              )}
+              {uploading && <Loader className="w-5 h-5 text-[#6366f1] animate-spin" />}
             </div>
-
-            {/* Certificate name */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Certificate Name *</label>
-              <input
-                type="text"
-                value={newCertificate.name}
-                onChange={(e) => setNewCertificate({ ...newCertificate, name: e.target.value })}
-                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                placeholder="e.g., Meta Frontend Developer"
-              />
-            </div>
-
-            {/* Issuer */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Issuing Organization *</label>
-              <input
-                type="text"
-                value={newCertificate.issuer}
-                onChange={(e) => setNewCertificate({ ...newCertificate, issuer: e.target.value })}
-                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                placeholder="e.g., Meta"
-              />
-            </div>
-
-            {/* Issue date */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Issue Date</label>
-              <input
-                type="date"
-                value={newCertificate.issue_date}
-                onChange={(e) => setNewCertificate({ ...newCertificate, issue_date: e.target.value })}
-                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-              />
-            </div>
-
-            {/* Credential URL */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Credential URL</label>
-              <input
-                type="url"
-                value={newCertificate.credential_url}
-                onChange={(e) => setNewCertificate({ ...newCertificate, credential_url: e.target.value })}
-                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                placeholder="https://coursera.org/verify/..."
-              />
-            </div>
-
-            {/* Submit button */}
-            <button
-              onClick={handleAddCertificate}
-              disabled={loading || !newCertificate.name || !newCertificate.issuer}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-[1.02] transition-all disabled:opacity-50"
-            >
-              {loading ? <Loader className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-              Add Certificate
-            </button>
           </div>
+
+          {/* Certificate name */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">اسم الشهادة *</label>
+            <input
+              type="text"
+              value={newCertificate.name}
+              onChange={(e) => setNewCertificate({ ...newCertificate, name: e.target.value })}
+              className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+              placeholder="مثال: ميتا فرونت إند ديفيلوبر"
+            />
+          </div>
+
+          {/* Issuer */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">الجهة المانحة *</label>
+            <input
+              type="text"
+              value={newCertificate.issuer}
+              onChange={(e) => setNewCertificate({ ...newCertificate, issuer: e.target.value })}
+              className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+              placeholder="مثال: ميتا"
+            />
+          </div>
+
+          {/* Issue date */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">تاريخ الإصدار</label>
+            <input
+              type="date"
+              value={newCertificate.issue_date}
+              onChange={(e) => setNewCertificate({ ...newCertificate, issue_date: e.target.value })}
+              className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+            />
+          </div>
+
+          {/* Credential URL */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">رابط التحقق</label>
+            <input
+              type="url"
+              value={newCertificate.credential_url}
+              onChange={(e) => setNewCertificate({ ...newCertificate, credential_url: e.target.value })}
+              className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+              placeholder="https://coursera.org/verify/..."
+            />
+          </div>
+
+          {/* Submit button */}
+          <button
+            onClick={handleAddCertificate}
+            disabled={saving || !newCertificate.name || !newCertificate.issuer}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-[1.02] transition-all disabled:opacity-50"
+          >
+            {saving ? <Loader className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+            إضافة شهادة
+          </button>
         </div>
-      )}
+      </div>
 
       {/* Certificates grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {certificates.map((certificate, index) => (
-          <CertificateCard
-            key={certificate.id}
-            certificate={certificate}
-            index={index}
-            total={certificates.length}
-            onEdit={() => setEditingId(certificate.id)}
-            onDelete={() => handleDeleteCertificate(certificate.id)}
-            onMoveUp={() => handleMoveCertificate(index, 'up')}
-            onMoveDown={() => handleMoveCertificate(index, 'down')}
-            isEditing={editingId === certificate.id}
-            onUpdate={handleUpdateCertificate}
-          />
-        ))}
-
-        {certificates.length === 0 && (
+        {certificates.length === 0 ? (
           <div className="col-span-full text-center py-12">
             <AlertCircle className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400">No certificates yet</p>
-            <p className="text-sm text-gray-500">Add your certificates to showcase your achievements</p>
+            <p className="text-gray-400">لا توجد شهادات بعد</p>
+            <p className="text-sm text-gray-500">أضف شهاداتك من النموذج أعلاه</p>
           </div>
+        ) : (
+          certificates.map((certificate, index) => (
+            <CertificateCard
+              key={certificate.id}
+              certificate={certificate}
+              index={index}
+              total={certificates.length}
+              onEdit={() => setEditingId(certificate.id)}
+              onDelete={() => handleDeleteCertificate(certificate.id)}
+              onMoveUp={() => handleMoveCertificate(index, 'up')}
+              onMoveDown={() => handleMoveCertificate(index, 'down')}
+              isEditing={editingId === certificate.id}
+              onUpdate={handleUpdateCertificate}
+            />
+          ))
         )}
       </div>
     </div>
   )
 }
 
-// مكون بطاقة الشهادة
+// مكون بطاقة الشهادة (مع ترجمة)
 const CertificateCard = ({ 
   certificate, 
   index, 
@@ -329,14 +356,14 @@ const CertificateCard = ({
             value={editData.name}
             onChange={(e) => setEditData({ ...editData, name: e.target.value })}
             className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
-            placeholder="Certificate name"
+            placeholder="اسم الشهادة"
           />
           <input
             type="text"
             value={editData.issuer}
             onChange={(e) => setEditData({ ...editData, issuer: e.target.value })}
             className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
-            placeholder="Issuer"
+            placeholder="الجهة المانحة"
           />
           <input
             type="date"
@@ -350,13 +377,13 @@ const CertificateCard = ({
               className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600"
             >
               <Save className="w-4 h-4" />
-              Save
+              حفظ
             </button>
             <button
               onClick={onEdit}
               className="px-3 py-2 bg-white/10 text-white rounded-lg text-sm hover:bg-white/20"
             >
-              Cancel
+              إلغاء
             </button>
           </div>
         </div>
@@ -396,8 +423,8 @@ const CertificateCard = ({
           </button>
         </div>
 
-        {/* Move buttons */}
-        <div className="absolute top-2 right-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {/* Move buttons - على اليسار للعربية */}
+        <div className="absolute top-2 left-2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {index > 0 && (
             <button onClick={onMoveUp} className="p-1 bg-black/50 backdrop-blur-sm rounded hover:bg-black/70">
               <ChevronUp className="w-4 h-4 text-white" />
@@ -418,7 +445,7 @@ const CertificateCard = ({
         
         {certificate.issue_date && (
           <p className="text-xs text-gray-500">
-            Issued: {new Date(certificate.issue_date).toLocaleDateString()}
+            تاريخ الإصدار: {new Date(certificate.issue_date).toLocaleDateString('ar-SA')}
           </p>
         )}
 
@@ -429,7 +456,7 @@ const CertificateCard = ({
             rel="noopener noreferrer"
             className="mt-3 inline-flex items-center gap-1 text-xs text-[#a855f7] hover:text-[#6366f1]"
           >
-            <span>View Credential</span>
+            <span>عرض الشهادة</span>
             <ExternalLink className="w-3 h-3" />
           </a>
         )}
