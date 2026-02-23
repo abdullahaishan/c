@@ -1,281 +1,564 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js'
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables')
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // ===========================================
-// 🔧 IMPORTANT: استبدل هذه القيم بمشروع Supabase الخاص بك
+// خدمات المطورين (Developers)
 // ===========================================
-const supabaseUrl = 'https://qfgolfcwpqwqkiwpgyfm.supabase.co'; // مثال: https://xyzabc.supabase.co
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmZ29sZmN3cHF3cWtpd3BneWZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NTkxMDcsImV4cCI6MjA4NzMzNTEwN30.ww71bWQLzsehnibbXV6_-gUikq64nn0fMRsi6CjHHqQ'; // المفتاح العام (anon key)
-
-export const supabase = createClient(supabaseUrl, supabaseKey);
-
-// ===========================================
-// دوال المستخدمين
-// ===========================================
-export const userService = {
-  // تسجيل مستخدم جديد
-  async register(email, password, userData) {
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+export const developerService = {
+  async getByUsername(username) {
+    const { data, error } = await supabase
+      .from('developers')
+      .select(`
+        *,
+        projects (*),
+        skills (*),
+        certificates (*),
+        experience (*),
+        education (*),
+        social_links (*)
+      `)
+      .eq('username', username)
+      .eq('is_active', true)
+      .single()
     
-    if (authError) throw authError;
-    
-    if (authData.user) {
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert([{
-          id: authData.user.id,
-          email,
-          full_name: userData.full_name,
-          username: userData.username,
-          plan_id: 1, // الباقة المجانية
-          created_at: new Date()
-        }]);
-      
-      if (profileError) throw profileError;
-    }
-    
-    return authData;
+    if (error) throw error
+    return data
   },
 
-  // تسجيل الدخول
-  async login(email, password) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
+  async getById(id) {
+    const { data, error } = await supabase
+      .from('developers')
+      .select('*')
+      .eq('id', id)
+      .single()
     
-    if (error) throw error;
-    return data;
+    if (error) throw error
+    return data
   },
 
-  // تسجيل الخروج
-  async logout() {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+  async update(id, updates) {
+    const { data, error } = await supabase
+      .from('developers')
+      .update({ ...updates, updated_at: new Date() })
+      .eq('id', id)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
   },
 
-  // جلب المستخدم الحالي
-  async getCurrentUser() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
+  async incrementViews(id) {
+    const { error } = await supabase.rpc('increment_views', { developer_id: id })
+    if (error) console.error('Error incrementing views:', error)
+  },
+
+  async trackVisit(developerId, visitorData) {
+    const { error } = await supabase
+      .from('visitors')
+      .insert([{ developer_id: developerId, ...visitorData }])
     
-    const { data: profile } = await supabase
-      .from('users')
-      .select('*, plans(*)')
-      .eq('id', user.id)
-      .single();
-    
-    return profile;
+    if (error) console.error('Error tracking visit:', error)
   }
-};
+}
 
 // ===========================================
-// دوال البورتفليو
+// خدمات البورتفليو (Portfolios)
 // ===========================================
 export const portfolioService = {
-  // إنشاء بورتفليو جديد
-  async createPortfolio(userId, data) {
-    const { data: portfolio, error } = await supabase
-      .from('portfolios')
-      .insert([{
-        user_id: userId,
-        title: data.title,
-        about_me: data.about_me,
-        profile_image: data.profile_image,
-        social_links: data.social_links,
-        theme_color: data.theme_color || '#6366f1',
-        slug: data.slug,
-        is_published: false,
-        ai_generated: data.ai_generated || false,
-        ai_confidence_score: data.ai_confidence_score
-      }])
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return portfolio;
-  },
-
-  // إضافة مشروع
-  async addProject(portfolioId, projectData) {
-    const { data, error } = await supabase
-      .from('projects')
-      .insert([{
-        portfolio_id: portfolioId,
-        ...projectData
-      }])
-      .select();
-    
-    if (error) throw error;
-    return data;
-  },
-
-  // إضافة مهارة
-  async addSkill(portfolioId, skillData) {
-    const { data, error } = await supabase
-      .from('skills')
-      .insert([{
-        portfolio_id: portfolioId,
-        ...skillData
-      }])
-      .select();
-    
-    if (error) throw error;
-    return data;
-  },
-
-  // إضافة خبرة
-  async addExperience(portfolioId, expData) {
-    const { data, error } = await supabase
-      .from('experience')
-      .insert([{
-        portfolio_id: portfolioId,
-        ...expData
-      }])
-      .select();
-    
-    if (error) throw error;
-    return data;
-  },
-
-  // إضافة تعليم
-  async addEducation(portfolioId, eduData) {
-    const { data, error } = await supabase
-      .from('education')
-      .insert([{
-        portfolio_id: portfolioId,
-        ...eduData
-      }])
-      .select();
-    
-    if (error) throw error;
-    return data;
-  },
-
-  // جلب بورتفليو كامل للعرض
-  async getPublicPortfolio(username) {
-    const { data: portfolio, error } = await supabase
-      .from('portfolios')
-      .select(`
-        *,
-        projects (*),
-        skills (*),
-        experience (*),
-        education (*),
-        certificates (*)
-      `)
-      .eq('slug', username)
-      .eq('is_published', true)
-      .single();
-    
-    if (error) throw error;
-    return portfolio;
-  },
-
-  // جلب بورتفليو المستخدم (للتحرير)
-  async getUserPortfolio(userId) {
+  async getByUserId(userId) {
     const { data, error } = await supabase
       .from('portfolios')
-      .select(`
-        *,
-        projects (*),
-        skills (*),
-        experience (*),
-        education (*),
-        certificates (*)
-      `)
+      .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle()
     
-    if (error && error.code !== 'PGRST116') throw error;
-    return data;
+    if (error) throw error
+    return data
   },
 
-  // تحديث البورتفليو
-  async updatePortfolio(portfolioId, updates) {
+  async create(userId, portfolioData) {
+    const { data, error } = await supabase
+      .from('portfolios')
+      .insert([{ user_id: userId, ...portfolioData }])
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async update(id, updates) {
     const { data, error } = await supabase
       .from('portfolios')
       .update(updates)
-      .eq('id', portfolioId)
+      .eq('id', id)
       .select()
-      .single();
+      .single()
     
-    if (error) throw error;
-    return data;
+    if (error) throw error
+    return data
   },
 
-  // نشر البورتفليو
-  async publishPortfolio(portfolioId) {
-    return this.updatePortfolio(portfolioId, {
-      is_published: true,
-      published_at: new Date()
-    });
+  async publish(id) {
+    return this.update(id, { is_published: true, published_at: new Date() })
   }
-};
+}
 
 // ===========================================
-// دوال الباقات والاشتراكات
+// خدمات المشاريع (Projects)
+// ===========================================
+export const projectService = {
+  async getByPortfolioId(portfolioId) {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('portfolio_id', portfolioId)
+      .order('display_order')
+    
+    if (error) throw error
+    return data
+  },
+
+  async create(portfolioId, projectData) {
+    const { data, error } = await supabase
+      .from('projects')
+      .insert([{ portfolio_id: portfolioId, ...projectData }])
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async update(id, updates) {
+    const { data, error } = await supabase
+      .from('projects')
+      .update({ ...updates, updated_at: new Date() })
+      .eq('id', id)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async delete(id) {
+    const { error } = await supabase.from('projects').delete().eq('id', id)
+    if (error) throw error
+  }
+}
+
+// ===========================================
+// خدمات المهارات (Skills)
+// ===========================================
+export const skillService = {
+  async getByPortfolioId(portfolioId) {
+    const { data, error } = await supabase
+      .from('skills')
+      .select('*')
+      .eq('portfolio_id', portfolioId)
+      .order('display_order')
+    
+    if (error) throw error
+    return data
+  },
+
+  async create(portfolioId, skillData) {
+    const { data, error } = await supabase
+      .from('skills')
+      .insert([{ portfolio_id: portfolioId, ...skillData }])
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async update(id, updates) {
+    const { data, error } = await supabase
+      .from('skills')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async delete(id) {
+    const { error } = await supabase.from('skills').delete().eq('id', id)
+    if (error) throw error
+  }
+}
+
+// ===========================================
+// خدمات الشهادات (Certificates)
+// ===========================================
+export const certificateService = {
+  async getByPortfolioId(portfolioId) {
+    const { data, error } = await supabase
+      .from('certificates')
+      .select('*')
+      .eq('portfolio_id', portfolioId)
+      .order('display_order')
+    
+    if (error) throw error
+    return data
+  },
+
+  async create(portfolioId, certificateData) {
+    const { data, error } = await supabase
+      .from('certificates')
+      .insert([{ portfolio_id: portfolioId, ...certificateData }])
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async update(id, updates) {
+    const { data, error } = await supabase
+      .from('certificates')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async delete(id) {
+    const { error } = await supabase.from('certificates').delete().eq('id', id)
+    if (error) throw error
+  }
+}
+
+// ===========================================
+// خدمات الخبرات (Experience)
+// ===========================================
+export const experienceService = {
+  async getByPortfolioId(portfolioId) {
+    const { data, error } = await supabase
+      .from('experience')
+      .select('*')
+      .eq('portfolio_id', portfolioId)
+      .order('display_order')
+    
+    if (error) throw error
+    return data
+  },
+
+  async create(portfolioId, experienceData) {
+    const { data, error } = await supabase
+      .from('experience')
+      .insert([{ portfolio_id: portfolioId, ...experienceData }])
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async update(id, updates) {
+    const { data, error } = await supabase
+      .from('experience')
+      .update({ ...updates, updated_at: new Date() })
+      .eq('id', id)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async delete(id) {
+    const { error } = await supabase.from('experience').delete().eq('id', id)
+    if (error) throw error
+  }
+}
+
+// ===========================================
+// خدمات التعليم (Education)
+// ===========================================
+export const educationService = {
+  async getByPortfolioId(portfolioId) {
+    const { data, error } = await supabase
+      .from('education')
+      .select('*')
+      .eq('portfolio_id', portfolioId)
+      .order('display_order')
+    
+    if (error) throw error
+    return data
+  },
+
+  async create(portfolioId, educationData) {
+    const { data, error } = await supabase
+      .from('education')
+      .insert([{ portfolio_id: portfolioId, ...educationData }])
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async update(id, updates) {
+    const { data, error } = await supabase
+      .from('education')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async delete(id) {
+    const { error } = await supabase.from('education').delete().eq('id', id)
+    if (error) throw error
+  }
+}
+
+// ===========================================
+// خدمات روابط التواصل (Social Links)
+// ===========================================
+export const socialLinkService = {
+  async getByDeveloperId(developerId) {
+    const { data, error } = await supabase
+      .from('social_links')
+      .select('*')
+      .eq('developer_id', developerId)
+    
+    if (error) throw error
+    return data
+  },
+
+  async upsert(developerId, platform, url) {
+    await supabase
+      .from('social_links')
+      .delete()
+      .eq('developer_id', developerId)
+      .eq('platform', platform)
+
+    const { data, error } = await supabase
+      .from('social_links')
+      .insert([{ developer_id: developerId, platform, url }])
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  }
+}
+
+// ===========================================
+// خدمات الباقات (Plans)
 // ===========================================
 export const planService = {
-  // جلب جميع الباقات
-  async getAllPlans() {
+  async getAll() {
     const { data, error } = await supabase
       .from('plans')
       .select('*')
-      .order('sort_order');
+      .eq('is_active', true)
+      .order('sort_order')
     
-    if (error) throw error;
-    return data;
+    if (error) throw error
+    return data
   },
 
-  // إنشاء اشتراك جديد
-  async createSubscription(userId, planId, paymentData) {
-    const { data: plan } = await supabase
+  async getById(id) {
+    const { data, error } = await supabase
       .from('plans')
       .select('*')
-      .eq('id', planId)
-      .single();
+      .eq('id', id)
+      .single()
     
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() + 1); // اشتراك شهري
+    if (error) throw error
+    return data
+  },
+
+  async createSubscription(userId, planId, paymentData) {
+    const plan = await this.getById(planId)
+    
+    const startDate = new Date()
+    const endDate = new Date()
+    endDate.setMonth(endDate.getMonth() + 1)
 
     const { data, error } = await supabase
-      .from('subscriptions')
+      .from('payments')
       .insert([{
-        user_id: userId,
+        developer_id: userId,
         plan_id: planId,
-        start_date: startDate,
-        end_date: endDate,
-        duration_days: 30,
-        price_paid: plan.price_monthly,
+        amount: plan.price_monthly,
         currency: 'USD',
-        status: 'pending',
         payment_method: paymentData.method,
         transaction_image: paymentData.transaction_image,
-        created_at: new Date()
+        status: 'pending',
+        start_date: startDate,
+        end_date: endDate
       }])
       .select()
-      .single();
+      .single()
     
-    if (error) throw error;
-    return data;
+    if (error) throw error
+    return data
   },
 
-  // جلب اشتراك المستخدم الحالي
   async getUserSubscription(userId) {
     const { data, error } = await supabase
-      .from('subscriptions')
+      .from('payments')
       .select('*, plans(*)')
-      .eq('user_id', userId)
-      .eq('status', 'active')
+      .eq('developer_id', userId)
+      .eq('status', 'approved')
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .single()
     
-    if (error && error.code !== 'PGRST116') throw error;
-    return data;
+    if (error && error.code !== 'PGRST116') throw error
+    return data
   }
-};
+}
+
+// ===========================================
+// خدمات المصادقة (Auth)
+// ===========================================
+export const authService = {
+  async login(email, password) {
+    const { data, error } = await supabase
+      .from('developers')
+      .select('*')
+      .eq('email', email)
+      .single()
+    
+    if (error || !data) throw new Error('Invalid email or password')
+    
+    const hashedPassword = await this.hashPassword(password)
+    if (data.password_hash !== hashedPassword) {
+      throw new Error('Invalid email or password')
+    }
+    
+    await supabase
+      .from('developers')
+      .update({ last_login: new Date() })
+      .eq('id', data.id)
+    
+    const { password_hash, ...userWithoutPassword } = data
+    return userWithoutPassword
+  },
+
+  async register(userData) {
+    const { data: existingUser } = await supabase
+      .from('developers')
+      .select('id')
+      .eq('email', userData.email)
+      .maybeSingle()
+    
+    if (existingUser) throw new Error('Email already exists')
+
+    const hashedPassword = await this.hashPassword(userData.password)
+    const username = userData.full_name
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '-')
+      .substring(0, 30)
+
+    const { data, error } = await supabase
+      .from('developers')
+      .insert([{
+        username,
+        email: userData.email,
+        password_hash: hashedPassword,
+        full_name: userData.full_name,
+        plan_id: 1,
+        is_active: true
+      }])
+      .select()
+      .single()
+    
+    if (error) throw error
+    
+    const { password_hash, ...newUser } = data
+    return newUser
+  },
+
+  async hashPassword(password) {
+    const encoder = new TextEncoder()
+    const data = encoder.encode(password)
+    const hash = await crypto.subtle.digest('SHA-256', data)
+    return Array.from(new Uint8Array(hash))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('')
+  }
+}
+
+// ===========================================
+// خدمات التخزين (Storage)
+// ===========================================
+export const storageService = {
+  getPathFromUrl(url) {
+    if (!url) return null
+    try {
+      const urlObj = new URL(url)
+      const pathMatch = urlObj.pathname.match(/\/developers\/(.+)$/)
+      return pathMatch ? pathMatch[1] : null
+    } catch {
+      return null
+    }
+  },
+
+  async deleteImage(imageUrl) {
+    if (!imageUrl) return
+    const filePath = this.getPathFromUrl(imageUrl)
+    if (!filePath) return
+
+    await supabase.storage.from('developers').remove([filePath])
+  },
+
+  async uploadImage(file, folder, oldImageUrl = null) {
+    if (oldImageUrl) await this.deleteImage(oldImageUrl)
+
+    const timestamp = Date.now()
+    const randomString = Math.random().toString(36).substring(2, 8)
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${timestamp}-${randomString}.${fileExt}`
+    const filePath = `${folder}/${fileName}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('developers')
+      .upload(filePath, file, { cacheControl: '3600', upsert: false })
+
+    if (uploadError) throw uploadError
+
+    const { data } = supabase.storage.from('developers').getPublicUrl(filePath)
+    return data.publicUrl
+  },
+
+  async uploadProfileImage(file, userId, oldImageUrl = null) {
+    return this.uploadImage(file, `profiles/${userId}`, oldImageUrl)
+  },
+
+  async uploadProjectImage(file, projectId, oldImageUrl = null) {
+    return this.uploadImage(file, `projects/${projectId}`, oldImageUrl)
+  },
+
+  async uploadCertificateImage(file, certificateId, oldImageUrl = null) {
+    return this.uploadImage(file, `certificates/${certificateId}`, oldImageUrl)
+  },
+
+  async uploadPaymentImage(file, userId) {
+    return this.uploadImage(file, `payments/${userId}`, null)
+  }
+}
