@@ -20,20 +20,17 @@ import Experience from './pages/dashboard/Experience'
 import Education from './pages/dashboard/Education'
 import Settings from './pages/dashboard/Settings'
 
-// 🆕 AI Builder
-import Builder from './pages/Builder'
-
 // صفحة 404
 import NotFound from './pages/NotFound'
 
 // Providers
 import { DeveloperProvider } from './context/DeveloperContext';
-import { useAuth } from './hooks/useAuth' // لاستخدام التوجيه الذكي
+import { useAuth } from './hooks/useAuth'
 
 // مكون التوجيه الذكي
 const AppRoutes = () => {
   const [showWelcome, setShowWelcome] = useState(true)
-  const { user, loading, hasPortfolio } = useAuth()
+  const { user, loading } = useAuth() // ✅ فقط user و loading
 
   if (loading) {
     return (
@@ -57,9 +54,7 @@ const AppRoutes = () => {
           <Route 
             path="/" 
             element={
-              !user ? <LandingPage /> :
-              !hasPortfolio ? <Navigate to="/app/builder" replace /> :
-              <Navigate to="/dashboard" replace />
+              user ? <Navigate to="/dashboard" replace /> : <LandingPage />
             } 
           />
           
@@ -67,21 +62,11 @@ const AppRoutes = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           
-          {/* 🆕 AI Builder - للمستخدمين الجدد */}
-          <Route 
-            path="/app/builder" 
-            element={
-              <ProtectedRoute>
-                <Builder />
-              </ProtectedRoute>
-            } 
-          />
-          
-          {/* لوحة التحكم - تتطلب بورتفليو */}
+          {/* لوحة التحكم - للمستخدمين المسجلين فقط */}
           <Route 
             path="/dashboard" 
             element={
-              <ProtectedRoute requirePortfolio={true}>
+              <ProtectedRoute>
                 <DashboardLayout />
               </ProtectedRoute>
             }
