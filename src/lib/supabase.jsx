@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { imageOptimizer } from './imageOptimizer'
+
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
@@ -10,7 +11,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // ===========================================
-// خدمات المطورين
+// خدمات المطورين (Developers)
 // ===========================================
 export const developerService = {
   // جلب مطور بواسطة اسم المستخدم
@@ -19,6 +20,7 @@ export const developerService = {
       .from('developers')
       .select(`
         *,
+        portfolios (*),
         projects (*),
         skills (*),
         certificates (*),
@@ -43,6 +45,7 @@ export const developerService = {
       .from('developers')
       .select(`
         *,
+        portfolios (*),
         projects (*),
         skills (*),
         certificates (*),
@@ -93,39 +96,44 @@ export const developerService = {
     if (error) console.error('Error tracking visit:', error)
   }
 }
+
 // ===========================================
-// خدمات الخبرات (Experience)
+// خدمات البورتفليو (Portfolios) - 🆕 جديد
 // ===========================================
-export const experienceService = {
-  async getByDeveloperId(developerId) {
+export const portfolioService = {
+  // جلب بورتفليو بواسطة user_id
+  async getByUserId(userId) {
     const { data, error } = await supabase
-      .from('experience')
+      .from('portfolios')
       .select('*')
-      .eq('developer_id', developerId)
-      .order('display_order', { ascending: true })
+      .eq('user_id', userId)
+      .maybeSingle()
     
     if (error) throw error
     return data
   },
 
-  async create(developerId, experienceData) {
+  // إنشاء بورتفليو جديد
+  async create(userId, portfolioData) {
     const { data, error } = await supabase
-      .from('experience')
+      .from('portfolios')
       .insert([{
-        developer_id: developerId,
-        ...experienceData,
+        user_id: userId,
+        ...portfolioData,
         created_at: new Date(),
         updated_at: new Date()
       }])
       .select()
+      .single()
     
     if (error) throw error
-    return data[0]
+    return data
   },
 
+  // تحديث البورتفليو
   async update(id, updates) {
     const { data, error } = await supabase
-      .from('experience')
+      .from('portfolios')
       .update({
         ...updates,
         updated_at: new Date()
@@ -138,75 +146,45 @@ export const experienceService = {
     return data
   },
 
-  async delete(id) {
-    const { error } = await supabase
-      .from('experience')
-      .delete()
-      .eq('id', id)
-    
-    if (error) throw error
-  }
-}
-// ===========================================
-// خدمات التعليم (Education)
-// ===========================================
-export const educationService = {
-  async getByDeveloperId(developerId) {
-    const { data, error } = await supabase
-      .from('education')
-      .select('*')
-      .eq('developer_id', developerId)
-      .order('display_order', { ascending: true })
-    
-    if (error) throw error
-    return data
+  // نشر البورتفليو
+  async publish(id) {
+    return this.update(id, { 
+      is_published: true, 
+      published_at: new Date() 
+    })
   },
 
-  async create(developerId, educationData) {
+  // الحصول على البورتفليو العام (للعرض)
+  async getPublicBySlug(slug) {
     const { data, error } = await supabase
-      .from('education')
-      .insert([{
-        developer_id: developerId,
-        ...educationData,
-        created_at: new Date()
-      }])
-      .select()
-    
-    if (error) throw error
-    return data[0]
-  },
-
-  async update(id, updates) {
-    const { data, error } = await supabase
-      .from('education')
-      .update(updates)
-      .eq('id', id)
-      .select()
+      .from('portfolios')
+      .select(`
+        *,
+        projects (*),
+        skills (*),
+        experience (*),
+        education (*),
+        certificates (*)
+      `)
+      .eq('slug', slug)
+      .eq('is_published', true)
       .single()
     
     if (error) throw error
     return data
-  },
-
-  async delete(id) {
-    const { error } = await supabase
-      .from('education')
-      .delete()
-      .eq('id', id)
-    
-    if (error) throw error
   }
 }
+
 // ===========================================
-// خدمات المشاريع
+// خدمات المشاريع (Projects)
 // ===========================================
 export const projectService = {
-  // جلب مشاريع مطور
-  async getByDeveloperId(developerId) {
+  // جلب مشاريع بورتفليو
+  async getByPortfolioId(portfolioId) {
     const { data, error } = await supabase
       .from('projects')
       .select('*')
-      .eq('developer_id', developerId)
+      .eq('portfolio_id', portfolioId)
       .order('display_order', { ascending: true })
     
     if (error) throw error
@@ -214,12 +192,14 @@ export const projectService = {
   },
 
   // إنشاء مشروع جديد
-  async create(developerId, projectData) {
+  async create(portfolioId, projectData) {
     const { data, error } = await supabase
       .from('projects')
       .insert([{
-        developer_id: developerId,
-        ...projectData
+        portfolio_id: portfolioId,
+        ...projectData,
+        created_at: new Date(),
+        updated_at: new Date()
       }])
       .select()
     
@@ -255,26 +235,29 @@ export const projectService = {
 }
 
 // ===========================================
-// خدمات المهارات
+// خدمات المهارات (Skills)
 // ===========================================
 export const skillService = {
-  async getByDeveloperId(developerId) {
+  // جلب مهارات بورتفليو
+  async getByPortfolioId(portfolioId) {
     const { data, error } = await supabase
       .from('skills')
       .select('*')
-      .eq('developer_id', developerId)
+      .eq('portfolio_id', portfolioId)
       .order('display_order', { ascending: true })
     
     if (error) throw error
     return data
   },
 
-  async create(developerId, skillData) {
+  // إنشاء مهارة جديدة
+  async create(portfolioId, skillData) {
     const { data, error } = await supabase
       .from('skills')
       .insert([{
-        developer_id: developerId,
-        ...skillData
+        portfolio_id: portfolioId,
+        ...skillData,
+        created_at: new Date()
       }])
       .select()
     
@@ -282,6 +265,7 @@ export const skillService = {
     return data[0]
   },
 
+  // تحديث مهارة
   async update(id, updates) {
     const { data, error } = await supabase
       .from('skills')
@@ -294,6 +278,7 @@ export const skillService = {
     return data
   },
 
+  // حذف مهارة
   async delete(id) {
     const { error } = await supabase
       .from('skills')
@@ -305,26 +290,29 @@ export const skillService = {
 }
 
 // ===========================================
-// خدمات الشهادات
+// خدمات الشهادات (Certificates)
 // ===========================================
 export const certificateService = {
-  async getByDeveloperId(developerId) {
+  // جلب شهادات بورتفليو
+  async getByPortfolioId(portfolioId) {
     const { data, error } = await supabase
       .from('certificates')
       .select('*')
-      .eq('developer_id', developerId)
+      .eq('portfolio_id', portfolioId)
       .order('display_order', { ascending: true })
     
     if (error) throw error
     return data
   },
 
-  async create(developerId, certificateData) {
+  // إنشاء شهادة جديدة
+  async create(portfolioId, certificateData) {
     const { data, error } = await supabase
       .from('certificates')
       .insert([{
-        developer_id: developerId,
-        ...certificateData
+        portfolio_id: portfolioId,
+        ...certificateData,
+        created_at: new Date()
       }])
       .select()
     
@@ -332,6 +320,7 @@ export const certificateService = {
     return data[0]
   },
 
+  // تحديث شهادة
   async update(id, updates) {
     const { data, error } = await supabase
       .from('certificates')
@@ -344,6 +333,7 @@ export const certificateService = {
     return data
   },
 
+  // حذف شهادة
   async delete(id) {
     const { error } = await supabase
       .from('certificates')
@@ -355,7 +345,121 @@ export const certificateService = {
 }
 
 // ===========================================
-// خدمات روابط التواصل
+// خدمات الخبرات (Experience)
+// ===========================================
+export const experienceService = {
+  // جلب خبرات بورتفليو
+  async getByPortfolioId(portfolioId) {
+    const { data, error } = await supabase
+      .from('experience')
+      .select('*')
+      .eq('portfolio_id', portfolioId)
+      .order('display_order', { ascending: true })
+    
+    if (error) throw error
+    return data
+  },
+
+  // إنشاء خبرة جديدة
+  async create(portfolioId, experienceData) {
+    const { data, error } = await supabase
+      .from('experience')
+      .insert([{
+        portfolio_id: portfolioId,
+        ...experienceData,
+        created_at: new Date(),
+        updated_at: new Date()
+      }])
+      .select()
+    
+    if (error) throw error
+    return data[0]
+  },
+
+  // تحديث خبرة
+  async update(id, updates) {
+    const { data, error } = await supabase
+      .from('experience')
+      .update({
+        ...updates,
+        updated_at: new Date()
+      })
+      .eq('id', id)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  // حذف خبرة
+  async delete(id) {
+    const { error } = await supabase
+      .from('experience')
+      .delete()
+      .eq('id', id)
+    
+    if (error) throw error
+  }
+}
+
+// ===========================================
+// خدمات التعليم (Education)
+// ===========================================
+export const educationService = {
+  // جلب تعليم بورتفليو
+  async getByPortfolioId(portfolioId) {
+    const { data, error } = await supabase
+      .from('education')
+      .select('*')
+      .eq('portfolio_id', portfolioId)
+      .order('display_order', { ascending: true })
+    
+    if (error) throw error
+    return data
+  },
+
+  // إنشاء تعليم جديد
+  async create(portfolioId, educationData) {
+    const { data, error } = await supabase
+      .from('education')
+      .insert([{
+        portfolio_id: portfolioId,
+        ...educationData,
+        created_at: new Date()
+      }])
+      .select()
+    
+    if (error) throw error
+    return data[0]
+  },
+
+  // تحديث تعليم
+  async update(id, updates) {
+    const { data, error } = await supabase
+      .from('education')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  // حذف تعليم
+  async delete(id) {
+    const { error } = await supabase
+      .from('education')
+      .delete()
+      .eq('id', id)
+    
+    if (error) throw error
+  }
+}
+
+// ===========================================
+// خدمات روابط التواصل (Social Links)
 // ===========================================
 export const socialLinkService = {
   async getByDeveloperId(developerId) {
@@ -383,12 +487,85 @@ export const socialLinkService = {
       .insert([{
         developer_id: developerId,
         platform,
-        url
+        url,
+        created_at: new Date()
       }])
       .select()
     
     if (error) throw error
     return data[0]
+  }
+}
+
+// ===========================================
+// خدمات الباقات (Plans)
+// ===========================================
+export const planService = {
+  // جلب جميع الباقات
+  async getAll() {
+    const { data, error } = await supabase
+      .from('plans')
+      .select('*')
+      .eq('is_active', true)
+      .order('sort_order')
+    
+    if (error) throw error
+    return data
+  },
+
+  // جلب باقة بواسطة ID
+  async getById(id) {
+    const { data, error } = await supabase
+      .from('plans')
+      .select('*')
+      .eq('id', id)
+      .single()
+    
+    if (error) throw error
+    return data
+  }
+}
+
+// ===========================================
+// خدمات تحليلات الذكاء الاصطناعي (AI Analyses)
+// ===========================================
+export const aiAnalysisService = {
+  // تسجيل تحليل جديد
+  async create(userId, analysisData = {}) {
+    const { data, error } = await supabase
+      .from('ai_analyses')
+      .insert([{
+        user_id: userId,
+        ...analysisData,
+        analyzed_at: new Date()
+      }])
+      .select()
+    
+    if (error) throw error
+    return data[0]
+  },
+
+  // الحصول على عدد تحليلات المستخدم
+  async countByUser(userId) {
+    const { count, error } = await supabase
+      .from('ai_analyses')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+    
+    if (error) throw error
+    return count || 0
+  },
+
+  // جلب تحليلات المستخدم
+  async getByUser(userId) {
+    const { data, error } = await supabase
+      .from('ai_analyses')
+      .select('*')
+      .eq('user_id', userId)
+      .order('analyzed_at', { ascending: false })
+    
+    if (error) throw error
+    return data
   }
 }
 
@@ -494,6 +671,60 @@ export const storageService = {
     }
   },
 
+  // رفع صورة الغلاف
+  async uploadCoverImage(file, userId, oldImageUrl = null) {
+    try {
+      return await this.uploadImage(
+        file,
+        `covers/${userId}`,
+        oldImageUrl,
+        {
+          maxWidth: 1500,
+          maxHeight: 500,
+          quality: 0.85
+        }
+      )
+    } catch (error) {
+      console.error('❌ فشل رفع صورة الغلاف:', error)
+      throw error
+    }
+  },
+
+  // رفع السيرة الذاتية (PDF)
+  async uploadResume(file, userId, oldResumeUrl = null) {
+    try {
+      if (file.type !== 'application/pdf') {
+        throw new Error('يجب أن يكون الملف بصيغة PDF')
+      }
+
+      if (oldResumeUrl) {
+        await this.deleteImage(oldResumeUrl)
+      }
+
+      const timestamp = Date.now()
+      const fileName = `${timestamp}-${file.name}`
+      const filePath = `resumes/${userId}/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('developers')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        })
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage
+        .from('developers')
+        .getPublicUrl(filePath)
+
+      return data.publicUrl
+    } catch (error) {
+      console.error('❌ فشل رفع السيرة الذاتية:', error)
+      throw error
+    }
+  },
+
   // رفع صورة المشروع
   async uploadProjectImage(file, projectId, oldImageUrl = null) {
     try {
@@ -543,7 +774,7 @@ export const storageService = {
           maxWidth: 1500,
           maxHeight: 1500,
           quality: 0.9,
-          format: 'jpeg'  // نحتفظ بـ JPEG للوضوح
+          format: 'jpeg'
         }
       )
     } catch (error) {
@@ -554,28 +785,24 @@ export const storageService = {
 }
 
 // ===========================================
-// خدمات المصادقة
+// خدمات المصادقة (Auth)
 // ===========================================
 export const authService = {
   // تسجيل الدخول
   async login(email, password) {
-    // هنا سنستخدم التشفير البسيط (للتطوير فقط)
-    // في الإنتاج استخدم auth المدمج في Supabase
     const { data, error } = await supabase
       .from('developers')
       .select('*')
       .eq('email', email)
       .single()
     
-    if (error) throw new Error('Invalid email or password')
+    if (error || !data) throw new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة')
     
-    // التحقق من كلمة المرور (تشفير بسيط - للتطوير فقط)
     const hashedPassword = await this.hashPassword(password)
     if (data.password_hash !== hashedPassword) {
-      throw new Error('Invalid email or password')
+      throw new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة')
     }
     
-    // تحديث آخر دخول
     await supabase
       .from('developers')
       .update({ last_login: new Date() })
@@ -587,25 +814,20 @@ export const authService = {
 
   // تسجيل مستخدم جديد
   async register(userData) {
-    // التحقق من عدم وجود المستخدم
     const { data: existingUser } = await supabase
       .from('developers')
       .select('id')
       .eq('email', userData.email)
-      .single()
+      .maybeSingle()
     
-    if (existingUser) {
-      throw new Error('Email already exists')
-    }
+    if (existingUser) throw new Error('البريد الإلكتروني موجود بالفعل')
 
-    // تشفير كلمة المرور
     const hashedPassword = await this.hashPassword(userData.password)
 
-    // إنشاء اسم مستخدم فريد
     const username = userData.full_name
       .toLowerCase()
       .replace(/[^a-z0-9]/g, '-')
-      .substring(0, 30)
+      .substring(0, 30) + '-' + Math.random().toString(36).substring(2, 6)
 
     const { data, error } = await supabase
       .from('developers')
@@ -614,7 +836,7 @@ export const authService = {
         email: userData.email,
         password_hash: hashedPassword,
         full_name: userData.full_name,
-        plan_id: 1, // الباقة المجانية
+        plan_id: 1,
         is_active: true
       }])
       .select()
@@ -626,7 +848,7 @@ export const authService = {
     return newUser
   },
 
-  // دالة تشفير بسيطة (للتطوير فقط)
+  // دالة تشفير بسيطة
   async hashPassword(password) {
     const encoder = new TextEncoder()
     const data = encoder.encode(password)
