@@ -21,7 +21,7 @@ import Education from './pages/dashboard/Education'
 import Settings from './pages/dashboard/Settings'
 
 // 🆕 AI Builder
-import Builder from './portfolio-ai/pages/Builder'
+import Builder from './pages/Builder'
 
 // صفحة 404
 import NotFound from './pages/NotFound'
