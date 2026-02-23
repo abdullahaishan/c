@@ -584,7 +584,9 @@ export const storageService = {
       // ✅ استخدام uuid مثل كود الشخص
       const fileName = `${userId}/${uuidv4()}`
 
-      console.log('رفع إلى:', fileName)
+      console.log('رفع إلى:', fileName,{
+        upsert: true,  // ✅ هذا مهم جداً
+    cacheControl: '3600'})
 
       const { error } = await supabase.storage
         .from('developers')
