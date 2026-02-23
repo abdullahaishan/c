@@ -686,144 +686,107 @@ export const storageService = {
 // ===========================================
 // خدمات المصادقة (Auth) - النسخة المصححة
 // ===========================================
+        // ===========================================
+// خدمات المصادقة (Auth) - النسخة المعدلة للتصحيح
+// ===========================================
 export const authService = {
   // تسجيل الدخول
   async login(email, password) {
     try {
-      console.log('1. Searching for user with email:', email)
+      console.log('🔍 بدء تسجيل الدخول للبريد:', email)
       
-      const { data, error } = await supabase
+      // ✅ أولاً: تأكد من وجود المستخدم
+      const { data: user, error: userError } = await supabase
         .from('developers')
         .select('*')
         .eq('email', email)
-        .maybeSingle() // ✅ استخدام maybeSingle بدلاً من single
       
-      console.log('2. Query result:', { data, error })
-      
-      if (error) {
-        console.error('Database error:', error)
-        throw new Error('خطأ في قاعدة البيانات')
-      }
-      
-      if (!data) {
-        console.log('3. No user found with this email')
-        throw new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة')
-      }
-
-      console.log('4. User found:', { id: data.id, email: data.email })
-
-      // التحقق من كلمة المرور
-      const hashedPassword = await this.hashPassword(password)
-      console.log('5. Password check:', { 
-        inputHashed: hashedPassword, 
-        storedHash: data.password_hash 
+      console.log('📊 نتيجة البحث:', { 
+        found: user?.length || 0, 
+        error: userError,
+        data: user 
       })
       
-      if (data.password_hash !== hashedPassword) {
-        console.log('6. Password mismatch')
+      if (userError) {
+        console.error('❌ خطأ في قاعدة البيانات:', userError)
+        throw new Error(`خطأ في قاعدة البيانات: ${userError.message}`)
+      }
+      
+      if (!user || user.length === 0) {
+        console.log('❌ لا يوجد مستخدم بهذا البريد')
         throw new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة')
       }
 
-      console.log('7. Password correct, updating last login')
+      const foundUser = user[0]
+      console.log('✅ تم العثور على المستخدم:', { 
+        id: foundUser.id, 
+        email: foundUser.email,
+        full_name: foundUser.full_name 
+      })
 
-      // تحديث آخر دخول
-      const { error: updateError } = await supabase
-        .from('developers')
-        .update({ last_login: new Date() })
-        .eq('id', data.id)
-
-      if (updateError) {
-        console.error('Error updating last login:', updateError)
+      // ✅ التحقق من كلمة المرور
+      const hashedPassword = await this.hashPassword(password)
+      console.log('🔐 التحقق من كلمة المرور:', {
+        password_hashed: hashedPassword.substring(0, 10) + '...',
+        stored_hash: foundUser.password_hash.substring(0, 10) + '...',
+        match: foundUser.password_hash === hashedPassword
+      })
+      
+      if (foundUser.password_hash !== hashedPassword) {
+        console.log('❌ كلمة المرور غير صحيحة')
+        throw new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة')
       }
 
-      // إزالة كلمة المرور من البيانات المرسلة
-      const { password_hash, ...userWithoutPassword } = data
-      console.log('8. Login successful for user:', userWithoutPassword.email)
+      // ✅ تحديث آخر دخول
+      console.log('📝 تحديث آخر دخول...')
+      const { error: updateError } = await supabase
+        .from('developers')
+        .update({ last_login: new Date().toISOString() })
+        .eq('id', foundUser.id)
+
+      if (updateError) {
+        console.error('⚠️ خطأ في تحديث آخر دخول:', updateError)
+        // لا نوقف العملية إذا فشل التحديث
+      }
+
+      // ✅ إزالة كلمة المرور من البيانات
+      const { password_hash, ...userWithoutPassword } = foundUser
+      console.log('✅ تم تسجيل الدخول بنجاح:', userWithoutPassword.email)
       
       return userWithoutPassword
 
     } catch (error) {
-      console.error('Login error in authService:', error)
+      console.error('❌ خطأ في تسجيل الدخول:', error)
       throw error
     }
   },
 
-  // تسجيل مستخدم جديد
-  async register(userData) {
+  // دالة اختبار للتحقق من اتصال قاعدة البيانات
+  async testConnection() {
     try {
-      console.log('1. Checking if email exists:', userData.email)
+      console.log('🔍 اختبار اتصال قاعدة البيانات...')
       
-      const { data: existingUser, error: checkError } = await supabase
+      // محاولة جلب مستخدم واحد فقط
+      const { data, error, count } = await supabase
         .from('developers')
-        .select('id')
-        .eq('email', userData.email)
-        .maybeSingle()
+        .select('*', { count: 'exact', head: true })
       
-      if (checkError) {
-        console.error('Check error:', checkError)
-        throw new Error('خطأ في التحقق من البريد الإلكتروني')
-      }
-      
-      if (existingUser) {
-        console.log('2. Email already exists')
-        throw new Error('البريد الإلكتروني موجود بالفعل')
-      }
-
-      console.log('3. Email is available, hashing password')
-
-      // تشفير كلمة المرور
-      const hashedPassword = await this.hashPassword(userData.password)
-
-      // إنشاء اسم مستخدم فريد
-      const baseUsername = userData.full_name
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, '-')
-        .substring(0, 20)
-      
-      const username = `${baseUsername}-${Math.random().toString(36).substring(2, 6)}`
-      
-      console.log('4. Generated username:', username)
-
-      // إنشاء المستخدم
-      const { data, error } = await supabase
-        .from('developers')
-        .insert([{
-          username,
-          email: userData.email,
-          password_hash: hashedPassword,
-          full_name: userData.full_name,
-          plan_id: 1,
-          role: 'user',
-          is_active: true,
-          created_at: new Date(),
-          updated_at: new Date()
-        }])
-        .select()
-        .single()
+      console.log('📊 نتيجة الاختبار:', { 
+        connected: !error, 
+        count: count,
+        error: error?.message 
+      })
       
       if (error) {
-        console.error('Insert error:', error)
-        throw new Error('فشل في إنشاء الحساب')
+        console.error('❌ فشل الاتصال:', error)
+        return false
       }
       
-      console.log('5. User created successfully:', data.email)
-      
-      const { password_hash, ...newUser } = data
-      return newUser
-
+      console.log(`✅ الاتصال ناجح، عدد المستخدمين: ${count}`)
+      return true
     } catch (error) {
-      console.error('Register error in authService:', error)
-      throw error
+      console.error('❌ خطأ في الاختبار:', error)
+      return false
     }
-  },
-
-  // دالة تشفير بسيطة
-  async hashPassword(password) {
-    const encoder = new TextEncoder()
-    const data = encoder.encode(password)
-    const hash = await crypto.subtle.digest('SHA-256', data)
-    return Array.from(new Uint8Array(hash))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('')
   }
 }
