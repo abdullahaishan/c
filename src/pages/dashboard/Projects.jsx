@@ -1,6 +1,5 @@
-import React, { useState } from 'react'
-import { useDeveloper } from '../../context/DeveloperContext'
-import { usePlan } from '../../hooks/usePlan'
+import React, { useState, useEffect } from 'react'
+import { useAuth } from '../../hooks/useAuth'
 import { projectService, storageService } from '../../lib/supabase'
 import {
   Plus,
@@ -15,17 +14,18 @@ import {
   Loader,
   AlertCircle,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  FolderKanban
 } from 'lucide-react'
 
 const Projects = () => {
-  const { developer, getProjects, refresh } = useDeveloper()
-  const { checkLimit, limits } = usePlan()
-  const [projects, setProjects] = useState(getProjects())
-  const [editingId, setEditingId] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const { user } = useAuth()
+  const [projects, setProjects] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
+  const [editingId, setEditingId] = useState(null)
 
   // نموذج مشروع جديد
   const [newProject, setNewProject] = useState({
@@ -41,6 +41,26 @@ const Projects = () => {
   const [techInput, setTechInput] = useState('')
   const [featureInput, setFeatureInput] = useState('')
 
+  // جلب المشاريع عند تحميل الصفحة
+  useEffect(() => {
+    fetchProjects()
+  }, [user])
+
+  const fetchProjects = async () => {
+    if (!user) return
+    
+    setLoading(true)
+    try {
+      const data = await projectService.getByDeveloperId(user.id)
+      setProjects(data || [])
+    } catch (err) {
+      console.error('Error fetching projects:', err)
+      setError('فشل في جلب المشاريع')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleImageUpload = async (file) => {
     if (!file) return null
     
@@ -48,12 +68,12 @@ const Projects = () => {
     try {
       const imageUrl = await storageService.uploadImage(
         file,
-        `projects/${developer.id}`
+        `projects/${user.id}`
       )
       return imageUrl
     } catch (err) {
       console.error('Error uploading image:', err)
-      setError('Failed to upload image')
+      setError('فشل في رفع الصورة')
       return null
     } finally {
       setUploading(false)
@@ -61,18 +81,12 @@ const Projects = () => {
   }
 
   const handleAddProject = async () => {
-    // التحقق من حدود الباقة
-    if (!checkLimit('projects', projects.length)) {
-      setError(`You've reached the maximum limit of ${limits.maxProjects} projects`)
-      return
-    }
-
     if (!newProject.title || !newProject.description) {
-      setError('Title and description are required')
+      setError('عنوان المشروع والوصف مطلوبان')
       return
     }
 
-    setLoading(true)
+    setSaving(true)
     setError('')
 
     try {
@@ -92,7 +106,7 @@ const Projects = () => {
         display_order: projects.length
       }
 
-      const created = await projectService.create(developer.id, projectData)
+      const created = await projectService.create(user.id, projectData)
       setProjects([...projects, created])
       
       // إعادة تعيين النموذج
@@ -109,38 +123,35 @@ const Projects = () => {
       setFeatureInput('')
     } catch (err) {
       console.error('Error adding project:', err)
-      setError('Failed to add project')
+      setError('فشل في إضافة المشروع')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
   const handleUpdateProject = async (id, updates) => {
-    setLoading(true)
+    setSaving(true)
     try {
       const updated = await projectService.update(id, updates)
       setProjects(projects.map(p => p.id === id ? updated : p))
       setEditingId(null)
     } catch (err) {
       console.error('Error updating project:', err)
-      setError('Failed to update project')
+      setError('فشل في تحديث المشروع')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
   const handleDeleteProject = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this project?')) return
+    if (!window.confirm('هل أنت متأكد من حذف هذا المشروع؟')) return
 
-    setLoading(true)
     try {
       await projectService.delete(id)
       setProjects(projects.filter(p => p.id !== id))
     } catch (err) {
       console.error('Error deleting project:', err)
-      setError('Failed to delete project')
-    } finally {
-      setLoading(false)
+      setError('فشل في حذف المشروع')
     }
   }
 
@@ -206,13 +217,24 @@ const Projects = () => {
     })
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#030014] flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="w-12 h-12 text-[#6366f1] animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">جاري تحميل مشاريعك...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Projects</h1>
+        <h1 className="text-2xl font-bold text-white">المشاريع</h1>
         <div className="text-sm text-gray-400">
-          {projects.length} / {limits.maxProjects === -1 ? '∞' : limits.maxProjects}
+          {projects.length} مشروع
         </div>
       </div>
 
@@ -224,198 +246,196 @@ const Projects = () => {
         </div>
       )}
 
-      {/* Add new project form */}
-      {checkLimit('projects', projects.length) && (
-        <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-          <h2 className="text-lg font-semibold text-white mb-4">Add New Project</h2>
-          
-          <div className="space-y-4">
-            {/* Image upload */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Project Image</label>
-              <div className="flex items-center gap-4">
-                {newProject.image ? (
-                  <div className="relative">
-                    <img
-                      src={URL.createObjectURL(newProject.image)}
-                      alt="Preview"
-                      className="w-32 h-32 object-cover rounded-lg"
-                    />
-                    <button
-                      onClick={() => setNewProject({ ...newProject, image: null })}
-                      className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <label className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg cursor-pointer hover:bg-white/10">
-                    <Upload className="w-5 h-5 text-gray-400" />
-                    <span className="text-gray-300">Upload Image</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setNewProject({ ...newProject, image: e.target.files[0] })}
-                      className="hidden"
-                    />
-                  </label>
-                )}
-                {uploading && <Loader className="w-5 h-5 text-[#6366f1] animate-spin" />}
-              </div>
+      {/* Add new project form - يظهر دائماً */}
+      <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
+        <h2 className="text-lg font-semibold text-white mb-4">إضافة مشروع جديد</h2>
+        
+        <div className="space-y-4">
+          {/* Image upload */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">صورة المشروع</label>
+            <div className="flex items-center gap-4">
+              {newProject.image ? (
+                <div className="relative">
+                  <img
+                    src={URL.createObjectURL(newProject.image)}
+                    alt="Preview"
+                    className="w-32 h-32 object-cover rounded-lg"
+                  />
+                  <button
+                    onClick={() => setNewProject({ ...newProject, image: null })}
+                    className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg cursor-pointer hover:bg-white/10">
+                  <Upload className="w-5 h-5 text-gray-400" />
+                  <span className="text-gray-300">رفع صورة</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setNewProject({ ...newProject, image: e.target.files[0] })}
+                    className="hidden"
+                  />
+                </label>
+              )}
+              {uploading && <Loader className="w-5 h-5 text-[#6366f1] animate-spin" />}
             </div>
+          </div>
 
-            {/* Title */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Title *</label>
+          {/* Title */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">عنوان المشروع *</label>
+            <input
+              type="text"
+              value={newProject.title}
+              onChange={(e) => setNewProject({ ...newProject, title: e.target.value })}
+              className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+              placeholder="مثال: متجر إلكتروني متكامل"
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">الوصف *</label>
+            <textarea
+              value={newProject.description}
+              onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+              rows="4"
+              className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+              placeholder="صف مشروعك..."
+            />
+          </div>
+
+          {/* Technologies */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">التقنيات المستخدمة</label>
+            <div className="flex gap-2 mb-2">
               <input
                 type="text"
-                value={newProject.title}
-                onChange={(e) => setNewProject({ ...newProject, title: e.target.value })}
-                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                placeholder="e.g., E-commerce Platform"
+                value={techInput}
+                onChange={(e) => setTechInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && addTechnology()}
+                className="flex-1 p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+                placeholder="مثال: React"
               />
+              <button
+                onClick={addTechnology}
+                className="px-4 py-2 bg-[#6366f1] text-white rounded-lg hover:bg-[#a855f7] transition-colors"
+              >
+                إضافة
+              </button>
             </div>
-
-            {/* Description */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Description *</label>
-              <textarea
-                value={newProject.description}
-                onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-                rows="4"
-                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                placeholder="Describe your project..."
-              />
-            </div>
-
-            {/* Technologies */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Technologies</label>
-              <div className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  value={techInput}
-                  onChange={(e) => setTechInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && addTechnology()}
-                  className="flex-1 p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                  placeholder="e.g., React"
-                />
-                <button
-                  onClick={addTechnology}
-                  className="px-4 py-2 bg-[#6366f1] text-white rounded-lg hover:bg-[#a855f7] transition-colors"
+            <div className="flex flex-wrap gap-2">
+              {newProject.technologies.map((tech) => (
+                <span
+                  key={tech}
+                  className="flex items-center gap-1 px-3 py-1 bg-[#6366f1]/20 text-[#6366f1] rounded-lg text-sm"
                 >
-                  Add
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {newProject.technologies.map((tech) => (
-                  <span
-                    key={tech}
-                    className="flex items-center gap-1 px-3 py-1 bg-[#6366f1]/20 text-[#6366f1] rounded-lg text-sm"
-                  >
-                    {tech}
-                    <button onClick={() => removeTechnology(tech)}>
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
+                  {tech}
+                  <button onClick={() => removeTechnology(tech)}>
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
             </div>
-
-            {/* Features */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Key Features</label>
-              <div className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  value={featureInput}
-                  onChange={(e) => setFeatureInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && addFeature()}
-                  className="flex-1 p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                  placeholder="e.g., User authentication"
-                />
-                <button
-                  onClick={addFeature}
-                  className="px-4 py-2 bg-[#6366f1] text-white rounded-lg hover:bg-[#a855f7] transition-colors"
-                >
-                  Add
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {newProject.features.map((feature) => (
-                  <span
-                    key={feature}
-                    className="flex items-center gap-1 px-3 py-1 bg-purple-500/20 text-purple-400 rounded-lg text-sm"
-                  >
-                    {feature}
-                    <button onClick={() => removeFeature(feature)}>
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* URLs */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">GitHub URL</label>
-                <input
-                  type="url"
-                  value={newProject.github_url}
-                  onChange={(e) => setNewProject({ ...newProject, github_url: e.target.value })}
-                  className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                  placeholder="https://github.com/..."
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Live URL</label>
-                <input
-                  type="url"
-                  value={newProject.live_url}
-                  onChange={(e) => setNewProject({ ...newProject, live_url: e.target.value })}
-                  className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                  placeholder="https://example.com"
-                />
-              </div>
-            </div>
-
-            {/* Submit button */}
-            <button
-              onClick={handleAddProject}
-              disabled={loading || !newProject.title || !newProject.description}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-[1.02] transition-all disabled:opacity-50"
-            >
-              {loading ? <Loader className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-              Add Project
-            </button>
           </div>
+
+          {/* Features */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">الميزات الرئيسية</label>
+            <div className="flex gap-2 mb-2">
+              <input
+                type="text"
+                value={featureInput}
+                onChange={(e) => setFeatureInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && addFeature()}
+                className="flex-1 p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+                placeholder="مثال: تسجيل دخول آمن"
+              />
+              <button
+                onClick={addFeature}
+                className="px-4 py-2 bg-[#6366f1] text-white rounded-lg hover:bg-[#a855f7] transition-colors"
+              >
+                إضافة
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {newProject.features.map((feature) => (
+                <span
+                  key={feature}
+                  className="flex items-center gap-1 px-3 py-1 bg-purple-500/20 text-purple-400 rounded-lg text-sm"
+                >
+                  {feature}
+                  <button onClick={() => removeFeature(feature)}>
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* URLs */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">رابط GitHub</label>
+              <input
+                type="url"
+                value={newProject.github_url}
+                onChange={(e) => setNewProject({ ...newProject, github_url: e.target.value })}
+                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+                placeholder="https://github.com/..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">رابط المشروع</label>
+              <input
+                type="url"
+                value={newProject.live_url}
+                onChange={(e) => setNewProject({ ...newProject, live_url: e.target.value })}
+                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+                placeholder="https://example.com"
+              />
+            </div>
+          </div>
+
+          {/* Submit button */}
+          <button
+            onClick={handleAddProject}
+            disabled={saving || !newProject.title || !newProject.description}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-[1.02] transition-all disabled:opacity-50"
+          >
+            {saving ? <Loader className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+            إضافة مشروع
+          </button>
         </div>
-      )}
+      </div>
 
       {/* Projects list */}
       <div className="space-y-4">
-        {projects.map((project, index) => (
-          <ProjectCard
-            key={project.id}
-            project={project}
-            index={index}
-            total={projects.length}
-            onEdit={() => setEditingId(project.id)}
-            onDelete={() => handleDeleteProject(project.id)}
-            onMoveUp={() => handleMoveProject(index, 'up')}
-            onMoveDown={() => handleMoveProject(index, 'down')}
-            isEditing={editingId === project.id}
-            onUpdate={handleUpdateProject}
-          />
-        ))}
-
-        {projects.length === 0 && (
+        {projects.length === 0 ? (
           <div className="text-center py-12">
             <FolderKanban className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400">No projects yet</p>
-            <p className="text-sm text-gray-500">Add your first project to showcase your work</p>
+            <p className="text-gray-400">لا توجد مشاريع بعد</p>
+            <p className="text-sm text-gray-500">أضف مشروعك الأول من النموذج أعلاه</p>
           </div>
+        ) : (
+          projects.map((project, index) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              index={index}
+              total={projects.length}
+              onEdit={() => setEditingId(project.id)}
+              onDelete={() => handleDeleteProject(project.id)}
+              onMoveUp={() => handleMoveProject(index, 'up')}
+              onMoveDown={() => handleMoveProject(index, 'down')}
+              isEditing={editingId === project.id}
+              onUpdate={handleUpdateProject}
+            />
+          ))
         )}
       </div>
     </div>
@@ -481,34 +501,37 @@ const ProjectCard = ({
             value={editData.title}
             onChange={(e) => setEditData({ ...editData, title: e.target.value })}
             className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+            placeholder="عنوان المشروع"
           />
           <textarea
             value={editData.description}
             onChange={(e) => setEditData({ ...editData, description: e.target.value })}
             rows="3"
             className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+            placeholder="وصف المشروع"
           />
           
           {/* Technologies */}
           <div>
-            <label className="text-sm text-gray-400">Technologies</label>
+            <label className="text-sm text-gray-400">التقنيات</label>
             <div className="flex gap-2 mt-2">
               <input
                 value={techInput}
                 onChange={(e) => setTechInput(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && addTechnology()}
                 className="flex-1 p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                placeholder="أضف تقنية"
               />
               <button
                 onClick={addTechnology}
                 className="px-3 py-2 bg-[#6366f1] text-white rounded-lg text-sm"
               >
-                Add
+                إضافة
               </button>
             </div>
             <div className="flex flex-wrap gap-2 mt-2">
               {editData.technologies?.map((tech) => (
-                <span className="flex items-center gap-1 px-2 py-1 bg-[#6366f1]/20 text-[#6366f1] rounded-lg text-xs">
+                <span key={tech} className="flex items-center gap-1 px-2 py-1 bg-[#6366f1]/20 text-[#6366f1] rounded-lg text-xs">
                   {tech}
                   <button onClick={() => removeTechnology(tech)}>
                     <X className="w-3 h-3" />
@@ -525,14 +548,14 @@ const ProjectCard = ({
               value={editData.github_url}
               onChange={(e) => setEditData({ ...editData, github_url: e.target.value })}
               className="p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-              placeholder="GitHub URL"
+              placeholder="رابط GitHub"
             />
             <input
               type="url"
               value={editData.live_url}
               onChange={(e) => setEditData({ ...editData, live_url: e.target.value })}
               className="p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-              placeholder="Live URL"
+              placeholder="رابط المشروع"
             />
           </div>
 
@@ -543,13 +566,13 @@ const ProjectCard = ({
               className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
             >
               <Save className="w-4 h-4" />
-              Save
+              حفظ
             </button>
             <button
               onClick={onEdit}
               className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20"
             >
-              Cancel
+              إلغاء
             </button>
           </div>
         </div>
@@ -649,7 +672,7 @@ const ProjectCard = ({
                 className="flex items-center gap-1 text-sm text-gray-400 hover:text-white"
               >
                 <ExternalLink className="w-4 h-4" />
-                <span>Live Demo</span>
+                <span>عرض المشروع</span>
               </a>
             )}
           </div>
