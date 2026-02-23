@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { imageOptimizer } from './imageOptimizer'
+import { v4 as uuidv4 } from 'uuid';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -569,65 +570,43 @@ export const aiAnalysisService = {
   }
 }
 
+            
 // ===========================================
-// خدمات رفع الملفات (Storage)
-// ===========================================
-  // ===========================================
-// خدمات رفع الملفات (Storage) - نسخة مبسطة
+// خدمات رفع الملفات (Storage) - مثل كود الشخص
 // ===========================================
 export const storageService = {
-// ===========================================
-// خدمات رفع الملفات (Storage) - نسخة مجربة
-// ===========================================
-export const storageService = {
-  // رفع صورة الملف الشخصي
   async uploadProfileImage(file, userId, oldImageUrl = null) {
     try {
-      console.log('بدء رفع الصورة...')
-      
-      // التحقق من الملف
       if (!file) throw new Error('لا يوجد ملف')
       if (!file.type.startsWith('image/')) throw new Error('الملف ليس صورة')
       if (file.size > 5 * 1024 * 1024) throw new Error('الصورة أكبر من 5 ميجابايت')
 
-      // ✅ مهم: اسم الملف يجب أن يبدأ بـ userId لمطابقة السياسة المتقدمة
-      const timestamp = Date.now()
-      const randomString = Math.random().toString(36).substring(2, 8)
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${userId}/${timestamp}-${randomString}.${fileExt}`
+      // ✅ استخدام uuid مثل كود الشخص
+      const fileName = `${userId}/${uuidv4()}`
 
-      console.log('رفع إلى المسار:', fileName)
+      console.log('رفع إلى:', fileName)
 
-      // رفع الملف - استخدام upsert: true لتجنب مشكلة التكرار [citation:10]
-      const { error: uploadError } = await supabase.storage
+      const { error } = await supabase.storage
         .from('developers')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: true // ✅ مهم جداً: يسمح باستبدال الملفات
-        })
+        .upload(fileName, file)
 
-      if (uploadError) {
-        console.error('خطأ في الرفع:', uploadError)
-        throw uploadError
+      if (error) {
+        console.error('خطأ في الرفع:', error)
+        throw error
       }
 
-      // الحصول على الرابط العام
       const { data } = supabase.storage
         .from('developers')
         .getPublicUrl(fileName)
 
-      console.log('تم الرفع بنجاح:', data.publicUrl)
-
-      // حذف الصورة القديمة إذا وجدت
+      // حذف القديمة
       if (oldImageUrl) {
         try {
           const oldPath = oldImageUrl.split('/developers/')[1]
           if (oldPath) {
             await supabase.storage.from('developers').remove([oldPath])
           }
-        } catch (e) {
-          console.log('خطأ في حذف القديمة (غير مهم)', e)
-        }
+        } catch (e) {}
       }
 
       return data.publicUrl
@@ -638,23 +617,19 @@ export const storageService = {
     }
   },
 
-  // رفع صورة الغلاف
   async uploadCoverImage(file, userId, oldImageUrl = null) {
     try {
       if (!file) throw new Error('لا يوجد ملف')
       if (!file.type.startsWith('image/')) throw new Error('الملف ليس صورة')
       if (file.size > 5 * 1024 * 1024) throw new Error('الصورة أكبر من 5 ميجابايت')
 
-      const timestamp = Date.now()
-      const randomString = Math.random().toString(36).substring(2, 8)
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${userId}/covers/${timestamp}-${randomString}.${fileExt}`
+      const fileName = `${userId}/covers/${uuidv4()}`
 
-      const { error: uploadError } = await supabase.storage
+      const { error } = await supabase.storage
         .from('developers')
-        .upload(fileName, file, { upsert: true })
+        .upload(fileName, file)
 
-      if (uploadError) throw uploadError
+      if (error) throw error
 
       const { data } = supabase.storage
         .from('developers')
@@ -675,21 +650,19 @@ export const storageService = {
     }
   },
 
-  // رفع السيرة الذاتية (PDF)
   async uploadResume(file, userId, oldResumeUrl = null) {
     try {
       if (!file) throw new Error('لا يوجد ملف')
       if (file.type !== 'application/pdf') throw new Error('الملف ليس PDF')
       if (file.size > 5 * 1024 * 1024) throw new Error('الملف أكبر من 5 ميجابايت')
 
-      const timestamp = Date.now()
-      const fileName = `${userId}/resumes/${timestamp}-${file.name}`
+      const fileName = `${userId}/resumes/${uuidv4()}.pdf`
 
-      const { error: uploadError } = await supabase.storage
+      const { error } = await supabase.storage
         .from('developers')
-        .upload(fileName, file, { upsert: true })
+        .upload(fileName, file)
 
-      if (uploadError) throw uploadError
+      if (error) throw error
 
       const { data } = supabase.storage
         .from('developers')
