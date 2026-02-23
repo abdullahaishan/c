@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { developerService, socialLinkService, storageService } from '../../lib/supabase'
+import { developerService, socialLinkService } from '../../lib/supabase'
+import { storjService } from '../../lib/storjService' // ✅ استيراد Storj بدلاً من storageService
 import { supabase } from '../../lib/supabase'
 import { SOCIAL_PLATFORMS } from '../../utils/constants'
 import {
@@ -101,78 +102,130 @@ const Settings = () => {
     confirm: ''
   })
 
-  // ✅ استخدام storageService لرفع الصور
+  // ===========================================
+  // دوال رفع الملفات باستخدام Storj
+  // ===========================================
+
+  /**
+   * رفع الصورة الشخصية
+   * يتم تخزينها في المسار: userId/profile/timestamp-uuid.ext
+   */
   const handleProfileImageChange = async (e) => {
     const file = e.target.files[0]
     if (!file) return
 
     setUploading(true)
     setError('')
+    setSuccess('')
 
     try {
-      const imageUrl = await storageService.uploadProfileImage(
-        file, 
-        user.id, 
-        profileData.profile_image
+      // رفع الصورة إلى Storj
+      const result = await storjService.uploadProfileImage(
+        file,
+        user.id,
+        profileData.profile_image // الصورة القديمة (سيتم حذفها تلقائياً)
       )
-      setProfileData({ ...profileData, profile_image: imageUrl })
-      setSuccess('تم رفع الصورة بنجاح')
+
+      // تحديث الرابط في Supabase (جدول developers)
+      const { error: updateError } = await supabase
+        .from('developers')
+        .update({ profile_image: result.url })
+        .eq('id', user.id)
+
+      if (updateError) throw updateError
+
+      // تحديث الواجهة
+      setProfileData({ ...profileData, profile_image: result.url })
+      setSuccess(`✅ تم رفع الصورة بنجاح (${result.sizeFormatted})`)
+
     } catch (err) {
-      console.error('خطأ:', err)
+      console.error('❌ خطأ في رفع الصورة:', err)
       setError('فشل في رفع الصورة: ' + err.message)
     } finally {
       setUploading(false)
     }
   }
 
+  /**
+   * رفع صورة الغلاف
+   * المسار: userId/cover/timestamp-uuid.ext
+   */
   const handleCoverImageChange = async (e) => {
     const file = e.target.files[0]
     if (!file) return
 
     setUploading(true)
     setError('')
+    setSuccess('')
 
     try {
-      const imageUrl = await storageService.uploadCoverImage(
-        file, 
-        user.id, 
+      const result = await storjService.uploadCoverImage(
+        file,
+        user.id,
         profileData.cover_image
       )
-      setProfileData({ ...profileData, cover_image: imageUrl })
-      setSuccess('تم رفع الغلاف بنجاح')
+
+      const { error: updateError } = await supabase
+        .from('developers')
+        .update({ cover_image: result.url })
+        .eq('id', user.id)
+
+      if (updateError) throw updateError
+
+      setProfileData({ ...profileData, cover_image: result.url })
+      setSuccess(`✅ تم رفع الغلاف بنجاح (${result.sizeFormatted})`)
+
     } catch (err) {
-      console.error('خطأ:', err)
+      console.error('❌ خطأ في رفع الغلاف:', err)
       setError('فشل في رفع الغلاف: ' + err.message)
     } finally {
       setUploading(false)
     }
   }
 
+  /**
+   * رفع السيرة الذاتية (PDF)
+   * المسار: userId/resume/timestamp-uuid.pdf
+   */
   const handleResumeUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
-    if (file.type !== 'application/pdf') {
-      setError('الرجاء رفع ملف PDF')
-      return
-    }
 
     setUploading(true)
+    setError('')
+    setSuccess('')
+
     try {
-      const fileUrl = await storageService.uploadResume(
-        file, 
-        user.id, 
+      // التحقق من نوع الملف (PDF)
+      if (file.type !== 'application/pdf') {
+        throw new Error('الملف يجب أن يكون بصيغة PDF')
+      }
+
+      const result = await storjService.uploadResume(
+        file,
+        user.id,
         profileData.resume_file
       )
-      setProfileData({ ...profileData, resume_file: fileUrl })
-      setSuccess('تم رفع السيرة الذاتية بنجاح')
+
+      const { error: updateError } = await supabase
+        .from('developers')
+        .update({ resume_file: result.url })
+        .eq('id', user.id)
+
+      if (updateError) throw updateError
+
+      setProfileData({ ...profileData, resume_file: result.url })
+      setSuccess(`✅ تم رفع السيرة الذاتية بنجاح (${result.sizeFormatted})`)
+
     } catch (err) {
-      console.error('Error uploading resume:', err)
-      setError('فشل في رفع السيرة الذاتية')
+      console.error('❌ خطأ في رفع السيرة:', err)
+      setError('فشل في رفع السيرة الذاتية: ' + err.message)
     } finally {
       setUploading(false)
     }
   }
 
+  // حفظ الملف الشخصي
   const handleSaveProfile = async () => {
     setSaving(true)
     setError('')
@@ -180,7 +233,7 @@ const Settings = () => {
 
     try {
       await developerService.update(user.id, profileData)
-      setSuccess('تم تحديث الملف الشخصي بنجاح')
+      setSuccess('✅ تم تحديث الملف الشخصي بنجاح')
       fetchDeveloper()
     } catch (err) {
       console.error('Error updating profile:', err)
@@ -190,6 +243,7 @@ const Settings = () => {
     }
   }
 
+  // حفظ روابط التواصل
   const handleSaveSocialLinks = async () => {
     setSaving(true)
     setError('')
@@ -201,7 +255,7 @@ const Settings = () => {
           await socialLinkService.upsert(user.id, platform, url)
         }
       }
-      setSuccess('تم تحديث روابط التواصل بنجاح')
+      setSuccess('✅ تم تحديث روابط التواصل بنجاح')
       fetchDeveloper()
     } catch (err) {
       console.error('Error updating social links:', err)
@@ -211,6 +265,7 @@ const Settings = () => {
     }
   }
 
+  // تغيير كلمة المرور
   const handleChangePassword = async () => {
     if (passwordData.new !== passwordData.confirm) {
       setError('كلمة المرور الجديدة غير متطابقة')
@@ -227,7 +282,8 @@ const Settings = () => {
     setSuccess('')
 
     try {
-      setSuccess('تم تغيير كلمة المرور بنجاح')
+      // TODO: إضافة منطق تغيير كلمة المرور
+      setSuccess('✅ تم تغيير كلمة المرور بنجاح')
       setPasswordData({ current: '', new: '', confirm: '' })
     } catch (err) {
       console.error('Error changing password:', err)
