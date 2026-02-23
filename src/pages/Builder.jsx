@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { deepseekService } from '../services/deepseek';
+import { deepseekService } from '../portfolio-ai/services/deepseek';
 import { portfolioService } from '../services/supabase';
 import { Upload, FileText, Sparkles, Loader, CheckCircle, AlertCircle } from 'lucide-react';
 import * as pdfjs from 'pdfjs-dist';
