@@ -71,6 +71,7 @@ const AppRoutes = () => {
               </ProtectedRoute>
             }
           >
+            <Route path="plan-status" element={<PlanStatus />} />
             <Route index element={<Overview />} />
             <Route path="projects" element={<Projects />} />
             <Route path="skills" element={<Skills />} />
