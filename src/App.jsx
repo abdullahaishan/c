@@ -23,44 +23,49 @@ import Settings from './pages/dashboard/Settings'
 // صفحة 404
 import NotFound from './pages/NotFound'
 
+// Providers
+import { DeveloperProvider } from './context/DeveloperContext'
+
 function App() {
   const [showWelcome, setShowWelcome] = useState(true)
 
   return (
-    <BrowserRouter>
-      <AnimatePresence mode="wait">
-        {showWelcome && (
-          <WelcomeScreen onLoadingComplete={() => setShowWelcome(false)} />
-        )}
-      </AnimatePresence>
+    <DeveloperProvider>
+      <BrowserRouter>
+        <AnimatePresence mode="wait">
+          {showWelcome && (
+            <WelcomeScreen onLoadingComplete={() => setShowWelcome(false)} />
+          )}
+        </AnimatePresence>
 
-      {!showWelcome && (
-        <Routes>
-          {/* الصفحات العامة */}
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          
-          {/* لوحة التحكم (محمية) */}
-          <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <DashboardLayout />
-            </ProtectedRoute>
-          }>
-            <Route index element={<Overview />} />
-            <Route path="projects" element={<Projects />} />
-            <Route path="skills" element={<Skills />} />
-            <Route path="certificates" element={<Certificates />} />
-            <Route path="experience" element={<Experience />} />
-            <Route path="education" element={<Education />} />
-            <Route path="settings" element={<Settings />} />
-          </Route>
-          
-          {/* صفحة 404 */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      )}
-    </BrowserRouter>
+        {!showWelcome && (
+          <Routes>
+            {/* الصفحات العامة */}
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            
+            {/* لوحة التحكم (محمية) */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            }>
+              <Route index element={<Overview />} />
+              <Route path="projects" element={<Projects />} />
+              <Route path="skills" element={<Skills />} />
+              <Route path="certificates" element={<Certificates />} />
+              <Route path="experience" element={<Experience />} />
+              <Route path="education" element={<Education />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
+            
+            {/* صفحة 404 */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        )}
+      </BrowserRouter>
+    </DeveloperProvider>
   )
 }
 
