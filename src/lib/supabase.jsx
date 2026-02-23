@@ -572,6 +572,9 @@ export const aiAnalysisService = {
 // ===========================================
 // خدمات رفع الملفات (Storage)
 // ===========================================
+  // ===========================================
+// خدمات رفع الملفات (Storage) - نسخة مبسطة
+// ===========================================
 export const storageService = {
   // استخراج مسار الملف من URL
   getPathFromUrl(url) {
@@ -599,51 +602,53 @@ export const storageService = {
 
       if (error) {
         console.error('خطأ في حذف الصورة القديمة:', error)
-      } else {
-        console.log('✅ تم حذف الصورة القديمة')
       }
     } catch (error) {
       console.error('خطأ في حذف الصورة:', error)
     }
   },
 
-  // رفع صورة مع التحسين والحذف التلقائي
-  async uploadImage(file, folder, oldImageUrl = null, options = {}) {
+  // رفع صورة (نسخة مبسطة بدون تحسين)
+  async uploadImage(file, folder, oldImageUrl = null) {
     try {
-      // 1. التحقق من صحة الملف
-      imageOptimizer.validateFile(file)
+      // التحقق من صحة الملف
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('حجم الملف كبير جداً. الحد الأقصى 5 ميجابايت')
+      }
 
-      // 2. حذف الصورة القديمة إذا وجدت
+      // حذف الصورة القديمة إذا وجدت
       if (oldImageUrl) {
         await this.deleteImage(oldImageUrl)
       }
 
-      // 3. تحسين الصورة وتقليل حجمها
-      const optimizedFile = await imageOptimizer.optimizeImage(file, options)
-
-      // 4. إنشاء اسم فريد للملف
+      // إنشاء اسم فريد للملف
       const timestamp = Date.now()
       const randomString = Math.random().toString(36).substring(2, 8)
-      const fileName = `${timestamp}-${randomString}.webp`
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${timestamp}-${randomString}.${fileExt}`
       const filePath = `${folder}/${fileName}`
 
-      // 5. رفع الصورة المحسنة
+      console.log('رفع الملف إلى:', filePath)
+
+      // رفع الملف مباشرة بدون تحسين
       const { error: uploadError } = await supabase.storage
         .from('developers')
-        .upload(filePath, optimizedFile, {
+        .upload(filePath, file, {
           cacheControl: '3600',
-          contentType: 'image/webp',
           upsert: false
         })
 
-      if (uploadError) throw uploadError
+      if (uploadError) {
+        console.error('خطأ في الرفع:', uploadError)
+        throw uploadError
+      }
 
-      // 6. الحصول على الرابط العام
+      // الحصول على الرابط العام
       const { data } = supabase.storage
         .from('developers')
         .getPublicUrl(filePath)
 
-      console.log('✅ تم رفع الصورة بنجاح')
+      console.log('✅ تم رفع الصورة بنجاح:', data.publicUrl)
       return data.publicUrl
 
     } catch (error) {
@@ -654,136 +659,44 @@ export const storageService = {
 
   // رفع صورة الملف الشخصي
   async uploadProfileImage(file, userId, oldImageUrl = null) {
-    try {
-      return await this.uploadImage(
-        file, 
-        `profiles/${userId}`,
-        oldImageUrl,
-        {
-          maxWidth: 800,
-          maxHeight: 800,
-          quality: 0.8
-        }
-      )
-    } catch (error) {
-      console.error('❌ فشل رفع صورة الملف الشخصي:', error)
-      throw error
-    }
+    return this.uploadImage(file, `profiles/${userId}`, oldImageUrl)
   },
 
   // رفع صورة الغلاف
   async uploadCoverImage(file, userId, oldImageUrl = null) {
-    try {
-      return await this.uploadImage(
-        file,
-        `covers/${userId}`,
-        oldImageUrl,
-        {
-          maxWidth: 1500,
-          maxHeight: 500,
-          quality: 0.85
-        }
-      )
-    } catch (error) {
-      console.error('❌ فشل رفع صورة الغلاف:', error)
-      throw error
-    }
+    return this.uploadImage(file, `covers/${userId}`, oldImageUrl)
   },
 
   // رفع السيرة الذاتية (PDF)
   async uploadResume(file, userId, oldResumeUrl = null) {
-    try {
-      if (file.type !== 'application/pdf') {
-        throw new Error('يجب أن يكون الملف بصيغة PDF')
-      }
-
-      if (oldResumeUrl) {
-        await this.deleteImage(oldResumeUrl)
-      }
-
-      const timestamp = Date.now()
-      const fileName = `${timestamp}-${file.name}`
-      const filePath = `resumes/${userId}/${fileName}`
-
-      const { error: uploadError } = await supabase.storage
-        .from('developers')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        })
-
-      if (uploadError) throw uploadError
-
-      const { data } = supabase.storage
-        .from('developers')
-        .getPublicUrl(filePath)
-
-      return data.publicUrl
-    } catch (error) {
-      console.error('❌ فشل رفع السيرة الذاتية:', error)
-      throw error
+    if (file.type !== 'application/pdf') {
+      throw new Error('يجب أن يكون الملف بصيغة PDF')
     }
-  },
 
-  // رفع صورة المشروع
-  async uploadProjectImage(file, projectId, oldImageUrl = null) {
-    try {
-      return await this.uploadImage(
-        file,
-        `projects/${projectId}`,
-        oldImageUrl,
-        {
-          maxWidth: 1200,
-          maxHeight: 1200,
-          quality: 0.85
-        }
-      )
-    } catch (error) {
-      console.error('❌ فشل رفع صورة المشروع:', error)
-      throw error
+    if (oldResumeUrl) {
+      await this.deleteImage(oldResumeUrl)
     }
-  },
 
-  // رفع صورة الشهادة
-  async uploadCertificateImage(file, certificateId, oldImageUrl = null) {
-    try {
-      return await this.uploadImage(
-        file,
-        `certificates/${certificateId}`,
-        oldImageUrl,
-        {
-          maxWidth: 1000,
-          maxHeight: 1000,
-          quality: 0.8
-        }
-      )
-    } catch (error) {
-      console.error('❌ فشل رفع صورة الشهادة:', error)
-      throw error
-    }
-  },
+    const timestamp = Date.now()
+    const fileName = `${timestamp}-${file.name}`
+    const filePath = `resumes/${userId}/${fileName}`
 
-  // رفع صورة الدفع
-  async uploadPaymentImage(file, userId) {
-    try {
-      return await this.uploadImage(
-        file,
-        `payments/${userId}`,
-        null,
-        {
-          maxWidth: 1500,
-          maxHeight: 1500,
-          quality: 0.9,
-          format: 'jpeg'
-        }
-      )
-    } catch (error) {
-      console.error('❌ فشل رفع صورة الدفع:', error)
-      throw error
-    }
+    const { error: uploadError } = await supabase.storage
+      .from('developers')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      })
+
+    if (uploadError) throw uploadError
+
+    const { data } = supabase.storage
+      .from('developers')
+      .getPublicUrl(filePath)
+
+    return data.publicUrl
   }
 }
-
 // ===========================================
 // خدمات المصادقة (Auth) - النسخة المصححة
 // ===========================================
