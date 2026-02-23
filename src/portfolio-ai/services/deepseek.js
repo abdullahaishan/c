@@ -3,7 +3,7 @@ import axios from 'axios';
 // ===========================================
 // 🔧 IMPORTANT: استبدل هذا بمفتاح DeepSeek API الخاص بك
 // ===========================================
-const DEEPSEEK_API_KEY = 'YOUR_DEEPSEEK_API_KEY';
+const DEEPSEEK_API_KEY = 'sk-35fba64fc17a4d38978dda4e4cda0311';
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
 
 export const deepseekService = {
