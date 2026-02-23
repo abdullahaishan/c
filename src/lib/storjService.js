@@ -1,4 +1,8 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+// ===========================================
+// ملف: storjService.js (نسخة متوافقة)
+// ===========================================
+
+import AWS from 'aws-sdk';
 import { v4 as uuidv4 } from 'uuid';
 
 const ACCESS_KEY = import.meta.env.VITE_STORJ_ACCESS_KEY;
@@ -10,14 +14,12 @@ if (!ACCESS_KEY || !SECRET_KEY) {
   console.error('❌ مفقود: VITE_STORJ_ACCESS_KEY أو VITE_STORJ_SECRET_KEY في ملف .env');
 }
 
-const s3Client = new S3Client({
-  region: 'global',
+const s3Client = new AWS.S3({
   endpoint: ENDPOINT,
-  credentials: {
-    accessKeyId: ACCESS_KEY,
-    secretAccessKey: SECRET_KEY,
-  },
-  forcePathStyle: true,
+  accessKeyId: ACCESS_KEY,
+  secretAccessKey: SECRET_KEY,
+  s3ForcePathStyle: true,
+  signatureVersion: 'v4',
 });
 
 const utils = {
@@ -64,7 +66,7 @@ export const storjService = {
       
       const filePath = `${userId}/${folder}/${timestamp}-${uniqueId}.${fileExt}`;
 
-      const command = new PutObjectCommand({
+      const params = {
         Bucket: BUCKET_NAME,
         Key: filePath,
         Body: file,
@@ -77,9 +79,9 @@ export const storjService = {
           'related-id': relatedId || '',
           'upload-date': new Date().toISOString()
         }
-      });
+      };
 
-      await s3Client.send(command);
+      await s3Client.putObject(params).promise();
 
       const publicUrl = `${ENDPOINT}/${BUCKET_NAME}/${filePath}`;
 
@@ -114,12 +116,12 @@ export const storjService = {
       const filePath = utils.getFilePathFromUrl(fileUrl);
       if (!filePath) return false;
 
-      const command = new DeleteObjectCommand({
+      const params = {
         Bucket: BUCKET_NAME,
         Key: filePath,
-      });
+      };
 
-      await s3Client.send(command);
+      await s3Client.deleteObject(params).promise();
       return true;
     } catch (error) {
       console.error('❌ فشل حذف الملف:', error);
@@ -148,6 +150,10 @@ export const storjService = {
 
   async uploadProjectImage(file, userId, projectId, oldImageUrl = null) {
     return this.uploadFile(file, userId, 'project', projectId, oldImageUrl);
+  },
+
+  async uploadPaymentImage(file, userId, oldImageUrl = null) {
+    return this.uploadFile(file, userId, 'payments', null, oldImageUrl);
   },
 
   async uploadGeneralFile(file, userId, customFolder = 'files', oldFileUrl = null) {
