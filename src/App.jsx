@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
-import { BrowserRouter, Routes, Route } from "react-router-dom"
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { AnimatePresence } from 'framer-motion'
 import "./index.css"
-    
+
 // الصفحات العامة
 import WelcomeScreen from './pages/WelcomeScreen'
 import LandingPage from './pages/LandingPage'
@@ -20,51 +20,94 @@ import Experience from './pages/dashboard/Experience'
 import Education from './pages/dashboard/Education'
 import Settings from './pages/dashboard/Settings'
 
+// 🆕 AI Builder
+import Builder from './portfolio-ai/pages/Builder'
+
 // صفحة 404
 import NotFound from './pages/NotFound'
 
 // Providers
-import { DeveloperProvider } from './context/DeveloperContext'
+import { DeveloperProvider } from './context/DeveloperProvider'
+import { useAuth } from './hooks/useAuth' // لاستخدام التوجيه الذكي
+
+// مكون التوجيه الذكي
+const AppRoutes = () => {
+  const [showWelcome, setShowWelcome] = useState(true)
+  const { user, loading, hasPortfolio } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#030014] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-[#6366f1]/20 border-t-[#6366f1] rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <AnimatePresence mode="wait">
+        {showWelcome && (
+          <WelcomeScreen onLoadingComplete={() => setShowWelcome(false)} />
+        )}
+      </AnimatePresence>
+
+      {!showWelcome && (
+        <Routes>
+          {/* الصفحة الرئيسية - توجيه ذكي */}
+          <Route 
+            path="/" 
+            element={
+              !user ? <LandingPage /> :
+              !hasPortfolio ? <Navigate to="/app/builder" replace /> :
+              <Navigate to="/dashboard" replace />
+            } 
+          />
+          
+          {/* مسارات المصادقة */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          
+          {/* 🆕 AI Builder - للمستخدمين الجدد */}
+          <Route 
+            path="/app/builder" 
+            element={
+              <ProtectedRoute>
+                <Builder />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* لوحة التحكم - تتطلب بورتفليو */}
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute requirePortfolio={true}>
+                <DashboardLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Overview />} />
+            <Route path="projects" element={<Projects />} />
+            <Route path="skills" element={<Skills />} />
+            <Route path="certificates" element={<Certificates />} />
+            <Route path="experience" element={<Experience />} />
+            <Route path="education" element={<Education />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
+          
+          {/* صفحة 404 */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      )}
+    </>
+  )
+}
 
 function App() {
-  const [showWelcome, setShowWelcome] = useState(true)
-
   return (
     <DeveloperProvider>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-  
-        <AnimatePresence mode="wait">
-          {showWelcome && (
-            <WelcomeScreen onLoadingComplete={() => setShowWelcome(false)} />
-          )}
-        </AnimatePresence>
-
-        {!showWelcome && (
-          <Routes>
-            {/* الصفحات العامة */}
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            
-            {/* لوحة التحكم (محمية) */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<Overview />} />
-              <Route path="projects" element={<Projects />} />
-              <Route path="skills" element={<Skills />} />
-              <Route path="certificates" element={<Certificates />} />
-              <Route path="experience" element={<Experience />} />
-              <Route path="education" element={<Education />} />
-              <Route path="settings" element={<Settings />} />
-            </Route>
-            
-            {/* صفحة 404 */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        )}
+        <AppRoutes />
       </BrowserRouter>
     </DeveloperProvider>
   )
