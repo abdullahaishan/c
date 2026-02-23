@@ -1,5 +1,4 @@
-import React, { useState } from 'react'
-import { useDeveloper } from '../../context/DeveloperContext'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { developerService, storageService, socialLinkService } from '../../lib/supabase'
 import { SOCIAL_PLATFORMS } from '../../utils/constants'
@@ -25,34 +24,74 @@ import {
 } from 'lucide-react'
 
 const Settings = () => {
-  const { developer, refresh } = useDeveloper()
   const { user } = useAuth()
-  const [loading, setLoading] = useState(false)
+  const [developer, setDeveloper] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [activeTab, setActiveTab] = useState('profile')
 
+  // جلب بيانات المطور عند تحميل الصفحة
+  useEffect(() => {
+    fetchDeveloper()
+  }, [user])
+
+  const fetchDeveloper = async () => {
+    if (!user) return
+    setLoading(true)
+    try {
+      const data = await developerService.getById(user.id)
+      setDeveloper(data)
+    } catch (err) {
+      console.error('Error fetching developer:', err)
+      setError('فشل في جلب بيانات المطور')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   // بيانات الملف الشخصي
   const [profileData, setProfileData] = useState({
-    full_name: developer?.full_name || '',
-    title: developer?.title || '',
-    bio: developer?.bio || '',
-    location: developer?.location || '',
-    phone: developer?.phone || '',
-    profile_image: developer?.profile_image || null,
-    cover_image: developer?.cover_image || null,
-    resume_file: developer?.resume_file || null
+    full_name: '',
+    title: '',
+    bio: '',
+    location: '',
+    phone: '',
+    profile_image: null,
+    cover_image: null,
+    resume_file: null
   })
 
+  // تحديث profileData عندما يتغير developer
+  useEffect(() => {
+    if (developer) {
+      setProfileData({
+        full_name: developer.full_name || '',
+        title: developer.title || '',
+        bio: developer.bio || '',
+        location: developer.location || '',
+        phone: developer.phone || '',
+        profile_image: developer.profile_image || null,
+        cover_image: developer.cover_image || null,
+        resume_file: developer.resume_file || null
+      })
+    }
+  }, [developer])
+
   // روابط التواصل
-  const [socialLinks, setSocialLinks] = useState(() => {
-    const links = {}
-    developer?.social_links?.forEach(link => {
-      links[link.platform] = link.url
-    })
-    return links
-  })
+  const [socialLinks, setSocialLinks] = useState({})
+
+  useEffect(() => {
+    if (developer?.social_links) {
+      const links = {}
+      developer.social_links.forEach(link => {
+        links[link.platform] = link.url
+      })
+      setSocialLinks(links)
+    }
+  }, [developer])
 
   // كلمة المرور
   const [passwordData, setPasswordData] = useState({
@@ -68,12 +107,12 @@ const Settings = () => {
     try {
       const imageUrl = await storageService.uploadImage(
         file,
-        `profiles/${developer.id}`
+        `profiles/${user.id}`
       )
       return imageUrl
     } catch (err) {
       console.error('Error uploading image:', err)
-      setError('Failed to upload image')
+      setError('فشل في رفع الصورة')
       return null
     } finally {
       setUploading(false)
@@ -104,7 +143,7 @@ const Settings = () => {
     const file = e.target.files[0]
     if (!file) return
     if (file.type !== 'application/pdf') {
-      setError('Please upload a PDF file')
+      setError('الرجاء رفع ملف PDF')
       return
     }
 
@@ -112,79 +151,79 @@ const Settings = () => {
     try {
       const fileUrl = await storageService.uploadImage(
         file,
-        `resumes/${developer.id}`
+        `resumes/${user.id}`
       )
       setProfileData({ ...profileData, resume_file: fileUrl })
     } catch (err) {
       console.error('Error uploading resume:', err)
-      setError('Failed to upload resume')
+      setError('فشل في رفع السيرة الذاتية')
     } finally {
       setUploading(false)
     }
   }
 
   const handleSaveProfile = async () => {
-    setLoading(true)
+    setSaving(true)
     setError('')
     setSuccess('')
 
     try {
-      await developerService.update(developer.id, profileData)
-      setSuccess('Profile updated successfully')
-      refresh()
+      await developerService.update(user.id, profileData)
+      setSuccess('تم تحديث الملف الشخصي بنجاح')
+      fetchDeveloper() // إعادة جلب البيانات
     } catch (err) {
       console.error('Error updating profile:', err)
-      setError('Failed to update profile')
+      setError('فشل في تحديث الملف الشخصي')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
   const handleSaveSocialLinks = async () => {
-    setLoading(true)
+    setSaving(true)
     setError('')
     setSuccess('')
 
     try {
       for (const [platform, url] of Object.entries(socialLinks)) {
         if (url) {
-          await socialLinkService.upsert(developer.id, platform, url)
+          await socialLinkService.upsert(user.id, platform, url)
         }
       }
-      setSuccess('Social links updated successfully')
-      refresh()
+      setSuccess('تم تحديث روابط التواصل بنجاح')
+      fetchDeveloper()
     } catch (err) {
       console.error('Error updating social links:', err)
-      setError('Failed to update social links')
+      setError('فشل في تحديث روابط التواصل')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
   const handleChangePassword = async () => {
     if (passwordData.new !== passwordData.confirm) {
-      setError('Passwords do not match')
+      setError('كلمة المرور الجديدة غير متطابقة')
       return
     }
 
     if (passwordData.new.length < 6) {
-      setError('Password must be at least 6 characters')
+      setError('كلمة المرور يجب أن تكون 6 أحرف على الأقل')
       return
     }
 
-    setLoading(true)
+    setSaving(true)
     setError('')
     setSuccess('')
 
     try {
       // هنا يمكن إضافة منطق تغيير كلمة المرور
-      setSuccess('Password changed successfully')
+      setSuccess('تم تغيير كلمة المرور بنجاح')
       setPasswordData({ current: '', new: '', confirm: '' })
     } catch (err) {
       console.error('Error changing password:', err)
-      setError('Failed to change password')
+      setError('فشل في تغيير كلمة المرور')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
@@ -201,11 +240,22 @@ const Settings = () => {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#030014] flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="w-12 h-12 text-[#6366f1] animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">جاري تحميل الإعدادات...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Settings</h1>
+        <h1 className="text-2xl font-bold text-white">الإعدادات</h1>
       </div>
 
       {/* Tabs */}
@@ -218,7 +268,7 @@ const Settings = () => {
               : 'text-gray-400 hover:text-white hover:bg-white/5'
           }`}
         >
-          Profile
+          الملف الشخصي
         </button>
         <button
           onClick={() => setActiveTab('social')}
@@ -228,7 +278,7 @@ const Settings = () => {
               : 'text-gray-400 hover:text-white hover:bg-white/5'
           }`}
         >
-          Social Links
+          روابط التواصل
         </button>
         <button
           onClick={() => setActiveTab('security')}
@@ -238,7 +288,7 @@ const Settings = () => {
               : 'text-gray-400 hover:text-white hover:bg-white/5'
           }`}
         >
-          Security
+          الأمان
         </button>
       </div>
 
@@ -270,14 +320,14 @@ const Settings = () => {
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <span className="text-white/30">Cover Image</span>
+                <span className="text-white/30">صورة الغلاف</span>
               </div>
             )}
             
             {/* Upload button */}
             <label className="absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-black/50 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-black/70 transition-all">
               <Upload className="w-4 h-4 text-white" />
-              <span className="text-white text-sm">Change Cover</span>
+              <span className="text-white text-sm">تغيير الغلاف</span>
               <input
                 type="file"
                 accept="image/*"
@@ -318,7 +368,7 @@ const Settings = () => {
 
             {/* Username */}
             <div className="flex-1 pb-4">
-              <p className="text-sm text-gray-400">Username</p>
+              <p className="text-sm text-gray-400">اسم المستخدم</p>
               <p className="text-lg text-white">@{developer?.username}</p>
             </div>
           </div>
@@ -326,7 +376,7 @@ const Settings = () => {
           {/* Profile Form */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Full Name</label>
+              <label className="block text-sm text-gray-400 mb-2">الاسم الكامل</label>
               <input
                 type="text"
                 value={profileData.full_name}
@@ -335,27 +385,27 @@ const Settings = () => {
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Title</label>
+              <label className="block text-sm text-gray-400 mb-2">المسمى الوظيفي</label>
               <input
                 type="text"
                 value={profileData.title}
                 onChange={(e) => setProfileData({ ...profileData, title: e.target.value })}
                 className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                placeholder="e.g., Frontend Developer"
+                placeholder="مثال: مطور واجهات أمامية"
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Location</label>
+              <label className="block text-sm text-gray-400 mb-2">الموقع</label>
               <input
                 type="text"
                 value={profileData.location}
                 onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
                 className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                placeholder="e.g., Cairo, Egypt"
+                placeholder="مثال: القاهرة، مصر"
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Phone</label>
+              <label className="block text-sm text-gray-400 mb-2">رقم الهاتف</label>
               <input
                 type="tel"
                 value={profileData.phone}
@@ -368,19 +418,19 @@ const Settings = () => {
 
           {/* Bio */}
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Bio</label>
+            <label className="block text-sm text-gray-400 mb-2">نبذة عنك</label>
             <textarea
               value={profileData.bio}
               onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
               rows="4"
               className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-              placeholder="Tell your story..."
+              placeholder="اكتب نبذة عن نفسك..."
             />
           </div>
 
           {/* Resume */}
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Resume (PDF)</label>
+            <label className="block text-sm text-gray-400 mb-2">السيرة الذاتية (PDF)</label>
             <div className="flex items-center gap-4">
               {profileData.resume_file ? (
                 <>
@@ -391,7 +441,7 @@ const Settings = () => {
                     className="flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30"
                   >
                     <Eye className="w-4 h-4" />
-                    View Resume
+                    عرض السيرة
                   </a>
                   <button
                     onClick={() => setProfileData({ ...profileData, resume_file: null })}
@@ -403,7 +453,7 @@ const Settings = () => {
               ) : (
                 <label className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg cursor-pointer hover:bg-white/10">
                   <Upload className="w-4 h-4 text-gray-400" />
-                  <span className="text-gray-300">Upload Resume</span>
+                  <span className="text-gray-300">رفع السيرة الذاتية</span>
                   <input
                     type="file"
                     accept=".pdf"
@@ -418,11 +468,11 @@ const Settings = () => {
           {/* Save button */}
           <button
             onClick={handleSaveProfile}
-            disabled={loading || uploading}
+            disabled={saving || uploading}
             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-[1.02] transition-all disabled:opacity-50"
           >
-            {loading ? <Loader className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-            Save Changes
+            {saving ? <Loader className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+            حفظ التغييرات
           </button>
         </div>
       )}
@@ -452,11 +502,11 @@ const Settings = () => {
 
           <button
             onClick={handleSaveSocialLinks}
-            disabled={loading}
+            disabled={saving}
             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-[1.02] transition-all disabled:opacity-50"
           >
-            {loading ? <Loader className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-            Save Social Links
+            {saving ? <Loader className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+            حفظ روابط التواصل
           </button>
         </div>
       )}
@@ -465,7 +515,7 @@ const Settings = () => {
       {activeTab === 'security' && (
         <div className="space-y-6 max-w-md">
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Current Password</label>
+            <label className="block text-sm text-gray-400 mb-2">كلمة المرور الحالية</label>
             <input
               type="password"
               value={passwordData.current}
@@ -475,7 +525,7 @@ const Settings = () => {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-2">New Password</label>
+            <label className="block text-sm text-gray-400 mb-2">كلمة المرور الجديدة</label>
             <input
               type="password"
               value={passwordData.new}
@@ -485,7 +535,7 @@ const Settings = () => {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Confirm New Password</label>
+            <label className="block text-sm text-gray-400 mb-2">تأكيد كلمة المرور الجديدة</label>
             <input
               type="password"
               value={passwordData.confirm}
@@ -496,11 +546,11 @@ const Settings = () => {
 
           <button
             onClick={handleChangePassword}
-            disabled={loading}
+            disabled={saving}
             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-[1.02] transition-all disabled:opacity-50"
           >
-            {loading ? <Loader className="w-5 h-5 animate-spin" /> : <Key className="w-5 h-5" />}
-            Change Password
+            {saving ? <Loader className="w-5 h-5 animate-spin" /> : <Key className="w-5 h-5" />}
+            تغيير كلمة المرور
           </button>
         </div>
       )}
