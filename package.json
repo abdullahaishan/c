@@ -24,6 +24,7 @@
     "@splinetool/runtime": "^1.9.37",
     "@supabase/supabase-js": "^2.39.0",
     "add": "^2.0.6",
+    "pdfjs-dist": "^4.0.379",
     "vite": "^5.4.10",
     "aos": "^2.3.4",
     "clsx": "^2.1.1",
