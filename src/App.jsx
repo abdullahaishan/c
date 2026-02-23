@@ -71,14 +71,15 @@ const AppRoutes = () => {
               </ProtectedRoute>
             }
           >
-            <Route path="plan-status" element={<PlanStatus />} />
-            <Route index element={<Overview />} />
+           <Route index element={<Overview />} />
             <Route path="projects" element={<Projects />} />
             <Route path="skills" element={<Skills />} />
             <Route path="certificates" element={<Certificates />} />
             <Route path="experience" element={<Experience />} />
             <Route path="education" element={<Education />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="plan-status" element={<PlanStatus />} />
+         
           </Route>
           
           {/* صفحة 404 */}
