@@ -2,7 +2,9 @@ import React, { useState } from 'react'
 import { BrowserRouter, Routes, Route } from "react-router-dom"
 import { AnimatePresence } from 'framer-motion'
 import "./index.css"
+import { BrowserRouter } from 'react-router-dom'
 
+    
 // الصفحات العامة
 import WelcomeScreen from './pages/WelcomeScreen'
 import LandingPage from './pages/LandingPage'
@@ -31,7 +33,8 @@ function App() {
 
   return (
     <DeveloperProvider>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+  
         <AnimatePresence mode="wait">
           {showWelcome && (
             <WelcomeScreen onLoadingComplete={() => setShowWelcome(false)} />
