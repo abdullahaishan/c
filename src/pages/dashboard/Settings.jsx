@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { developerService, socialLinkService } from '../../lib/supabase'
+import { developerService, socialLinkService, storageService } from '../../lib/supabase'
 import { supabase } from '../../lib/supabase'
 import { SOCIAL_PLATFORMS } from '../../utils/constants'
 import {
@@ -101,7 +101,7 @@ const Settings = () => {
     confirm: ''
   })
 
-  // ✅ دالة رفع الصورة الشخصية
+  // ✅ استخدام storageService لرفع الصور
   const handleProfileImageChange = async (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -110,39 +110,13 @@ const Settings = () => {
     setError('')
 
     try {
-      // التحقق من الملف
-      if (!file.type.startsWith('image/')) {
-        throw new Error('الملف ليس صورة')
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        throw new Error('الصورة أكبر من 5 ميجابايت')
-      }
-
-      // إنشاء اسم فريد للملف
-      const timestamp = Date.now()
-      const randomString = Math.random().toString(36).substring(2, 8)
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${timestamp}-${randomString}.${fileExt}`
-      const filePath = `profiles/${user.id}/${fileName}`
-
-      console.log('رفع إلى:', filePath)
-
-      // رفع الملف مباشرة إلى Supabase
-      const { error } = await supabase.storage
-        .from('developers')
-        .upload(filePath, file)
-
-      if (error) throw error
-
-      // الحصول على رابط الصورة
-      const { data } = supabase.storage
-        .from('developers')
-        .getPublicUrl(filePath)
-
-      // تحديث البيانات
-      setProfileData({ ...profileData, profile_image: data.publicUrl })
+      const imageUrl = await storageService.uploadProfileImage(
+        file, 
+        user.id, 
+        profileData.profile_image
+      )
+      setProfileData({ ...profileData, profile_image: imageUrl })
       setSuccess('تم رفع الصورة بنجاح')
-
     } catch (err) {
       console.error('خطأ:', err)
       setError('فشل في رفع الصورة: ' + err.message)
@@ -151,7 +125,6 @@ const Settings = () => {
     }
   }
 
-  // ✅ دالة رفع صورة الغلاف
   const handleCoverImageChange = async (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -160,28 +133,13 @@ const Settings = () => {
     setError('')
 
     try {
-      if (!file.type.startsWith('image/')) throw new Error('الملف ليس صورة')
-      if (file.size > 5 * 1024 * 1024) throw new Error('الصورة أكبر من 5 ميجابايت')
-
-      const timestamp = Date.now()
-      const randomString = Math.random().toString(36).substring(2, 8)
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${timestamp}-${randomString}.${fileExt}`
-      const filePath = `covers/${user.id}/${fileName}`
-
-      const { error } = await supabase.storage
-        .from('developers')
-        .upload(filePath, file)
-
-      if (error) throw error
-
-      const { data } = supabase.storage
-        .from('developers')
-        .getPublicUrl(filePath)
-
-      setProfileData({ ...profileData, cover_image: data.publicUrl })
+      const imageUrl = await storageService.uploadCoverImage(
+        file, 
+        user.id, 
+        profileData.cover_image
+      )
+      setProfileData({ ...profileData, cover_image: imageUrl })
       setSuccess('تم رفع الغلاف بنجاح')
-
     } catch (err) {
       console.error('خطأ:', err)
       setError('فشل في رفع الغلاف: ' + err.message)
@@ -190,7 +148,6 @@ const Settings = () => {
     }
   }
 
-  // ✅ دالة رفع السيرة الذاتية (PDF)
   const handleResumeUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -201,23 +158,13 @@ const Settings = () => {
 
     setUploading(true)
     try {
-      const timestamp = Date.now()
-      const fileName = `${timestamp}-${file.name}`
-      const filePath = `resumes/${user.id}/${fileName}`
-
-      const { error } = await supabase.storage
-        .from('developers')
-        .upload(filePath, file)
-
-      if (error) throw error
-
-      const { data } = supabase.storage
-        .from('developers')
-        .getPublicUrl(filePath)
-
-      setProfileData({ ...profileData, resume_file: data.publicUrl })
+      const fileUrl = await storageService.uploadResume(
+        file, 
+        user.id, 
+        profileData.resume_file
+      )
+      setProfileData({ ...profileData, resume_file: fileUrl })
       setSuccess('تم رفع السيرة الذاتية بنجاح')
-
     } catch (err) {
       console.error('Error uploading resume:', err)
       setError('فشل في رفع السيرة الذاتية')
