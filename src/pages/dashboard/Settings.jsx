@@ -1,7 +1,7 @@
-import { supabase } from '../../lib/supabase' // أضف هذا السطر
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { developerService, storageService, socialLinkService } from '../../lib/supabase'
+import { developerService, socialLinkService } from '../../lib/supabase'
+import { supabase } from '../../lib/supabase'
 import { SOCIAL_PLATFORMS } from '../../utils/constants'
 import {
   Save,
@@ -101,112 +101,96 @@ const Settings = () => {
     confirm: ''
   })
 
-  const handleImageUpload = async (file, type) => {
-    if (!file) return null
-    
+  // ✅ دالة رفع الصورة الشخصية
+  const handleProfileImageChange = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
     setUploading(true)
+    setError('')
+
     try {
-      const imageUrl = await storageService.uploadImage(
-        file,
-        `profiles/${user.id}`
-      )
-      return imageUrl
+      // التحقق من الملف
+      if (!file.type.startsWith('image/')) {
+        throw new Error('الملف ليس صورة')
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error('الصورة أكبر من 5 ميجابايت')
+      }
+
+      // إنشاء اسم فريد للملف
+      const timestamp = Date.now()
+      const randomString = Math.random().toString(36).substring(2, 8)
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${timestamp}-${randomString}.${fileExt}`
+      const filePath = `profiles/${user.id}/${fileName}`
+
+      console.log('رفع إلى:', filePath)
+
+      // رفع الملف مباشرة إلى Supabase
+      const { error } = await supabase.storage
+        .from('developers')
+        .upload(filePath, file)
+
+      if (error) throw error
+
+      // الحصول على رابط الصورة
+      const { data } = supabase.storage
+        .from('developers')
+        .getPublicUrl(filePath)
+
+      // تحديث البيانات
+      setProfileData({ ...profileData, profile_image: data.publicUrl })
+      setSuccess('تم رفع الصورة بنجاح')
+
     } catch (err) {
-      console.error('Error uploading image:', err)
-      setError('فشل في رفع الصورة')
-      return null
+      console.error('خطأ:', err)
+      setError('فشل في رفع الصورة: ' + err.message)
     } finally {
       setUploading(false)
     }
   }
 
-  const handleProfileImageChange = async (e) => {
-  const file = e.target.files[0]
-  if (!file) return
-
-  setUploading(true)
-  setError('')
-
-  try {
-    // التحقق من الملف
-    if (!file.type.startsWith('image/')) {
-      throw new Error('الملف ليس صورة')
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      throw new Error('الصورة أكبر من 5 ميجابايت')
-    }
-
-    // إنشاء اسم فريد للملف
-    const timestamp = Date.now()
-    const randomString = Math.random().toString(36).substring(2, 8)
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${timestamp}-${randomString}.${fileExt}`
-    const filePath = `profiles/${user.id}/${fileName}`
-
-    console.log('رفع إلى:', filePath)
-
-    // رفع الملف مباشرة إلى Supabase
-    const { error } = await supabase.storage
-      .from('developers')
-      .upload(filePath, file)
-
-    if (error) throw error
-
-    // الحصول على رابط الصورة
-    const { data } = supabase.storage
-      .from('developers')
-      .getPublicUrl(filePath)
-
-    // تحديث البيانات
-    setProfileData({ ...profileData, profile_image: data.publicUrl })
-    setSuccess('تم رفع الصورة بنجاح')
-
-  } catch (err) {
-    console.error('خطأ:', err)
-    setError('فشل في رفع الصورة: ' + err.message)
-  } finally {
-    setUploading(false)
-  }
-}
-
+  // ✅ دالة رفع صورة الغلاف
   const handleCoverImageChange = async (e) => {
-  const file = e.target.files[0]
-  if (!file) return
+    const file = e.target.files[0]
+    if (!file) return
 
-  setUploading(true)
-  setError('')
+    setUploading(true)
+    setError('')
 
-  try {
-    if (!file.type.startsWith('image/')) throw new Error('الملف ليس صورة')
-    if (file.size > 5 * 1024 * 1024) throw new Error('الصورة أكبر من 5 ميجابايت')
+    try {
+      if (!file.type.startsWith('image/')) throw new Error('الملف ليس صورة')
+      if (file.size > 5 * 1024 * 1024) throw new Error('الصورة أكبر من 5 ميجابايت')
 
-    const timestamp = Date.now()
-    const randomString = Math.random().toString(36).substring(2, 8)
-    const fileExt = file.name.split('.').pop()
-    const fileName = `${timestamp}-${randomString}.${fileExt}`
-    const filePath = `covers/${user.id}/${fileName}`
+      const timestamp = Date.now()
+      const randomString = Math.random().toString(36).substring(2, 8)
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${timestamp}-${randomString}.${fileExt}`
+      const filePath = `covers/${user.id}/${fileName}`
 
-    const { error } = await supabase.storage
-      .from('developers')
-      .upload(filePath, file)
+      const { error } = await supabase.storage
+        .from('developers')
+        .upload(filePath, file)
 
-    if (error) throw error
+      if (error) throw error
 
-    const { data } = supabase.storage
-      .from('developers')
-      .getPublicUrl(filePath)
+      const { data } = supabase.storage
+        .from('developers')
+        .getPublicUrl(filePath)
 
-    setProfileData({ ...profileData, cover_image: data.publicUrl })
-    setSuccess('تم رفع الغلاف بنجاح')
+      setProfileData({ ...profileData, cover_image: data.publicUrl })
+      setSuccess('تم رفع الغلاف بنجاح')
 
-  } catch (err) {
-    console.error('خطأ:', err)
-    setError('فشل في رفع الغلاف: ' + err.message)
-  } finally {
-    setUploading(false)
+    } catch (err) {
+      console.error('خطأ:', err)
+      setError('فشل في رفع الغلاف: ' + err.message)
+    } finally {
+      setUploading(false)
+    }
   }
-}
 
+  // ✅ دالة رفع السيرة الذاتية (PDF)
   const handleResumeUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -217,11 +201,23 @@ const Settings = () => {
 
     setUploading(true)
     try {
-      const fileUrl = await storageService.uploadImage(
-        file,
-        `resumes/${user.id}`
-      )
-      setProfileData({ ...profileData, resume_file: fileUrl })
+      const timestamp = Date.now()
+      const fileName = `${timestamp}-${file.name}`
+      const filePath = `resumes/${user.id}/${fileName}`
+
+      const { error } = await supabase.storage
+        .from('developers')
+        .upload(filePath, file)
+
+      if (error) throw error
+
+      const { data } = supabase.storage
+        .from('developers')
+        .getPublicUrl(filePath)
+
+      setProfileData({ ...profileData, resume_file: data.publicUrl })
+      setSuccess('تم رفع السيرة الذاتية بنجاح')
+
     } catch (err) {
       console.error('Error uploading resume:', err)
       setError('فشل في رفع السيرة الذاتية')
@@ -238,7 +234,7 @@ const Settings = () => {
     try {
       await developerService.update(user.id, profileData)
       setSuccess('تم تحديث الملف الشخصي بنجاح')
-      fetchDeveloper() // إعادة جلب البيانات
+      fetchDeveloper()
     } catch (err) {
       console.error('Error updating profile:', err)
       setError('فشل في تحديث الملف الشخصي')
@@ -284,7 +280,6 @@ const Settings = () => {
     setSuccess('')
 
     try {
-      // هنا يمكن إضافة منطق تغيير كلمة المرور
       setSuccess('تم تغيير كلمة المرور بنجاح')
       setPasswordData({ current: '', new: '', confirm: '' })
     } catch (err) {
