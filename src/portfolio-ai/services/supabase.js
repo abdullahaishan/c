@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 // ===========================================
 // 🔧 IMPORTANT: استبدل هذه القيم بمشروع Supabase الخاص بك
 // ===========================================
-const supabaseUrl = 'YOUR_SUPABASE_URL'; // مثال: https://xyzabc.supabase.co
-const supabaseKey = 'YOUR_SUPABASE_ANON_KEY'; // المفتاح العام (anon key)
+const supabaseUrl = 'https://qfgolfcwpqwqkiwpgyfm.supabase.co'; // مثال: https://xyzabc.supabase.co
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmZ29sZmN3cHF3cWtpd3BneWZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NTkxMDcsImV4cCI6MjA4NzMzNTEwN30.ww71bWQLzsehnibbXV6_-gUikq64nn0fMRsi6CjHHqQ'; // المفتاح العام (anon key)
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
