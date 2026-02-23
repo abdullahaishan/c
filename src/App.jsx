@@ -9,6 +9,9 @@ import LandingPage from './pages/LandingPage'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 
+// AI Builder
+import Builder from './portfolio-ai/pages/Builder'
+
 // صفحات لوحة التحكم
 import ProtectedRoute from './components/ProtectedRoute'
 import DashboardLayout from './pages/dashboard/DashboardLayout'
@@ -19,18 +22,18 @@ import Certificates from './pages/dashboard/Certificates'
 import Experience from './pages/dashboard/Experience'
 import Education from './pages/dashboard/Education'
 import Settings from './pages/dashboard/Settings'
+import PlanStatus from './pages/dashboard/PlanStatus'
 
 // صفحة 404
 import NotFound from './pages/NotFound'
 
 // Providers
-import { DeveloperProvider } from './context/DeveloperContext';
+import { DeveloperProvider } from './context/DeveloperContext'
 import { useAuth } from './hooks/useAuth'
 
-// مكون التوجيه الذكي
 const AppRoutes = () => {
   const [showWelcome, setShowWelcome] = useState(true)
-  const { user, loading } = useAuth() // ✅ فقط user و loading
+  const { user, loading } = useAuth()
 
   if (loading) {
     return (
@@ -62,7 +65,17 @@ const AppRoutes = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           
-          {/* لوحة التحكم - للمستخدمين المسجلين فقط */}
+          {/* AI Builder - للمستخدمين المسجلين */}
+          <Route 
+            path="/app/builder" 
+            element={
+              <ProtectedRoute>
+                <Builder />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* لوحة التحكم - للمستخدمين المسجلين */}
           <Route 
             path="/dashboard" 
             element={
@@ -71,14 +84,14 @@ const AppRoutes = () => {
               </ProtectedRoute>
             }
           >
-           <Route index element={<Overview />} />
+            <Route index element={<Overview />} />
             <Route path="projects" element={<Projects />} />
             <Route path="skills" element={<Skills />} />
             <Route path="certificates" element={<Certificates />} />
             <Route path="experience" element={<Experience />} />
             <Route path="education" element={<Education />} />
             <Route path="settings" element={<Settings />} />
-            
+            <Route path="plan-status" element={<PlanStatus />} />
           </Route>
           
           {/* صفحة 404 */}
