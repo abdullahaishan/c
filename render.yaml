@@ -1,7 +1,7 @@
 services:
   - type: web
     name: portfolio-v5
-    runtime: static
+    env: static
     buildCommand: npm install --legacy-peer-deps && npm run build
     staticPublishPath: ./dist
     routes:
