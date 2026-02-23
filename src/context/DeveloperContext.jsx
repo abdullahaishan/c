@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react'
-import { useParams, useLocation } from 'react-router-dom'
-import { developerService, storageService } from '../lib/supabase'
+import { useParams } from 'react-router-dom'
+import { developerService } from '../lib/supabase'
 
 const DeveloperContext = createContext()
 
@@ -14,52 +14,44 @@ export const useDeveloper = () => {
 
 export const DeveloperProvider = ({ children }) => {
   const { username } = useParams()
-  const location = useLocation()
   const [developer, setDeveloper] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  // تحديد اسم المستخدم من الرابط
-  const currentUsername = username || 'eki' // المطور الرئيسي
+  // هل نحن في صفحة مطور عام؟
+  const isPublicPage = window.location.pathname.startsWith('/u/')
 
   useEffect(() => {
-    loadDeveloper()
-  }, [currentUsername])
-
-  const loadDeveloper = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      console.log('Loading developer:', currentUsername)
-      
-      const data = await developerService.getByUsername(currentUsername)
-      setDeveloper(data)
-      
-      // تسجيل الزيارة إذا كان المطور موجوداً
-      if (data) {
-        // زيادة عدد المشاهدات
-        await developerService.incrementViews(data.id)
-        
-        // تسجيل معلومات الزائر
-        const visitorData = {
-          visitor_ip: 'visitor', // في الإنتاج نحصل على IP حقيقي
-          device_type: window.innerWidth < 768 ? 'mobile' : 'desktop',
-          browser: navigator.userAgent,
-          referrer: document.referrer || 'direct'
-        }
-        
-        await developerService.trackVisit(data.id, visitorData)
-      }
-    } catch (err) {
-      console.error('Error loading developer:', err)
-      setError('المطور غير موجود')
-    } finally {
-      setLoading(false)
+    // فقط إذا كنا في صفحة عامة نحمل بيانات المطور
+    if (!isPublicPage || !username) {
+      return
     }
-  }
 
-  // دوال مساعدة للوصول السريع للبيانات
+    const loadDeveloper = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        console.log('Loading public developer:', username)
+        
+        const data = await developerService.getByUsername(username)
+        setDeveloper(data)
+        
+        // تسجيل الزيارة
+        if (data) {
+          await developerService.incrementViews(data.id)
+        }
+      } catch (err) {
+        console.error('Error loading developer:', err)
+        setError('المطور غير موجود')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadDeveloper()
+  }, [username, isPublicPage])
+
+  // دوال مساعدة - فقط للصفحات العامة
   const getProjects = () => developer?.projects || []
   const getSkills = () => developer?.skills || []
   const getCertificates = () => developer?.certificates || []
@@ -73,22 +65,18 @@ export const DeveloperProvider = ({ children }) => {
     return links
   }
 
-  // الحصول على الصور (مع fallback للصور الافتراضية)
   const getProfileImage = () => {
     return developer?.profile_image || '/default-avatar.png'
   }
 
-  const getCoverImage = () => {
-    return developer?.cover_image || '/default-cover.jpg'
-  }
-
   const value = {
-    // البيانات الأساسية
-    developer,
-    loading,
-    error,
+    // للصفحات العامة فقط
+    publicDeveloper: developer,
+    publicLoading: loading,
+    publicError: error,
+    isPublicPage,
     
-    // الدوال المساعدة
+    // دوال مساعدة
     getProjects,
     getSkills,
     getCertificates,
@@ -96,14 +84,6 @@ export const DeveloperProvider = ({ children }) => {
     getEducation,
     getSocialLinks,
     getProfileImage,
-    getCoverImage,
-    
-    // معلومات إضافية
-    isLoaded: !loading && developer !== null,
-    username: currentUsername,
-    
-    // إعادة التحميل
-    refresh: loadDeveloper
   }
 
   return (
