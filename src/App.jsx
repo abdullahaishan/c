@@ -10,7 +10,7 @@ import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 
 // AI Builder
-import Builder from './portfolio-ai/pages/Builder'
+import Builder from './pages/Builder'
 
 // صفحات لوحة التحكم
 import ProtectedRoute from './components/ProtectedRoute'
