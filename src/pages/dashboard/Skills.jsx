@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { useDeveloper } from '../../context/DeveloperContext'
+import React, { useState, useEffect } from 'react'
+import { useAuth } from '../../hooks/useAuth'
 import { usePlan } from '../../hooks/usePlan'
 import { skillService } from '../../lib/supabase'
 import { SKILL_CATEGORIES, PROFICIENCY_LEVELS, SKILL_GRADIENTS } from '../../utils/constants'
@@ -16,12 +16,13 @@ import {
 } from 'lucide-react'
 
 const Skills = () => {
-  const { developer, getSkills, refresh } = useDeveloper()
+  const { user } = useAuth() // ✅ استخدم useAuth بدلاً من useDeveloper
   const { checkLimit, limits } = usePlan()
-  const [skills, setSkills] = useState(getSkills())
-  const [editingId, setEditingId] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [skills, setSkills] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [editingId, setEditingId] = useState(null)
 
   // نموذج مهارة جديدة
   const [newSkill, setNewSkill] = useState({
@@ -31,19 +32,39 @@ const Skills = () => {
     icon: ''
   })
 
+  // جلب المهارات عند تحميل الصفحة
+  useEffect(() => {
+    fetchSkills()
+  }, [user])
+
+  const fetchSkills = async () => {
+    if (!user) return
+    
+    setLoading(true)
+    try {
+      const data = await skillService.getByDeveloperId(user.id)
+      setSkills(data || [])
+    } catch (err) {
+      console.error('Error fetching skills:', err)
+      setError('فشل في جلب المهارات')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleAddSkill = async () => {
     // التحقق من حدود الباقة
     if (!checkLimit('skills', skills.length)) {
-      setError(`You've reached the maximum limit of ${limits.maxSkills} skills`)
+      setError(`لقد وصلت للحد الأقصى (${limits.maxSkills} مهارة)`)
       return
     }
 
     if (!newSkill.name) {
-      setError('Skill name is required')
+      setError('اسم المهارة مطلوب')
       return
     }
 
-    setLoading(true)
+    setSaving(true)
     setError('')
 
     try {
@@ -55,7 +76,7 @@ const Skills = () => {
         display_order: skills.length
       }
 
-      const created = await skillService.create(developer.id, skillData)
+      const created = await skillService.create(user.id, skillData)
       setSkills([...skills, created])
       
       // إعادة تعيين النموذج
@@ -67,38 +88,35 @@ const Skills = () => {
       })
     } catch (err) {
       console.error('Error adding skill:', err)
-      setError('Failed to add skill')
+      setError('فشل في إضافة المهارة')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
   const handleUpdateSkill = async (id, updates) => {
-    setLoading(true)
+    setSaving(true)
     try {
       const updated = await skillService.update(id, updates)
       setSkills(skills.map(s => s.id === id ? updated : s))
       setEditingId(null)
     } catch (err) {
       console.error('Error updating skill:', err)
-      setError('Failed to update skill')
+      setError('فشل في تحديث المهارة')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
   const handleDeleteSkill = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this skill?')) return
+    if (!window.confirm('هل أنت متأكد من حذف هذه المهارة؟')) return
 
-    setLoading(true)
     try {
       await skillService.delete(id)
       setSkills(skills.filter(s => s.id !== id))
     } catch (err) {
       console.error('Error deleting skill:', err)
-      setError('Failed to delete skill')
-    } finally {
-      setLoading(false)
+      setError('فشل في حذف المهارة')
     }
   }
 
@@ -138,11 +156,22 @@ const Skills = () => {
     return acc
   }, {})
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#030014] flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="w-12 h-12 text-[#6366f1] animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">جاري تحميل مهاراتك...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Skills</h1>
+        <h1 className="text-2xl font-bold text-white">المهارات</h1>
         <div className="text-sm text-gray-400">
           {skills.length} / {limits.maxSkills === -1 ? '∞' : limits.maxSkills}
         </div>
@@ -156,64 +185,62 @@ const Skills = () => {
         </div>
       )}
 
-      {/* Add new skill form */}
-      {checkLimit('skills', skills.length) && (
-        <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-          <h2 className="text-lg font-semibold text-white mb-4">Add New Skill</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Skill name */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Skill Name *</label>
-              <input
-                type="text"
-                value={newSkill.name}
-                onChange={(e) => setNewSkill({ ...newSkill, name: e.target.value })}
-                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                placeholder="e.g., React"
-              />
-            </div>
-
-            {/* Category */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Category</label>
-              <select
-                value={newSkill.category}
-                onChange={(e) => setNewSkill({ ...newSkill, category: e.target.value })}
-                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-              >
-                {SKILL_CATEGORIES.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Proficiency */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Proficiency</label>
-              <select
-                value={newSkill.proficiency}
-                onChange={(e) => setNewSkill({ ...newSkill, proficiency: Number(e.target.value) })}
-                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-              >
-                {PROFICIENCY_LEVELS.map(level => (
-                  <option key={level.value} value={level.value}>{level.label}</option>
-                ))}
-              </select>
-            </div>
+      {/* Add new skill form - يظهر دائماً */}
+      <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
+        <h2 className="text-lg font-semibold text-white mb-4">إضافة مهارة جديدة</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Skill name */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">اسم المهارة *</label>
+            <input
+              type="text"
+              value={newSkill.name}
+              onChange={(e) => setNewSkill({ ...newSkill, name: e.target.value })}
+              className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+              placeholder="مثال: React"
+            />
           </div>
 
-          {/* Submit button */}
-          <button
-            onClick={handleAddSkill}
-            disabled={loading || !newSkill.name}
-            className="mt-4 flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-[1.02] transition-all disabled:opacity-50"
-          >
-            {loading ? <Loader className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-            Add Skill
-          </button>
+          {/* Category */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">التصنيف</label>
+            <select
+              value={newSkill.category}
+              onChange={(e) => setNewSkill({ ...newSkill, category: e.target.value })}
+              className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+            >
+              {SKILL_CATEGORIES.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Proficiency */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">نسبة الإتقان</label>
+            <select
+              value={newSkill.proficiency}
+              onChange={(e) => setNewSkill({ ...newSkill, proficiency: Number(e.target.value) })}
+              className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+            >
+              {PROFICIENCY_LEVELS.map(level => (
+                <option key={level.value} value={level.value}>{level.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
-      )}
+
+        {/* Submit button */}
+        <button
+          onClick={handleAddSkill}
+          disabled={saving || !newSkill.name}
+          className="mt-4 flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-[1.02] transition-all disabled:opacity-50"
+        >
+          {saving ? <Loader className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+          إضافة مهارة
+        </button>
+      </div>
 
       {/* Skills by category */}
       <div className="space-y-6">
@@ -242,8 +269,8 @@ const Skills = () => {
         {skills.length === 0 && (
           <div className="text-center py-12">
             <AlertCircle className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400">No skills yet</p>
-            <p className="text-sm text-gray-500">Add your skills to showcase your expertise</p>
+            <p className="text-gray-400">لا توجد مهارات بعد</p>
+            <p className="text-sm text-gray-500">أضف مهاراتك من النموذج أعلاه</p>
           </div>
         )}
       </div>
@@ -251,7 +278,7 @@ const Skills = () => {
   )
 }
 
-// مكون بطاقة المهارة
+// مكون بطاقة المهارة (نفس الكود مع ترجمة الأزرار)
 const SkillCard = ({ 
   skill, 
   index, 
@@ -275,6 +302,7 @@ const SkillCard = ({
             value={editData.name}
             onChange={(e) => setEditData({ ...editData, name: e.target.value })}
             className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+            placeholder="اسم المهارة"
           />
           <select
             value={editData.category}
@@ -300,13 +328,13 @@ const SkillCard = ({
               className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600"
             >
               <Save className="w-4 h-4" />
-              Save
+              حفظ
             </button>
             <button
               onClick={onEdit}
               className="px-3 py-2 bg-white/10 text-white rounded-lg text-sm hover:bg-white/20"
             >
-              Cancel
+              إلغاء
             </button>
           </div>
         </div>
@@ -349,7 +377,7 @@ const SkillCard = ({
       {/* Proficiency bar */}
       <div className="mt-3">
         <div className="flex items-center justify-between text-xs mb-1">
-          <span className="text-gray-400">Proficiency</span>
+          <span className="text-gray-400">نسبة الإتقان</span>
           <span className="text-white">{skill.proficiency}%</span>
         </div>
         <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
