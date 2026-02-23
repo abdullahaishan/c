@@ -1,3 +1,4 @@
+import { supabase } from '../../lib/supabase' // أضف هذا السطر
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { developerService, storageService, socialLinkService } from '../../lib/supabase'
