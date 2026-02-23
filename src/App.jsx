@@ -27,7 +27,7 @@ import Builder from './pages/Builder'
 import NotFound from './pages/NotFound'
 
 // Providers
-import { DeveloperProvider } from './context/DeveloperProvider'
+import { DeveloperProvider } from './context/DeveloperContext';
 import { useAuth } from './hooks/useAuth' // لاستخدام التوجيه الذكي
 
 // مكون التوجيه الذكي
