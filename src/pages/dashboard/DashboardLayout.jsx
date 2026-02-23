@@ -13,7 +13,9 @@ import {
   User,
   Code,
   ChevronDown,
-  Bell
+  Bell,
+  Sparkles, // 🆕 أضف هذا
+  Crown  
 } from 'lucide-react'
 
 const DashboardLayout = () => {
