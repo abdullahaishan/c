@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../hooks/useAuth';
 import { deepseekService } from '../services/deepseek';
 import { portfolioService } from '../services/supabase';
 import { Upload, FileText, Sparkles, Loader, CheckCircle, AlertCircle } from 'lucide-react';
