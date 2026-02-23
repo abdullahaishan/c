@@ -1,15 +1,19 @@
 services:
   - type: web
-    name: portfolio
-    env: static
-    buildCommand: npm install && npm run build
+    name: portfolio-v5
+    runtime: static
+    buildCommand: npm install --legacy-peer-deps && npm run build
     staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
     envVars:
       - key: VITE_SUPABASE_URL
-        sync: false
+        value: https://qfgolfcwpqwqkiwpgyfm.supabase.co
       - key: VITE_SUPABASE_ANON_KEY
-        sync: false
-routes:
-  - type: rewrite
-    source: /*
-    destination: /index.html
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmZ29sZmN3cHF3cWtpd3BneWZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NTkxMDcsImV4cCI6MjA4NzMzNTEwN30.ww71bWQLzsehnibbXV6_-gUikq64nn0fMRsi6CjHHqQ
