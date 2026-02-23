@@ -1,14 +1,16 @@
 import { useAuth } from './useAuth'
+import { supabase } from '../lib/supabase'
 
 // حدود الباقات
 const PLAN_LIMITS = {
   1: { // Free
-    maxProjects: 3,
-    maxSkills: 10,
-    maxCertificates: 3,
-    maxExperience: 5,
-    maxEducation: 5,
-    storageLimit: 50, // MB
+    maxProjects: 1,
+    maxSkills: 2,
+    maxCertificates: 1,
+    maxExperience: 1,
+    maxEducation: 1,
+    storageLimit: 50,
+    aiAnalysisCount: 1, // ✅ تحليل واحد مجاني
     canCustomDomain: false,
     canRemoveBranding: false,
     canAnalytics: false
@@ -20,6 +22,7 @@ const PLAN_LIMITS = {
     maxExperience: 10,
     maxEducation: 10,
     storageLimit: 200,
+    aiAnalysisCount: 5, // ✅ 5 تحليلات
     canCustomDomain: false,
     canRemoveBranding: false,
     canAnalytics: true
@@ -31,6 +34,7 @@ const PLAN_LIMITS = {
     maxExperience: 20,
     maxEducation: 20,
     storageLimit: 500,
+    aiAnalysisCount: 20, // ✅ 20 تحليل
     canCustomDomain: true,
     canRemoveBranding: true,
     canAnalytics: true
@@ -42,6 +46,7 @@ const PLAN_LIMITS = {
     maxExperience: 50,
     maxEducation: 50,
     storageLimit: 2000,
+    aiAnalysisCount: -1, // ✅ غير محدود
     canCustomDomain: true,
     canRemoveBranding: true,
     canAnalytics: true
@@ -53,6 +58,31 @@ export const usePlan = () => {
 
   const getPlanId = () => user?.plan_id || 1
   const getPlanLimits = () => PLAN_LIMITS[getPlanId()] || PLAN_LIMITS[1]
+
+  // ✅ دالة جديدة لجلب عدد التحليلات المتبقية
+  const getRemainingAnalyses = async () => {
+    if (!user) return 0
+    
+    try {
+      const { count, error } = await supabase
+        .from('ai_analyses')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+      
+      if (error) {
+        console.error('Error counting analyses:', error)
+        return 0
+      }
+      
+      const limits = getPlanLimits()
+      if (limits.aiAnalysisCount === -1) return Infinity // غير محدود
+      
+      return Math.max(0, limits.aiAnalysisCount - (count || 0))
+    } catch (error) {
+      console.error('Error in getRemainingAnalyses:', error)
+      return 0
+    }
+  }
 
   const checkLimit = (type, currentCount) => {
     const limits = getPlanLimits()
@@ -99,9 +129,10 @@ export const usePlan = () => {
     checkLimit,
     canUseFeature,
     getRemainingStorage,
+    getRemainingAnalyses, // ✅ تم إضافة هذه الدالة
     isFree: getPlanId() === 1,
     isBasic: getPlanId() === 2,
     isPro: getPlanId() === 3,
     isEnterprise: getPlanId() === 4
   }
-}
+    }
