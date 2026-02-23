@@ -26,14 +26,16 @@ const DashboardLayout = () => {
   const navigate = useNavigate()
 
   const navigation = [
-    { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
-    { name: 'Skills', href: '/dashboard/skills', icon: Code },
-    { name: 'Certificates', href: '/dashboard/certificates', icon: Award },
-    { name: 'Experience', href: '/dashboard/experience', icon: Briefcase },
-    { name: 'Education', href: '/dashboard/education', icon: GraduationCap },
-    { name: 'Settings', href: '/dashboard/settings', icon: Settings },
-  ]
+  { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
+  { name: 'Skills', href: '/dashboard/skills', icon: Code },
+  { name: 'Certificates', href: '/dashboard/certificates', icon: Award },
+  { name: 'Experience', href: '/dashboard/experience', icon: Briefcase },
+  { name: 'Education', href: '/dashboard/education', icon: GraduationCap },
+  { name: 'AI Builder', href: '/app/builder', icon: Sparkles }, // 🆕 أضف هذا
+  { name: 'Plan Status', href: '/dashboard/plan-status', icon: Crown }, // 🆕 أضف هذا
+  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+]
 
   const handleLogout = () => {
     logout()
