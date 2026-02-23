@@ -46,7 +46,6 @@
     "sweetalert2": "^11.15.0",
     "tailwind-merge": "^2.5.5",
     "typewriter-effect": "^2.21.0",
-    "aws-sdk": "^2.1503.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
