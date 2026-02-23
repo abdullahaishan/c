@@ -1,14 +1,6 @@
-// ===========================================
-// ملف: storjService.js
-// الوصف: خدمة رفع وإدارة ملفات المطورين على Storj
-// الإصدار: 1.0
-// التاريخ: 2026-02-24
-// ===========================================
-
-import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 
-// التحقق من وجود المتغيرات البيئية
 const ACCESS_KEY = import.meta.env.VITE_STORJ_ACCESS_KEY;
 const SECRET_KEY = import.meta.env.VITE_STORJ_SECRET_KEY;
 const ENDPOINT = import.meta.env.VITE_STORJ_ENDPOINT || 'https://gateway.storjshare.io';
@@ -18,7 +10,6 @@ if (!ACCESS_KEY || !SECRET_KEY) {
   console.error('❌ مفقود: VITE_STORJ_ACCESS_KEY أو VITE_STORJ_SECRET_KEY في ملف .env');
 }
 
-// تهيئة عميل S3 لـ Storj
 const s3Client = new S3Client({
   region: 'global',
   endpoint: ENDPOINT,
@@ -29,33 +20,18 @@ const s3Client = new S3Client({
   forcePathStyle: true,
 });
 
-/**
- * دوال مساعدة داخلية
- */
 const utils = {
-  // تنظيف اسم الملف من الرموز غير المسموحة
   sanitizeFileName(fileName) {
     return fileName.replace(/[^a-zA-Z0-9.\u0600-\u06FF]/g, '_');
   },
-
-  // استخراج مسار الملف من الرابط
   getFilePathFromUrl(url) {
     try {
       const urlParts = url.split('/');
-      // الرابط: https://gateway.storjshare.io/bucket-name/userId/folder/file.ext
       return urlParts.slice(4).join('/');
     } catch {
       return null;
     }
   },
-
-  // استخراج معرف المستخدم من المسار
-  extractUserIdFromPath(filePath) {
-    const parts = filePath.split('/');
-    return parts.length > 0 ? parts[0] : null;
-  },
-
-  // الحصول على حجم الملف بصيغة مقروءة
   formatFileSize(bytes) {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -65,67 +41,29 @@ const utils = {
   }
 };
 
-/**
- * الخدمة الرئيسية لرفع وإدارة الملفات
- */
 export const storjService = {
-  /**
-   * رفع أي ملف مع ربطه بمستخدم معين
-   * @param {File} file - الملف المراد رفعه
-   * @param {string} userId - معرف المستخدم
-   * @param {string} fileType - نوع الملف (profile, cover, resume, certificate, project)
-   * @param {string} relatedId - معرف مرتبط (مثلاً projectId أو certificateId)
-   * @param {string} oldFileUrl - رابط الملف القديم (للحذف)
-   * @returns {Promise<Object>} - معلومات الملف المرفوع
-   */
   async uploadFile(file, userId, fileType = 'general', relatedId = null, oldFileUrl = null) {
     try {
-      // التحقق من المدخلات
       if (!file) throw new Error('الملف مطلوب');
       if (!userId) throw new Error('معرف المستخدم مطلوب');
 
-      // التحقق من الحجم (حد أقصى 50 ميجابايت)
       const MAX_SIZE = 50 * 1024 * 1024; // 50MB
       if (file.size > MAX_SIZE) {
-        throw new Error(`حجم الملف كبير جداً. الحد الأقصى 50 ميجابايت (حجم ملفك: ${utils.formatFileSize(file.size)})`);
+        throw new Error(`حجم الملف كبير جداً. الحد الأقصى 50 ميجابايت`);
       }
 
-      // التحقق من نوع الملف للـ PDF إذا كان سيرة ذاتية
-      if (fileType === 'resume' && file.type !== 'application/pdf') {
-        throw new Error('السيرة الذاتية يجب أن تكون بصيغة PDF');
-      }
-
-      // التحقق من نوع الملف للصور
-      if (['profile', 'cover', 'certificate', 'project'].includes(fileType) && !file.type.startsWith('image/')) {
-        throw new Error('هذا النوع يجب أن يكون صورة');
-      }
-
-      // تنظيف اسم الملف
       const safeFileName = utils.sanitizeFileName(file.name);
-      
-      // إنشاء مسار فريد مع معرف المستخدم
       const timestamp = Date.now();
       const uniqueId = uuidv4();
       const fileExt = file.name.split('.').pop() || 'bin';
       
-      // بناء المسار حسب النوع
       let folder = fileType;
       if (relatedId) {
         folder = `${fileType}/${relatedId}`;
       }
       
-      // المسار: userId/folder/timestamp-uniqueId.extension
       const filePath = `${userId}/${folder}/${timestamp}-${uniqueId}.${fileExt}`;
 
-      console.log('📤 رفع ملف:', {
-        userId,
-        type: fileType,
-        fileName: safeFileName,
-        size: utils.formatFileSize(file.size),
-        path: filePath
-      });
-
-      // رفع الملف إلى Storj
       const command = new PutObjectCommand({
         Bucket: BUCKET_NAME,
         Key: filePath,
@@ -143,17 +81,15 @@ export const storjService = {
 
       await s3Client.send(command);
 
-      // إنشاء الرابط العام
       const publicUrl = `${ENDPOINT}/${BUCKET_NAME}/${filePath}`;
 
-      // حذف الملف القديم إذا وجد
       if (oldFileUrl) {
         await this.deleteFile(oldFileUrl).catch(e => 
           console.log('⚠️ لا يمكن حذف الملف القديم:', e.message)
         );
       }
 
-      const fileInfo = {
+      return {
         url: publicUrl,
         path: filePath,
         size: file.size,
@@ -166,32 +102,17 @@ export const storjService = {
         uploadDate: new Date().toISOString()
       };
 
-      console.log('✅ تم رفع الملف:', fileInfo);
-      
-      return fileInfo;
-
     } catch (error) {
       console.error('❌ فشل رفع الملف:', error);
       throw error;
     }
   },
 
-  /**
-   * حذف ملف من Storj
-   * @param {string} fileUrl - رابط الملف المراد حذفه
-   * @returns {Promise<boolean>} - نجاح العملية
-   */
   async deleteFile(fileUrl) {
     try {
       if (!fileUrl) return false;
-
       const filePath = utils.getFilePathFromUrl(fileUrl);
-      if (!filePath) {
-        console.log('⚠️ لا يمكن استخراج مسار الملف من الرابط');
-        return false;
-      }
-
-      console.log('🗑️ حذف ملف:', filePath);
+      if (!filePath) return false;
 
       const command = new DeleteObjectCommand({
         Bucket: BUCKET_NAME,
@@ -199,100 +120,36 @@ export const storjService = {
       });
 
       await s3Client.send(command);
-      console.log('✅ تم حذف الملف');
       return true;
-
     } catch (error) {
       console.error('❌ فشل حذف الملف:', error);
       return false;
     }
   },
 
-  /**
-   * قائمة بجميع ملفات مستخدم معين
-   * @param {string} userId - معرف المستخدم
-   * @param {string} fileType - نوع الملف (اختياري)
-   * @returns {Promise<Array>} - قائمة الملفات
-   */
-  async listUserFiles(userId, fileType = null) {
-    try {
-      if (!userId) throw new Error('معرف المستخدم مطلوب');
-
-      const prefix = fileType ? `${userId}/${fileType}/` : `${userId}/`;
-      
-      const command = new ListObjectsV2Command({
-        Bucket: BUCKET_NAME,
-        Prefix: prefix,
-      });
-
-      const response = await s3Client.send(command);
-      
-      if (!response.Contents) return [];
-
-      const files = response.Contents.map(item => {
-        const pathParts = item.Key.split('/');
-        return {
-          url: `${ENDPOINT}/${BUCKET_NAME}/${item.Key}`,
-          path: item.Key,
-          size: item.Size,
-          sizeFormatted: utils.formatFileSize(item.Size),
-          lastModified: item.LastModified,
-          userId: pathParts[0],
-          fileType: pathParts[1],
-          fileName: pathParts[pathParts.length - 1]
-        };
-      });
-
-      return files;
-
-    } catch (error) {
-      console.error('❌ فشل جلب قائمة الملفات:', error);
-      return [];
-    }
-  },
-
-  // ===========================================
-  // دوال متخصصة لأنواع الملفات المختلفة
-  // ===========================================
-
-  /**
-   * رفع صورة شخصية
-   */
   async uploadProfileImage(file, userId, oldImageUrl = null) {
     return this.uploadFile(file, userId, 'profile', null, oldImageUrl);
   },
 
-  /**
-   * رفع صورة غلاف
-   */
   async uploadCoverImage(file, userId, oldImageUrl = null) {
     return this.uploadFile(file, userId, 'cover', null, oldImageUrl);
   },
 
-  /**
-   * رفع سيرة ذاتية (PDF)
-   */
   async uploadResume(file, userId, oldResumeUrl = null) {
+    if (file.type !== 'application/pdf') {
+      throw new Error('الملف يجب أن يكون PDF');
+    }
     return this.uploadFile(file, userId, 'resume', null, oldResumeUrl);
   },
 
-  /**
-   * رفع شهادة
-   */
   async uploadCertificate(file, userId, certificateId, oldFileUrl = null) {
     return this.uploadFile(file, userId, 'certificate', certificateId, oldFileUrl);
   },
 
-  /**
-   * رفع صورة مشروع
-   */
   async uploadProjectImage(file, userId, projectId, oldImageUrl = null) {
     return this.uploadFile(file, userId, 'project', projectId, oldImageUrl);
   },
 
-  /**
-   * رفع ملف عام (أي نوع)
-   */
   async uploadGeneralFile(file, userId, customFolder = 'files', oldFileUrl = null) {
     return this.uploadFile(file, userId, customFolder, null, oldFileUrl);
   }
