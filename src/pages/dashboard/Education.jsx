@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { useDeveloper } from '../../context/DeveloperContext'
+import React, { useState, useEffect } from 'react'
+import { useAuth } from '../../hooks/useAuth'
 import { usePlan } from '../../hooks/usePlan'
 import { educationService } from '../../lib/supabase'
 import { DEGREE_TYPES } from '../../utils/constants'
@@ -20,12 +20,33 @@ import {
 } from 'lucide-react'
 
 const Education = () => {
-  const { developer, getEducation, refresh } = useDeveloper()
+  const { user } = useAuth() // ✅ استخدم useAuth بدلاً من useDeveloper
   const { checkLimit, limits } = usePlan()
-  const [educations, setEducations] = useState(getEducation())
-  const [editingId, setEditingId] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [educations, setEducations] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [editingId, setEditingId] = useState(null)
+
+  // جلب التعليم عند تحميل الصفحة
+  useEffect(() => {
+    fetchEducation()
+  }, [user])
+
+  const fetchEducation = async () => {
+    if (!user) return
+    
+    setLoading(true)
+    try {
+      const data = await educationService.getByDeveloperId(user.id)
+      setEducations(data || [])
+    } catch (err) {
+      console.error('Error fetching education:', err)
+      setError('فشل في جلب المؤهلات التعليمية')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // نموذج تعليم جديد
   const [newEducation, setNewEducation] = useState({
@@ -44,16 +65,16 @@ const Education = () => {
   const handleAddEducation = async () => {
     // التحقق من حدود الباقة
     if (!checkLimit('education', educations.length)) {
-      setError(`You've reached the maximum limit of ${limits.maxEducation} education entries`)
+      setError(`لقد وصلت للحد الأقصى (${limits.maxEducation} مؤهل)`)
       return
     }
 
     if (!newEducation.degree || !newEducation.institution) {
-      setError('Degree and institution are required')
+      setError('الدرجة العلمية والمؤسسة مطلوبان')
       return
     }
 
-    setLoading(true)
+    setSaving(true)
     setError('')
 
     try {
@@ -62,7 +83,7 @@ const Education = () => {
         display_order: educations.length
       }
 
-      const created = await educationService.create(developer.id, educationData)
+      const created = await educationService.create(user.id, educationData)
       setEducations([...educations, created])
       
       // إعادة تعيين النموذج
@@ -80,38 +101,35 @@ const Education = () => {
       })
     } catch (err) {
       console.error('Error adding education:', err)
-      setError('Failed to add education')
+      setError('فشل في إضافة المؤهل التعليمي')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
   const handleUpdateEducation = async (id, updates) => {
-    setLoading(true)
+    setSaving(true)
     try {
       const updated = await educationService.update(id, updates)
       setEducations(educations.map(edu => edu.id === id ? updated : edu))
       setEditingId(null)
     } catch (err) {
       console.error('Error updating education:', err)
-      setError('Failed to update education')
+      setError('فشل في تحديث المؤهل التعليمي')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
   const handleDeleteEducation = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this education entry?')) return
+    if (!window.confirm('هل أنت متأكد من حذف هذا المؤهل التعليمي؟')) return
 
-    setLoading(true)
     try {
       await educationService.delete(id)
       setEducations(educations.filter(edu => edu.id !== id))
     } catch (err) {
       console.error('Error deleting education:', err)
-      setError('Failed to delete education')
-    } finally {
-      setLoading(false)
+      setError('فشل في حذف المؤهل التعليمي')
     }
   }
 
@@ -143,11 +161,22 @@ const Education = () => {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#030014] flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="w-12 h-12 text-[#6366f1] animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">جاري تحميل مؤهلاتك التعليمية...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Education</h1>
+        <h1 className="text-2xl font-bold text-white">المؤهلات التعليمية</h1>
         <div className="text-sm text-gray-400">
           {educations.length} / {limits.maxEducation === -1 ? '∞' : limits.maxEducation}
         </div>
@@ -161,176 +190,174 @@ const Education = () => {
         </div>
       )}
 
-      {/* Add new education form */}
-      {checkLimit('education', educations.length) && (
-        <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-          <h2 className="text-lg font-semibold text-white mb-4">Add New Education</h2>
-          
-          <div className="space-y-4">
-            {/* Degree and field */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Degree *</label>
-                <select
-                  value={newEducation.degree}
-                  onChange={(e) => setNewEducation({ ...newEducation, degree: e.target.value })}
-                  className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                >
-                  <option value="">Select degree</option>
-                  {DEGREE_TYPES.map(degree => (
-                    <option key={degree} value={degree}>{degree}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Field of Study</label>
-                <input
-                  type="text"
-                  value={newEducation.field_of_study}
-                  onChange={(e) => setNewEducation({ ...newEducation, field_of_study: e.target.value })}
-                  className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                  placeholder="e.g., Computer Science"
-                />
-              </div>
-            </div>
-
-            {/* Institution and location */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Institution *</label>
-                <input
-                  type="text"
-                  value={newEducation.institution}
-                  onChange={(e) => setNewEducation({ ...newEducation, institution: e.target.value })}
-                  className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                  placeholder="e.g., Cairo University"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Location</label>
-                <input
-                  type="text"
-                  value={newEducation.location}
-                  onChange={(e) => setNewEducation({ ...newEducation, location: e.target.value })}
-                  className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                  placeholder="e.g., Cairo, Egypt"
-                />
-              </div>
-            </div>
-
-            {/* Dates */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Start Date</label>
-                <input
-                  type="month"
-                  value={newEducation.start_date}
-                  onChange={(e) => setNewEducation({ ...newEducation, start_date: e.target.value })}
-                  className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">End Date</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="month"
-                    value={newEducation.end_date}
-                    onChange={(e) => setNewEducation({ ...newEducation, end_date: e.target.value })}
-                    disabled={newEducation.is_current}
-                    className="flex-1 p-3 bg-white/10 border border-white/20 rounded-lg text-white disabled:opacity-50"
-                  />
-                  <label className="flex items-center gap-2 text-sm text-gray-400">
-                    <input
-                      type="checkbox"
-                      checked={newEducation.is_current}
-                      onChange={(e) => setNewEducation({ ...newEducation, is_current: e.target.checked })}
-                      className="w-4 h-4 bg-white/10 border-white/20 rounded"
-                    />
-                    Current
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* Grade */}
+      {/* Add new education form - يظهر دائماً */}
+      <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
+        <h2 className="text-lg font-semibold text-white mb-4">إضافة مؤهل تعليمي جديد</h2>
+        
+        <div className="space-y-4">
+          {/* Degree and field */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-2">Grade / GPA</label>
+              <label className="block text-sm text-gray-400 mb-2">الدرجة العلمية *</label>
+              <select
+                value={newEducation.degree}
+                onChange={(e) => setNewEducation({ ...newEducation, degree: e.target.value })}
+                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+              >
+                <option value="">اختر الدرجة</option>
+                {DEGREE_TYPES.map(degree => (
+                  <option key={degree} value={degree}>{degree}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">التخصص</label>
               <input
                 type="text"
-                value={newEducation.grade}
-                onChange={(e) => setNewEducation({ ...newEducation, grade: e.target.value })}
+                value={newEducation.field_of_study}
+                onChange={(e) => setNewEducation({ ...newEducation, field_of_study: e.target.value })}
                 className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                placeholder="e.g., 3.8/4.0"
+                placeholder="مثال: علوم الحاسب"
               />
             </div>
-
-            {/* Description */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Description</label>
-              <textarea
-                value={newEducation.description}
-                onChange={(e) => setNewEducation({ ...newEducation, description: e.target.value })}
-                rows="3"
-                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                placeholder="Describe your studies, thesis, etc..."
-              />
-            </div>
-
-            {/* Activities */}
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Activities & Societies</label>
-              <textarea
-                value={newEducation.activities}
-                onChange={(e) => setNewEducation({ ...newEducation, activities: e.target.value })}
-                rows="3"
-                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                placeholder="List your extracurricular activities..."
-              />
-            </div>
-
-            {/* Submit button */}
-            <button
-              onClick={handleAddEducation}
-              disabled={loading || !newEducation.degree || !newEducation.institution}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-[1.02] transition-all disabled:opacity-50"
-            >
-              {loading ? <Loader className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-              Add Education
-            </button>
           </div>
+
+          {/* Institution and location */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">الجامعة / المؤسسة *</label>
+              <input
+                type="text"
+                value={newEducation.institution}
+                onChange={(e) => setNewEducation({ ...newEducation, institution: e.target.value })}
+                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+                placeholder="مثال: جامعة القاهرة"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">الموقع</label>
+              <input
+                type="text"
+                value={newEducation.location}
+                onChange={(e) => setNewEducation({ ...newEducation, location: e.target.value })}
+                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+                placeholder="مثال: القاهرة، مصر"
+              />
+            </div>
+          </div>
+
+          {/* Dates */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">تاريخ البداية</label>
+              <input
+                type="month"
+                value={newEducation.start_date}
+                onChange={(e) => setNewEducation({ ...newEducation, start_date: e.target.value })}
+                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-2">تاريخ النهاية</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="month"
+                  value={newEducation.end_date}
+                  onChange={(e) => setNewEducation({ ...newEducation, end_date: e.target.value })}
+                  disabled={newEducation.is_current}
+                  className="flex-1 p-3 bg-white/10 border border-white/20 rounded-lg text-white disabled:opacity-50"
+                />
+                <label className="flex items-center gap-2 text-sm text-gray-400">
+                  <input
+                    type="checkbox"
+                    checked={newEducation.is_current}
+                    onChange={(e) => setNewEducation({ ...newEducation, is_current: e.target.checked })}
+                    className="w-4 h-4 bg-white/10 border-white/20 rounded"
+                  />
+                  حتى الآن
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Grade */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">التقدير / المعدل</label>
+            <input
+              type="text"
+              value={newEducation.grade}
+              onChange={(e) => setNewEducation({ ...newEducation, grade: e.target.value })}
+              className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+              placeholder="مثال: 3.8/4.0"
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">الوصف</label>
+            <textarea
+              value={newEducation.description}
+              onChange={(e) => setNewEducation({ ...newEducation, description: e.target.value })}
+              rows="3"
+              className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+              placeholder="صف دراستك، مشروع التخرج، إلخ..."
+            />
+          </div>
+
+          {/* Activities */}
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">الأنشطة</label>
+            <textarea
+              value={newEducation.activities}
+              onChange={(e) => setNewEducation({ ...newEducation, activities: e.target.value })}
+              rows="3"
+              className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+              placeholder="الأنشطة الطلابية، الأندية، إلخ..."
+            />
+          </div>
+
+          {/* Submit button */}
+          <button
+            onClick={handleAddEducation}
+            disabled={saving || !newEducation.degree || !newEducation.institution}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-[1.02] transition-all disabled:opacity-50"
+          >
+            {saving ? <Loader className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+            إضافة مؤهل
+          </button>
         </div>
-      )}
+      </div>
 
       {/* Education list */}
       <div className="space-y-4">
-        {educations.map((education, index) => (
-          <EducationCard
-            key={education.id}
-            education={education}
-            index={index}
-            total={educations.length}
-            onEdit={() => setEditingId(education.id)}
-            onDelete={() => handleDeleteEducation(education.id)}
-            onMoveUp={() => handleMoveEducation(index, 'up')}
-            onMoveDown={() => handleMoveEducation(index, 'down')}
-            isEditing={editingId === education.id}
-            onUpdate={handleUpdateEducation}
-          />
-        ))}
-
-        {educations.length === 0 && (
+        {educations.length === 0 ? (
           <div className="text-center py-12">
             <GraduationCap className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400">No education yet</p>
-            <p className="text-sm text-gray-500">Add your educational background</p>
+            <p className="text-gray-400">لا توجد مؤهلات تعليمية بعد</p>
+            <p className="text-sm text-gray-500">أضف مؤهلاتك من النموذج أعلاه</p>
           </div>
+        ) : (
+          educations.map((education, index) => (
+            <EducationCard
+              key={education.id}
+              education={education}
+              index={index}
+              total={educations.length}
+              onEdit={() => setEditingId(education.id)}
+              onDelete={() => handleDeleteEducation(education.id)}
+              onMoveUp={() => handleMoveEducation(index, 'up')}
+              onMoveDown={() => handleMoveEducation(index, 'down')}
+              isEditing={editingId === education.id}
+              onUpdate={handleUpdateEducation}
+            />
+          ))
         )}
       </div>
     </div>
   )
 }
 
-// مكون بطاقة التعليم
+// مكون بطاقة التعليم (مع ترجمة)
 const EducationCard = ({ 
   education, 
   index, 
@@ -364,7 +391,7 @@ const EducationCard = ({
               value={editData.field_of_study}
               onChange={(e) => setEditData({ ...editData, field_of_study: e.target.value })}
               className="p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-              placeholder="Field of Study"
+              placeholder="التخصص"
             />
           </div>
 
@@ -374,7 +401,7 @@ const EducationCard = ({
             value={editData.institution}
             onChange={(e) => setEditData({ ...editData, institution: e.target.value })}
             className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-            placeholder="Institution"
+            placeholder="الجامعة"
           />
 
           {/* Dates */}
@@ -400,7 +427,7 @@ const EducationCard = ({
                   onChange={(e) => setEditData({ ...editData, is_current: e.target.checked })}
                   className="w-4 h-4"
                 />
-                Current
+                حتى الآن
               </label>
             </div>
           </div>
@@ -411,7 +438,7 @@ const EducationCard = ({
             value={editData.grade}
             onChange={(e) => setEditData({ ...editData, grade: e.target.value })}
             className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-            placeholder="Grade"
+            placeholder="التقدير"
           />
 
           {/* Description */}
@@ -420,7 +447,7 @@ const EducationCard = ({
             onChange={(e) => setEditData({ ...editData, description: e.target.value })}
             rows="2"
             className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-            placeholder="Description"
+            placeholder="الوصف"
           />
 
           {/* Activities */}
@@ -429,7 +456,7 @@ const EducationCard = ({
             onChange={(e) => setEditData({ ...editData, activities: e.target.value })}
             rows="2"
             className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-            placeholder="Activities"
+            placeholder="الأنشطة"
           />
 
           {/* Action buttons */}
@@ -439,13 +466,13 @@ const EducationCard = ({
               className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
             >
               <Save className="w-4 h-4" />
-              Save
+              حفظ
             </button>
             <button
               onClick={onEdit}
               className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20"
             >
-              Cancel
+              إلغاء
             </button>
           </div>
         </div>
@@ -455,8 +482,8 @@ const EducationCard = ({
 
   return (
     <div className="group relative bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all">
-      {/* Move buttons */}
-      <div className="absolute right-4 top-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Move buttons - على اليمين */}
+      <div className="absolute left-4 top-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         {index > 0 && (
           <button onClick={onMoveUp} className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded">
             <ChevronUp className="w-4 h-4" />
@@ -478,7 +505,7 @@ const EducationCard = ({
       {/* Header */}
       <div className="mb-4">
         <h3 className="text-xl font-semibold text-white">{education.degree}</h3>
-        <div className="flex items-center gap-4 mt-1 text-sm text-gray-400">
+        <div className="flex flex-wrap items-center gap-4 mt-1 text-sm text-gray-400">
           <span className="flex items-center gap-1">
             <GraduationCap className="w-4 h-4" />
             {education.institution}
@@ -493,10 +520,10 @@ const EducationCard = ({
       <div className="space-y-3">
         {/* Dates */}
         {(education.start_date || education.end_date) && (
-          <div className="flex items-center gap-4 text-sm">
+          <div className="flex flex-wrap items-center gap-4 text-sm">
             <span className="flex items-center gap-1 text-gray-400">
               <Calendar className="w-4 h-4" />
-              {new Date(education.start_date).getFullYear()} - {education.is_current ? 'Present' : new Date(education.end_date).getFullYear()}
+              {new Date(education.start_date).getFullYear()} - {education.is_current ? 'حتى الآن' : new Date(education.end_date).getFullYear()}
             </span>
             {education.grade && (
               <span className="flex items-center gap-1 text-gray-400">
@@ -517,13 +544,13 @@ const EducationCard = ({
 
         {/* Description */}
         {education.description && (
-          <p className="text-gray-300 text-sm">{education.description}</p>
+          <p className="text-gray-300 text-sm leading-relaxed">{education.description}</p>
         )}
 
         {/* Activities */}
         {education.activities && (
           <div>
-            <h4 className="text-sm font-medium text-gray-400 mb-1">Activities</h4>
+            <h4 className="text-sm font-medium text-gray-400 mb-1">الأنشطة</h4>
             <p className="text-gray-300 text-sm">{education.activities}</p>
           </div>
         )}
