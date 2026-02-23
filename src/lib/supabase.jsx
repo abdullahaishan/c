@@ -576,66 +576,34 @@ export const aiAnalysisService = {
 // خدمات رفع الملفات (Storage) - نسخة مبسطة
 // ===========================================
 export const storageService = {
-  // استخراج مسار الملف من URL
-  getPathFromUrl(url) {
-    if (!url) return null
+// ===========================================
+// خدمات رفع الملفات (Storage) - نسخة مجربة
+// ===========================================
+export const storageService = {
+  // رفع صورة الملف الشخصي
+  async uploadProfileImage(file, userId, oldImageUrl = null) {
     try {
-      const urlObj = new URL(url)
-      const pathMatch = urlObj.pathname.match(/\/developers\/(.+)$/)
-      return pathMatch ? pathMatch[1] : null
-    } catch {
-      return null
-    }
-  },
+      console.log('بدء رفع الصورة...')
+      
+      // التحقق من الملف
+      if (!file) throw new Error('لا يوجد ملف')
+      if (!file.type.startsWith('image/')) throw new Error('الملف ليس صورة')
+      if (file.size > 5 * 1024 * 1024) throw new Error('الصورة أكبر من 5 ميجابايت')
 
-  // حذف صورة قديمة
-  async deleteImage(imageUrl) {
-    if (!imageUrl) return
-    
-    try {
-      const filePath = this.getPathFromUrl(imageUrl)
-      if (!filePath) return
-
-      const { error } = await supabase.storage
-        .from('developers')
-        .remove([filePath])
-
-      if (error) {
-        console.error('خطأ في حذف الصورة القديمة:', error)
-      }
-    } catch (error) {
-      console.error('خطأ في حذف الصورة:', error)
-    }
-  },
-
-  // رفع صورة (نسخة مبسطة بدون تحسين)
-  async uploadImage(file, folder, oldImageUrl = null) {
-    try {
-      // التحقق من صحة الملف
-      if (file.size > 5 * 1024 * 1024) {
-        throw new Error('حجم الملف كبير جداً. الحد الأقصى 5 ميجابايت')
-      }
-
-      // حذف الصورة القديمة إذا وجدت
-      if (oldImageUrl) {
-        await this.deleteImage(oldImageUrl)
-      }
-
-      // إنشاء اسم فريد للملف
+      // ✅ مهم: اسم الملف يجب أن يبدأ بـ userId لمطابقة السياسة المتقدمة
       const timestamp = Date.now()
       const randomString = Math.random().toString(36).substring(2, 8)
       const fileExt = file.name.split('.').pop()
-      const fileName = `${timestamp}-${randomString}.${fileExt}`
-      const filePath = `${folder}/${fileName}`
+      const fileName = `${userId}/${timestamp}-${randomString}.${fileExt}`
 
-      console.log('رفع الملف إلى:', filePath)
+      console.log('رفع إلى المسار:', fileName)
 
-      // رفع الملف مباشرة بدون تحسين
+      // رفع الملف - استخدام upsert: true لتجنب مشكلة التكرار [citation:10]
       const { error: uploadError } = await supabase.storage
         .from('developers')
-        .upload(filePath, file, {
+        .upload(fileName, file, {
           cacheControl: '3600',
-          upsert: false
+          upsert: true // ✅ مهم جداً: يسمح باستبدال الملفات
         })
 
       if (uploadError) {
@@ -646,57 +614,102 @@ export const storageService = {
       // الحصول على الرابط العام
       const { data } = supabase.storage
         .from('developers')
-        .getPublicUrl(filePath)
+        .getPublicUrl(fileName)
 
-      console.log('✅ تم رفع الصورة بنجاح:', data.publicUrl)
+      console.log('تم الرفع بنجاح:', data.publicUrl)
+
+      // حذف الصورة القديمة إذا وجدت
+      if (oldImageUrl) {
+        try {
+          const oldPath = oldImageUrl.split('/developers/')[1]
+          if (oldPath) {
+            await supabase.storage.from('developers').remove([oldPath])
+          }
+        } catch (e) {
+          console.log('خطأ في حذف القديمة (غير مهم)', e)
+        }
+      }
+
       return data.publicUrl
 
     } catch (error) {
-      console.error('❌ فشل رفع الصورة:', error)
+      console.error('فشل رفع الصورة:', error)
       throw error
     }
   },
 
-  // رفع صورة الملف الشخصي
-  async uploadProfileImage(file, userId, oldImageUrl = null) {
-    return this.uploadImage(file, `profiles/${userId}`, oldImageUrl)
-  },
-
   // رفع صورة الغلاف
   async uploadCoverImage(file, userId, oldImageUrl = null) {
-    return this.uploadImage(file, `covers/${userId}`, oldImageUrl)
+    try {
+      if (!file) throw new Error('لا يوجد ملف')
+      if (!file.type.startsWith('image/')) throw new Error('الملف ليس صورة')
+      if (file.size > 5 * 1024 * 1024) throw new Error('الصورة أكبر من 5 ميجابايت')
+
+      const timestamp = Date.now()
+      const randomString = Math.random().toString(36).substring(2, 8)
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${userId}/covers/${timestamp}-${randomString}.${fileExt}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('developers')
+        .upload(fileName, file, { upsert: true })
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage
+        .from('developers')
+        .getPublicUrl(fileName)
+
+      if (oldImageUrl) {
+        try {
+          const oldPath = oldImageUrl.split('/developers/')[1]
+          if (oldPath) await supabase.storage.from('developers').remove([oldPath])
+        } catch (e) {}
+      }
+
+      return data.publicUrl
+
+    } catch (error) {
+      console.error('فشل رفع الغلاف:', error)
+      throw error
+    }
   },
 
   // رفع السيرة الذاتية (PDF)
   async uploadResume(file, userId, oldResumeUrl = null) {
-    if (file.type !== 'application/pdf') {
-      throw new Error('يجب أن يكون الملف بصيغة PDF')
+    try {
+      if (!file) throw new Error('لا يوجد ملف')
+      if (file.type !== 'application/pdf') throw new Error('الملف ليس PDF')
+      if (file.size > 5 * 1024 * 1024) throw new Error('الملف أكبر من 5 ميجابايت')
+
+      const timestamp = Date.now()
+      const fileName = `${userId}/resumes/${timestamp}-${file.name}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('developers')
+        .upload(fileName, file, { upsert: true })
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage
+        .from('developers')
+        .getPublicUrl(fileName)
+
+      if (oldResumeUrl) {
+        try {
+          const oldPath = oldResumeUrl.split('/developers/')[1]
+          if (oldPath) await supabase.storage.from('developers').remove([oldPath])
+        } catch (e) {}
+      }
+
+      return data.publicUrl
+
+    } catch (error) {
+      console.error('فشل رفع السيرة:', error)
+      throw error
     }
-
-    if (oldResumeUrl) {
-      await this.deleteImage(oldResumeUrl)
-    }
-
-    const timestamp = Date.now()
-    const fileName = `${timestamp}-${file.name}`
-    const filePath = `resumes/${userId}/${fileName}`
-
-    const { error: uploadError } = await supabase.storage
-      .from('developers')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false
-      })
-
-    if (uploadError) throw uploadError
-
-    const { data } = supabase.storage
-      .from('developers')
-      .getPublicUrl(filePath)
-
-    return data.publicUrl
   }
-}
+};
 // ===========================================
 // خدمات المصادقة (Auth) - النسخة المصححة
 // ===========================================
