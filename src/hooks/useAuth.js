@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { authService } from '../lib/supabase'
 import { supabase } from '../lib/supabase'
 
 export const useAuth = () => {
@@ -7,17 +8,29 @@ export const useAuth = () => {
   const [error, setError] = useState(null)
   const [hasPortfolio, setHasPortfolio] = useState(false)
 
-  // التحقق من وجود بورتفليو
+  // ✅ التحقق من وجود بورتفليو
   const checkPortfolio = async (userId) => {
+    if (!userId) {
+      setHasPortfolio(false)
+      return false
+    }
+
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('portfolios')
         .select('id')
         .eq('user_id', userId)
         .maybeSingle()
 
-      setHasPortfolio(!!data)
-      return !!data
+      if (error) {
+        console.error('Portfolio error:', error)
+        setHasPortfolio(false)
+        return false
+      }
+
+      const exists = !!data
+      setHasPortfolio(exists)
+      return exists
     } catch (err) {
       console.error('Error checking portfolio:', err)
       setHasPortfolio(false)
@@ -26,75 +39,50 @@ export const useAuth = () => {
   }
 
   useEffect(() => {
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
+    const initAuth = async () => {
+      try {
+        const storedUser = localStorage.getItem('developer')
 
-      if (session?.user) {
-        const { data: developer } = await supabase
-          .from('developers')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
+        if (storedUser) {
+          const userData = JSON.parse(storedUser)
 
-        if (developer) {
-          setUser(developer)
-          await checkPortfolio(developer.id)
+          if (userData && userData.id) {
+            setUser(userData)
+            await checkPortfolio(userData.id)
+          } else {
+            localStorage.removeItem('developer')
+          }
         }
+      } catch (err) {
+        console.error('Init auth error:', err)
+        localStorage.removeItem('developer')
+      } finally {
+        setLoading(false)
       }
-
-      setLoading(false)
     }
 
-    getSession()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session?.user) {
-          const { data: developer } = await supabase
-            .from('developers')
-            .select('*')
-            .eq('id', session.user.id)
-            .single()
-
-          if (developer) {
-            setUser(developer)
-            await checkPortfolio(developer.id)
-          }
-        } else {
-          setUser(null)
-          setHasPortfolio(false)
-        }
-      }
-    )
-
-    return () => subscription.unsubscribe()
+    initAuth()
   }, [])
 
-  // ======================
-  // LOGIN (بدون تعديل)
-  // ======================
+  // ✅ تسجيل الدخول
   const login = async (email, password) => {
     try {
       setLoading(true)
       setError(null)
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      })
+      const userData = await authService.login(email, password)
 
-      if (error) throw error
+      if (!userData || !userData.id) {
+        throw new Error('Login failed: invalid user data')
+      }
 
-      const { data: developer } = await supabase
-        .from('developers')
-        .select('*')
-        .eq('id', data.user.id)
-        .single()
+      setUser(userData)
+      localStorage.setItem('developer', JSON.stringify(userData))
 
-      setUser(developer)
-      await checkPortfolio(developer.id)
+      await checkPortfolio(userData.id)
 
-      return { success: true, user: developer }
+      return { success: true, user: userData }
+
     } catch (err) {
       setError(err.message)
       return { success: false, error: err.message }
@@ -103,54 +91,25 @@ export const useAuth = () => {
     }
   }
 
-  // ======================
-  // REGISTER (تم إصلاحه فقط)
-  // ======================
-  const register = async (userData) => {
+  // ✅ إنشاء حساب
+  const register = async (formData) => {
     try {
       setLoading(true)
       setError(null)
 
-      const { data, error } = await supabase.auth.signUp({
-        email: userData.email,
-        password: userData.password,
-        options: {
-          data: {
-            full_name: userData.full_name
-          }
-        }
-      })
+      const newUser = await authService.register(formData)
 
-      if (error) throw error
-
-      // 🔥 الإصلاح المهم هنا
-      if (!data.user) {
-        throw new Error('Registration failed. Please try again.')
+      if (!newUser || !newUser.id) {
+        throw new Error('Registration failed: invalid user data')
       }
 
-      const { data: developer, error: insertError } = await supabase
-        .from('developers')
-        .insert([{
-          id: data.user.id,
-          username:
-            userData.full_name.toLowerCase().replace(/[^a-z0-9]/g, '-') +
-            '-' +
-            Math.random().toString(36).substring(2, 6),
-          email: userData.email,
-          full_name: userData.full_name,
-          role: 'user',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }])
-        .select()
-        .single()
+      setUser(newUser)
+      localStorage.setItem('developer', JSON.stringify(newUser))
 
-      if (insertError) throw insertError
-
-      setUser(developer)
       setHasPortfolio(false)
 
-      return { success: true, user: developer }
+      return { success: true, user: newUser }
+
     } catch (err) {
       setError(err.message)
       return { success: false, error: err.message }
@@ -159,14 +118,15 @@ export const useAuth = () => {
     }
   }
 
-  const logout = async () => {
-    await supabase.auth.signOut()
+  // ✅ تسجيل الخروج
+  const logout = () => {
     setUser(null)
     setHasPortfolio(false)
+    localStorage.removeItem('developer')
   }
 
   const refreshPortfolioStatus = async () => {
-    if (user) {
+    if (user && user.id) {
       await checkPortfolio(user.id)
     }
   }
