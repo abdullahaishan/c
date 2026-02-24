@@ -569,10 +569,8 @@ export const aiAnalysisService = {
     return data
   }
 }
-
-            
-// ===========================================
-// خدمات رفع الملفات (Storage) - مثل كود الشخص
+      // ===========================================
+// خدمات رفع الملفات (Storage) - النسخة المصححة
 // ===========================================
 export const storageService = {
   async uploadProfileImage(file, userId, oldImageUrl = null) {
@@ -581,34 +579,44 @@ export const storageService = {
       if (!file.type.startsWith('image/')) throw new Error('الملف ليس صورة')
       if (file.size > 5 * 1024 * 1024) throw new Error('الصورة أكبر من 5 ميجابايت')
 
-      // ✅ استخدام uuid مثل كود الشخص
-      const fileName = `${userId}/${uuidv4()}`
+      // ✅ استخدام userId من Auth
+      const fileName = `${userId}/profile/${uuidv4()}-${file.name}`
 
-      console.log('رفع إلى:', fileName,{
-        upsert: true,  // ✅ هذا مهم جداً
-    cacheControl: '3600'})
+      console.log('رفع إلى:', fileName)
 
-      const { error } = await supabase.storage
+      // ✅ إضافة upsert: true للسماح باستبدال الملف
+      const { error: uploadError } = await supabase.storage
         .from('developers')
-        .upload(fileName, file)
+        .upload(fileName, file, {
+          upsert: true,
+          cacheControl: '3600'
+        })
 
-      if (error) {
-        console.error('خطأ في الرفع:', error)
-        throw error
-      }
+      if (uploadError) throw uploadError
 
+      // الحصول على الرابط العام
       const { data } = supabase.storage
         .from('developers')
         .getPublicUrl(fileName)
 
-      // حذف القديمة
+      // تحديث قاعدة البيانات
+      const { error: updateError } = await supabase
+        .from('developers')
+        .update({ profile_image: data.publicUrl })
+        .eq('id', userId)
+
+      if (updateError) throw updateError
+
+      // حذف الصورة القديمة إذا وجدت
       if (oldImageUrl) {
         try {
           const oldPath = oldImageUrl.split('/developers/')[1]
           if (oldPath) {
             await supabase.storage.from('developers').remove([oldPath])
           }
-        } catch (e) {}
+        } catch (e) {
+          console.log('لا يمكن حذف الصورة القديمة:', e)
+        }
       }
 
       return data.publicUrl
@@ -619,28 +627,41 @@ export const storageService = {
     }
   },
 
+  // دوال مماثلة للـ Cover و Resume
   async uploadCoverImage(file, userId, oldImageUrl = null) {
     try {
       if (!file) throw new Error('لا يوجد ملف')
       if (!file.type.startsWith('image/')) throw new Error('الملف ليس صورة')
       if (file.size > 5 * 1024 * 1024) throw new Error('الصورة أكبر من 5 ميجابايت')
 
-      const fileName = `${userId}/covers/${uuidv4()}`
+      const fileName = `${userId}/cover/${uuidv4()}-${file.name}`
 
-      const { error } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('developers')
-        .upload(fileName, file)
+        .upload(fileName, file, {
+          upsert: true,
+          cacheControl: '3600'
+        })
 
-      if (error) throw error
+      if (uploadError) throw uploadError
 
       const { data } = supabase.storage
         .from('developers')
         .getPublicUrl(fileName)
 
+      const { error: updateError } = await supabase
+        .from('developers')
+        .update({ cover_image: data.publicUrl })
+        .eq('id', userId)
+
+      if (updateError) throw updateError
+
       if (oldImageUrl) {
         try {
           const oldPath = oldImageUrl.split('/developers/')[1]
-          if (oldPath) await supabase.storage.from('developers').remove([oldPath])
+          if (oldPath) {
+            await supabase.storage.from('developers').remove([oldPath])
+          }
         } catch (e) {}
       }
 
@@ -658,22 +679,34 @@ export const storageService = {
       if (file.type !== 'application/pdf') throw new Error('الملف ليس PDF')
       if (file.size > 5 * 1024 * 1024) throw new Error('الملف أكبر من 5 ميجابايت')
 
-      const fileName = `${userId}/resumes/${uuidv4()}.pdf`
+      const fileName = `${userId}/resume/${uuidv4()}-${file.name}`
 
-      const { error } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('developers')
-        .upload(fileName, file)
+        .upload(fileName, file, {
+          upsert: true,
+          cacheControl: '3600'
+        })
 
-      if (error) throw error
+      if (uploadError) throw uploadError
 
       const { data } = supabase.storage
         .from('developers')
         .getPublicUrl(fileName)
 
+      const { error: updateError } = await supabase
+        .from('developers')
+        .update({ resume_file: data.publicUrl })
+        .eq('id', userId)
+
+      if (updateError) throw updateError
+
       if (oldResumeUrl) {
         try {
           const oldPath = oldResumeUrl.split('/developers/')[1]
-          if (oldPath) await supabase.storage.from('developers').remove([oldPath])
+          if (oldPath) {
+            await supabase.storage.from('developers').remove([oldPath])
+          }
         } catch (e) {}
       }
 
@@ -684,7 +717,7 @@ export const storageService = {
       throw error
     }
   }
-};
+}
       // ===========================================
 // خدمات المصادقة (Auth) - النسخة المصححة
 // ===========================================
