@@ -173,7 +173,7 @@ const WelcomeScreen = ({ onLoadingComplete }) => {
                 className="text-center"
                 variants={childVariants}
                 data-aos="fade-up"
-                data-aos-delay="1200"
+                data-aos-delay="1000"
               >
                 <a
                   href="https://www.abc.com/"
