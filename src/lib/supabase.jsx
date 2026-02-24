@@ -718,141 +718,82 @@ export const storageService = {
     }
   }
 }
-      // ===========================================
-// خدمات المصادقة (Auth) - النسخة المصححة
+
+// ===========================================
+// خدمات المصادقة باستخدام Supabase Auth
 // ===========================================
 export const authService = {
-  // دالة تشفير بسيطة (دالة مستقلة وليست داخل this)
-  async hashPassword(password) {
-    try {
-      const encoder = new TextEncoder()
-      const data = encoder.encode(password)
-      const hash = await crypto.subtle.digest('SHA-256', data)
-      return Array.from(new Uint8Array(hash))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('')
-    } catch (error) {
-      console.error('Error hashing password:', error)
-      throw error
-    }
-  },
-
   // تسجيل الدخول
   async login(email, password) {
-    try {
-      console.log('🔍 بدء تسجيل الدخول للبريد:', email)
-      
-      // ✅ استخدام this.hashPassword
-      const hashedPassword = await this.hashPassword(password)
-      console.log('🔐 كلمة المرور بعد التشفير:', hashedPassword.substring(0, 10) + '...')
-      
-      const { data: users, error } = await supabase
-        .from('developers')
-        .select('*')
-        .eq('email', email)
-      
-      if (error) {
-        console.error('❌ خطأ في قاعدة البيانات:', error)
-        throw new Error('خطأ في قاعدة البيانات')
-      }
-      
-      if (!users || users.length === 0) {
-        throw new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة')
-      }
-
-      const user = users[0]
-      console.log('✅ تم العثور على المستخدم:', user.email)
-      
-      // التحقق من كلمة المرور
-      if (user.password_hash !== hashedPassword) {
-        throw new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة')
-      }
-
-      // تحديث آخر دخول
-      await supabase
-        .from('developers')
-        .update({ last_login: new Date().toISOString() })
-        .eq('id', user.id)
-
-      // إزالة كلمة المرور من البيانات
-      const { password_hash, ...userWithoutPassword } = user
-      return userWithoutPassword
-
-    } catch (error) {
-      console.error('❌ خطأ في تسجيل الدخول:', error)
-      throw error
-    }
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    })
+    
+    if (error) throw error
+    
+    // جلب بيانات المطور من جدول developers
+    const { data: developer } = await supabase
+      .from('developers')
+      .select('*')
+      .eq('id', data.user.id)
+      .single()
+    
+    return developer
   },
 
   // تسجيل مستخدم جديد
   async register(userData) {
-    try {
-      console.log('🔍 بدء تسجيل مستخدم جديد:', userData.email)
-      
-      // التحقق من عدم وجود البريد
-      const { data: existingUsers } = await supabase
-        .from('developers')
-        .select('id')
-        .eq('email', userData.email)
-      
-      if (existingUsers && existingUsers.length > 0) {
-        throw new Error('البريد الإلكتروني موجود بالفعل')
+    // 1. إنشاء المستخدم في Supabase Auth
+    const { data, error } = await supabase.auth.signUp({
+      email: userData.email,
+      password: userData.password,
+      options: {
+        data: {
+          full_name: userData.full_name
+        }
       }
+    })
+    
+    if (error) throw error
 
-      // ✅ استخدام this.hashPassword
-      const hashedPassword = await this.hashPassword(userData.password)
+    // 2. إنشاء سجل في جدول developers بنفس ID
+    const { data: developer, error: insertError } = await supabase
+      .from('developers')
+      .insert([{
+        id: data.user.id,  // ✅ نفس ID من Auth
+        username: userData.full_name.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Math.random().toString(36).substring(2, 6),
+        email: userData.email,
+        full_name: userData.full_name,
+        plan_id: 1,
+        role: 'user',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select()
+      .single()
+    
+    if (insertError) throw insertError
+    return developer
+  },
 
-      // إنشاء اسم مستخدم
-      const username = userData.full_name
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, '-')
-        .substring(0, 20) + '-' + Math.random().toString(36).substring(2, 6)
+  // تسجيل الخروج
+  async logout() {
+    const { error } = await supabase.auth.signOut()
+    if (error) throw error
+  },
 
-      // إنشاء المستخدم
-      const { data, error } = await supabase
-        .from('developers')
-        .insert([{
-          username,
-          email: userData.email,
-          password_hash: hashedPassword,
-          full_name: userData.full_name,
-          plan_id: 1,
-          role: 'user',
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }])
-        .select()
-        .single()
-      
-      if (error) {
-        console.error('❌ خطأ في الإدراج:', error)
-        throw new Error('فشل في إنشاء الحساب')
-      }
-
-      // إنشاء بورتفليو افتراضي
-      try {
-        await supabase
-          .from('portfolios')
-          .insert([{
-            user_id: data.id,
-            title: `معرض ${data.full_name}`,
-            is_published: false,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }])
-      } catch (e) {
-        console.log('تنبيه: لم يتم إنشاء البورتفليو الافتراضي')
-      }
-
-      console.log('✅ تم إنشاء المستخدم بنجاح:', data.email)
-      
-      const { password_hash, ...newUser } = data
-      return newUser
-
-    } catch (error) {
-      console.error('❌ خطأ في التسجيل:', error)
-      throw error
-    }
+  // الحصول على المستخدم الحالي
+  async getCurrentUser() {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return null
+    
+    const { data: developer } = await supabase
+      .from('developers')
+      .select('*')
+      .eq('id', session.user.id)
+      .single()
+    
+    return developer
   }
 }
