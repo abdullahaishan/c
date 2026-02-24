@@ -37,7 +37,8 @@ const DashboardLayout = () => {
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ]
 
-  const handleLogout = () => {
+  const handleLogout = () => async{
+    await supabase.auth.signOut()
     logout()
     navigate('/')
   }
