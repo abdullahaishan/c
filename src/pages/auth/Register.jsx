@@ -48,7 +48,12 @@ const Register = () => {
     })
     
     if (result.success) {
-      navigate('/dashboard')
+      // ✅ التأكد من وجود المستخدم قبل الانتقال للوحة التحكم
+      if (result.user && result.user.id) {
+        navigate('/dashboard')
+      } else {
+        setError('Registration succeeded but user data is missing. Please log in.')
+      }
     } else {
       setError(result.error)
     }
