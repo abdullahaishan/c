@@ -38,7 +38,7 @@ const DashboardLayout = () => {
 ]
 
   const handleLogout = () => async{
-    await supabase.auth.signOut()
+    supabase.auth.signOut()
     logout()
     navigate('/')
   }
