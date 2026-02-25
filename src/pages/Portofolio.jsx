@@ -1,84 +1,139 @@
-import React, { useEffect, useState } from "react"
-import { useDeveloper } from '../context/DeveloperContext'
-import CardProject from "../components/CardProject"
-import TechStackIcon from "../components/TechStackIcon"
-import Certificate from "../components/Certificate"
-import { Code, Award, Boxes, ExternalLink, Github } from "lucide-react"
-import AOS from "aos"
-import "aos/dist/aos.css"
-import LoadingScreen from "../components/LoadingScreen"
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { useDeveloper } from '../context/DeveloperContext';
+import CardProject from "../components/CardProject";
+import TechStackIcon from "../components/TechStackIcon";
+import Certificate from "../components/Certificate";
+import { Code, Award, Boxes } from "lucide-react";
+import AOS from "aos";
+import "aos/dist/aos.css";
 
-// مكون العلامة المائية
-const Watermark = () => (
-  <div className="fixed inset-0 pointer-events-none select-none flex items-center justify-center opacity-[0.03] text-8xl font-bold text-white rotate-[-30deg] scale-150 uppercase tracking-wider">
-    Portfolio-v5
-  </div>
-)
-
+// أيقونات التقنيات (من المجلد public/icons)
 const techIcons = [
-  { icon: "../../public/icons/html.svg", name: "HTML" },
-  { icon: "../../public/icons/css.svg", name: "CSS" },
-  { icon: "../../public/icons/javascript.svg", name: "JavaScript" },
-  { icon: "../../public/icons/tailwind.svg", name: "Tailwind CSS" },
-  { icon: "../../public/icons/reactjs.svg", name: "ReactJS" },
-  { icon: "../../public/icons/nodejs.svg", name: "Node JS" },
-  { icon: "../../public/icons/python.svg", name: "Python" },
-  { icon: "../../public/icons/django.svg", name: "Django" },
-]
+  { icon: "/icons/html.svg", name: "HTML" },
+  { icon: "/icons/css.svg", name: "CSS" },
+  { icon: "/icons/javascript.svg", name: "JavaScript" },
+  { icon: "/icons/tailwind.svg", name: "Tailwind CSS" },
+  { icon: "/icons/reactjs.svg", name: "ReactJS" },
+  { icon: "/icons/vite.svg", name: "Vite" },
+  { icon: "/icons/nodejs.svg", name: "Node JS" },
+  { icon: "/icons/bootstrap.svg", name: "Bootstrap" },
+  { icon: "/icons/firebase.svg", name: "Firebase" },
+  { icon: "/icons/MUI.svg", name: "Material UI" },
+  { icon: "/icons/vercel.svg", name: "Vercel" },
+  { icon: "/icons/SweetAlert.svg", name: "SweetAlert2" },
+];
+
+// Separate ShowMore/ShowLess button component
+const ToggleButton = ({ onClick, isShowingMore }) => (
+  <button
+    onClick={onClick}
+    className="
+      px-3 py-1.5
+      text-slate-300 
+      hover:text-white 
+      text-sm 
+      font-medium 
+      transition-all 
+      duration-300 
+      ease-in-out
+      flex 
+      items-center 
+      gap-2
+      bg-white/5 
+      hover:bg-white/10
+      rounded-md
+      border 
+      border-white/10
+      hover:border-white/20
+      backdrop-blur-sm
+      group
+      relative
+      overflow-hidden
+    "
+  >
+    <span className="relative z-10 flex items-center gap-2">
+      {isShowingMore ? "See Less" : "See More"}
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={`
+          transition-transform 
+          duration-300 
+          ${isShowingMore ? "group-hover:-translate-y-0.5" : "group-hover:translate-y-0.5"}
+        `}
+      >
+        <polyline points={isShowingMore ? "18 15 12 9 6 15" : "6 9 12 15 18 9"}></polyline>
+      </svg>
+    </span>
+    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-purple-500/50 transition-all duration-300 group-hover:w-full"></span>
+  </button>
+);
 
 const Portfolio = ({ developer: propDeveloper }) => {
-  const context = useDeveloper()
-  const developer = propDeveloper || context.publicDeveloper
-  const { loading } = context
+  const context = useDeveloper();
+  const developer = propDeveloper || context.publicDeveloper;
+  const { getProjects, getCertificates, getSkills, loading } = context;
+
+  const [showAllProjects, setShowAllProjects] = useState(false);
+  const [showAllCertificates, setShowAllCertificates] = useState(false);
+  const [value, setValue] = useState(0);
   
-  const [activeTab, setActiveTab] = useState(0)
-  const [showAllProjects, setShowAllProjects] = useState(false)
-  const [showAllCerts, setShowAllCerts] = useState(false)
+  const projects = getProjects();
+  const certificates = getCertificates();
+  const skills = getSkills();
 
-  const projects = developer?.projects || []
-  const certificates = developer?.certificates || []
-  const skills = developer?.skills || []
+  // عدد العناصر في العرض الأول
+  const initialItems = window.innerWidth < 768 ? 4 : 6;
 
-  const [initialItems, setInitialItems] = useState(6)
+  const displayedProjects = showAllProjects ? projects : projects.slice(0, initialItems);
+  const displayedCertificates = showAllCertificates ? certificates : certificates.slice(0, initialItems);
 
   useEffect(() => {
-    const handleResize = () => {
-      setInitialItems(window.innerWidth < 768 ? 4 : 6)
+    AOS.init({ once: false });
+  }, []);
+
+  const toggleShowMore = useCallback((type) => {
+    if (type === 'projects') {
+      setShowAllProjects(prev => !prev);
+    } else {
+      setShowAllCertificates(prev => !prev);
     }
-    handleResize()
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-
-  const displayedProjects = showAllProjects ? projects : projects.slice(0, initialItems)
-  const displayedCerts = showAllCerts ? certificates : certificates.slice(0, initialItems)
-
-  useEffect(() => {
-    AOS.init({ once: false })
-  }, [])
-
-  if (loading) {
-    return <LoadingScreen />
-  }
+  }, []);
 
   return (
-    <div className="md:px-[10%] px-[5%] w-full bg-[#030014] overflow-hidden relative" id="Portfolio">
-      <Watermark />
-      
-      <div className="text-center pb-10" data-aos="fade-up">
-        <h2 className="inline-block text-3xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6366f1] to-[#a855f7]">
-          Portfolio Showcase
+    <div className="md:px-[10%] px-[5%] w-full sm:mt-0 mt-[3rem] bg-[#030014] overflow-hidden" id="Portofolio">
+      {/* Header */}
+      <div className="text-center pb-10" data-aos="fade-up" data-aos-duration="1000">
+        <h2 className="inline-block text-3xl md:text-5xl font-bold text-center mx-auto text-transparent bg-clip-text bg-gradient-to-r from-[#6366f1] to-[#a855f7]">
+          <span style={{
+            color: '#6366f1',
+            backgroundImage: 'linear-gradient(45deg, #6366f1 10%, #a855f7 93%)',
+            WebkitBackgroundClip: 'text',
+            backgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
+          }}>
+            Portfolio Showcase
+          </span>
         </h2>
         <p className="text-slate-400 max-w-2xl mx-auto text-sm md:text-base mt-2">
-          Explore my journey through projects, certifications, and technical expertise.
+          Explore my journey through projects, certifications, and technical expertise. 
+          Each section represents a milestone in my continuous learning path.
         </p>
       </div>
 
+      {/* Tabs */}
       <div className="flex justify-center gap-4 mb-8">
         <button
-          onClick={() => setActiveTab(0)}
+          onClick={() => setValue(0)}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all ${
-            activeTab === 0
+            value === 0
               ? 'bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white'
               : 'bg-white/5 text-gray-400 hover:bg-white/10'
           }`}
@@ -87,9 +142,9 @@ const Portfolio = ({ developer: propDeveloper }) => {
           <span>Projects ({projects.length})</span>
         </button>
         <button
-          onClick={() => setActiveTab(1)}
+          onClick={() => setValue(1)}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all ${
-            activeTab === 1
+            value === 1
               ? 'bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white'
               : 'bg-white/5 text-gray-400 hover:bg-white/10'
           }`}
@@ -98,9 +153,9 @@ const Portfolio = ({ developer: propDeveloper }) => {
           <span>Certificates ({certificates.length})</span>
         </button>
         <button
-          onClick={() => setActiveTab(2)}
+          onClick={() => setValue(2)}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all ${
-            activeTab === 2
+            value === 2
               ? 'bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white'
               : 'bg-white/5 text-gray-400 hover:bg-white/10'
           }`}
@@ -110,8 +165,10 @@ const Portfolio = ({ developer: propDeveloper }) => {
         </button>
       </div>
 
+      {/* محتوى التبويبات */}
       <div className="mt-8">
-        {activeTab === 0 && (
+        {/* Projects Tab */}
+        {value === 0 && (
           <div>
             {projects.length === 0 ? (
               <div className="text-center py-12">
@@ -122,8 +179,8 @@ const Portfolio = ({ developer: propDeveloper }) => {
                 {displayedProjects.map((project, index) => (
                   <div
                     key={project.id}
-                    data-aos="fade-up"
-                    data-aos-delay={index * 100}
+                    data-aos={index % 3 === 0 ? "fade-up-right" : index % 3 === 1 ? "fade-up" : "fade-up-left"}
+                    data-aos-duration={index % 3 === 0 ? "1000" : index % 3 === 1 ? "1200" : "1000"}
                   >
                     <CardProject
                       Img={project.image || "/default-project.jpg"}
@@ -138,17 +195,18 @@ const Portfolio = ({ developer: propDeveloper }) => {
               </div>
             )}
             {projects.length > initialItems && (
-              <button
-                onClick={() => setShowAllProjects(!showAllProjects)}
-                className="mt-6 px-4 py-2 bg-white/5 text-gray-300 rounded-lg hover:bg-white/10 transition-all"
-              >
-                {showAllProjects ? 'Show Less' : `Show All (${projects.length})`}
-              </button>
+              <div className="mt-6 w-full flex justify-start">
+                <ToggleButton
+                  onClick={() => toggleShowMore('projects')}
+                  isShowingMore={showAllProjects}
+                />
+              </div>
             )}
           </div>
         )}
 
-        {activeTab === 1 && (
+        {/* Certificates Tab */}
+        {value === 1 && (
           <div>
             {certificates.length === 0 ? (
               <div className="text-center py-12">
@@ -156,11 +214,11 @@ const Portfolio = ({ developer: propDeveloper }) => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {displayedCerts.map((cert, index) => (
+                {displayedCertificates.map((cert, index) => (
                   <div
                     key={cert.id}
-                    data-aos="fade-up"
-                    data-aos-delay={index * 100}
+                    data-aos={index % 3 === 0 ? "fade-up-right" : index % 3 === 1 ? "fade-up" : "fade-up-left"}
+                    data-aos-duration={index % 3 === 0 ? "1000" : index % 3 === 1 ? "1200" : "1000"}
                   >
                     <Certificate ImgSertif={cert.image || "/default-cert.jpg"} />
                   </div>
@@ -168,24 +226,25 @@ const Portfolio = ({ developer: propDeveloper }) => {
               </div>
             )}
             {certificates.length > initialItems && (
-              <button
-                onClick={() => setShowAllCerts(!showAllCerts)}
-                className="mt-6 px-4 py-2 bg-white/5 text-gray-300 rounded-lg hover:bg-white/10 transition-all"
-              >
-                {showAllCerts ? 'Show Less' : `Show All (${certificates.length})`}
-              </button>
+              <div className="mt-6 w-full flex justify-start">
+                <ToggleButton
+                  onClick={() => toggleShowMore('certificates')}
+                  isShowingMore={showAllCertificates}
+                />
+              </div>
             )}
           </div>
         )}
 
-        {activeTab === 2 && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {/* Tech Stack Tab */}
+        {value === 2 && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 pb-[5%]">
             {skills.length > 0 ? (
               skills.map((skill, index) => (
                 <div
                   key={skill.id}
-                  data-aos="fade-up"
-                  data-aos-delay={index * 50}
+                  data-aos={index % 3 === 0 ? "fade-up-right" : index % 3 === 1 ? "fade-up" : "fade-up-left"}
+                  data-aos-duration={index % 3 === 0 ? "1000" : index % 3 === 1 ? "1200" : "1000"}
                 >
                   <TechStackIcon
                     TechStackIcon={`/icons/${skill.icon || 'reactjs.svg'}`}
@@ -197,8 +256,8 @@ const Portfolio = ({ developer: propDeveloper }) => {
               techIcons.map((tech, index) => (
                 <div
                   key={index}
-                  data-aos="fade-up"
-                  data-aos-delay={index * 50}
+                  data-aos={index % 3 === 0 ? "fade-up-right" : index % 3 === 1 ? "fade-up" : "fade-up-left"}
+                  data-aos-duration={index % 3 === 0 ? "1000" : index % 3 === 1 ? "1200" : "1000"}
                 >
                   <TechStackIcon
                     TechStackIcon={tech.icon}
@@ -211,7 +270,7 @@ const Portfolio = ({ developer: propDeveloper }) => {
         )}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Portfolio
+export default Portfolio;
