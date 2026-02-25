@@ -276,40 +276,7 @@ const Projects = () => {
         <h2 className="text-lg font-semibold text-white mb-4">إضافة مشروع جديد</h2>
         
         <div className="space-y-4">
-          {/* Image upload */}
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">صورة المشروع</label>
-            <div className="flex items-center gap-4">
-              {newProject.image ? (
-                <div className="relative">
-                  <img
-                    src={URL.createObjectURL(newProject.image)}
-                    alt="Preview"
-                    className="w-32 h-32 object-cover rounded-lg"
-                  />
-                  <button
-                    onClick={() => setNewProject({ ...newProject, image: null })}
-                    className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <label className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg cursor-pointer hover:bg-white/10">
-                  <Upload className="w-5 h-5 text-gray-400" />
-                  <span className="text-gray-300">رفع صورة</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setNewProject({ ...newProject, image: e.target.files[0] })}
-                    className="hidden"
-                    disabled={uploading}
-                  />
-                </label>
-              )}
-              {uploading && <Loader className="w-5 h-5 text-[#6366f1] animate-spin" />}
-            </div>
-          </div>
+          
 
           {/* Title */}
           <div>
