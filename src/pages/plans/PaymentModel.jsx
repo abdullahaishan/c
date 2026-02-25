@@ -35,7 +35,7 @@ const PaymentModal = ({ plan, billingCycle, currency, convertedPrice, userCountr
   
   // ✅ متغيرات التحقق من طريقة الدفع
   const isWestern = method === 'western'
-  const isMoneyGram = method === 'moneygram'
+  const isJib = method === 'jib' // جيب
   const isOneCash = method === 'onecash'
   const isCrypto = method === 'crypto'
   const isBank = method === 'bank'
@@ -55,17 +55,17 @@ const PaymentModal = ({ plan, billingCycle, currency, convertedPrice, userCountr
   // معلومات البنوك اليمنية
   const yemenBanks = [
     { 
-      id: 'alahli', 
-      name:'بنك القاسمي', 
-      account: 'لايتوفر حااليا',
-      iban: 'YEلايتوفر حاليا',
-      branch: 'الفرع الرئيسي - صنعاء'
-    },
-    { 
       id: 'kuraimi', 
       name: 'بنك الكريمي', 
       account: '3101557757',
       iban: 'YE9876543210',
+      branch: 'الفرع الرئيسي - صنعاء'
+    },
+    { 
+      id: 'alahli', 
+      name:'بنك القاسمي', 
+      account: 'لايتوفر حاليا',
+      iban: 'YEلايتوفر حاليا',
       branch: 'الفرع الرئيسي - صنعاء'
     },
     { 
@@ -108,10 +108,10 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
   const getMethodName = (methodId) => {
     const methods = {
       western: 'ويسترن يونيون',
-      moneygram: 'موني جرام',
+      jib: 'محفظة جيب',
       crypto: 'عملات رقمية',
       bank: 'تحويل بنكي',
-      onecash: 'OneCash'
+      onecash: 'ون كاش'
     }
     return methods[methodId] || methodId
   }
@@ -268,27 +268,38 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
           {/* Step 1: Payment Method */}
           {step === 'method' && (
             <div className="space-y-4">
-              {/* ويسترن يونيون - متاح للجميع وخاصة اليمن */}
+              {/* ويسترن يونيون */}
               <PaymentMethodCard
                 id="western"
                 name="Western Union"
                 icon={Send}
-                description="حوالات ويسترن يونيون - الأسرع والأكثر أماناً "
-                required={userRegion === 'yemen'}
+                description="حوالات ويسترن يونيون"
                 onClick={() => {
                   setMethod('western')
                   setStep('upload')
                 }}
               />
 
-              {/* موني جرام */}
+              {/* محفظة جيب */}
               <PaymentMethodCard
-                id="moneygram"
-                name="MoneyGram"
-                icon={Send}
-                description="حوالات موني جرام - متوفرة في جميع المحافظات اليمنية"
+                id="jib"
+                name="محفظة جيب"
+                icon={Wallet}
+                description="محفظة جيب - 102515815"
                 onClick={() => {
-                  setMethod('moneygram')
+                  setMethod('jib')
+                  setStep('upload')
+                }}
+              />
+
+              {/* ون كاش */}
+              <PaymentMethodCard
+                id="onecash"
+                name="ون كاش"
+                icon={Wallet}
+                description="ون كاش - 2844083"
+                onClick={() => {
+                  setMethod('onecash')
                   setStep('upload')
                 }}
               />
@@ -298,34 +309,23 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
                 id="crypto"
                 name="العملات الرقمية"
                 icon={Bitcoin}
-                description="USDT - BTC - ETH (تحويل فوري للمحفظة)"
+                description="USDT - BTC - ETH"
                 onClick={() => {
                   setMethod('crypto')
                   setStep('crypto')
                 }}
               />
 
-              {/* تحويل بنكي */}
+              {/* تحويل بنكي - مع تعيين الكريمي كموصى به */}
               <PaymentMethodCard
                 id="bank"
                 name="تحويل بنكي"
                 icon={Landmark}
-                description="حوالات بنكية محلية - البنك الأهلي، الكريمي، التسليف"
+                description="بنك الكريمي (موصى به) - 3101557757"
+                required={true}
                 onClick={() => {
                   setMethod('bank')
                   setStep('bank')
-                }}
-              />
-
-              {/* OneCash */}
-              <PaymentMethodCard
-                id="onecash"
-                name="OneCash"
-                icon={Wallet}
-                description="محفظة OneCash - تحويل فوري"
-                onClick={() => {
-                  setMethod('onecash')
-                  setStep('upload')
                 }}
               />
             </div>
@@ -387,8 +387,17 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
                     setSelectedBank(bank.name)
                     setStep('upload')
                   }}
-                  className="w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all text-right"
+                  className={`w-full p-4 bg-white/5 border rounded-xl hover:bg-white/10 transition-all text-right ${
+                    bank.id === 'kuraimi' 
+                      ? 'border-yellow-500/50 bg-yellow-500/5' 
+                      : 'border-white/10'
+                  }`}
                 >
+                  {bank.id === 'kuraimi' && (
+                    <span className="inline-block mb-2 px-2 py-0.5 bg-yellow-500 text-black text-xs rounded-full font-bold">
+                      موصى به
+                    </span>
+                  )}
                   <h3 className="text-white font-semibold mb-2">{bank.name}</h3>
                   <p className="text-sm text-gray-400 mb-1">رقم الحساب: {bank.account}</p>
                   <p className="text-sm text-gray-400">{bank.branch}</p>
@@ -411,7 +420,6 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
               <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
                 <h3 className="text-white font-medium mb-2">📋 تعليمات الدفع:</h3>
                 <p className="text-sm text-blue-400">
-                  {/* ✅ استخدام المتغيرات الجديدة */}
                   {isWestern && (
                     <>
                       أرسل حوالة ويسترن يونيون إلى:
@@ -424,25 +432,36 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
                     </>
                   )}
                   
-                  {isMoneyGram && (
+                  {isJib && (
                     <>
-                      أرسل حوالة موني جرام إلى:
+                      أرسل المبلغ إلى محفظة جيب:
                       <div className="mt-2 p-3 bg-black/30 rounded-lg text-gray-300">
+                        <p>رقم المحفظة: 102515815</p>
                         <p>الاسم: احمد زبن الله علي عيشان</p>
-                        <p>البلد: اليمن - عدن</p>
-                        <p>الهاتف: +967771315459</p>
-                        <p className="text-yellow-400 mt-2">⚠️ بعد الإرسال، أرفق صورة الإيصال</p>
+                        <p className="text-yellow-400 mt-2">⚠️ بعد الإرسال، أرفق صورة التحويل</p>
                       </div>
                     </>
                   )}
                   
                   {isOneCash && (
                     <>
-                      أرسل المبلغ إلى محفظة OneCash:
+                      أرسل المبلغ إلى ون كاش:
                       <div className="mt-2 p-3 bg-black/30 rounded-lg text-gray-300">
-                        <p>رقم المحفظة: 771315459</p>
+                        <p>رقم المحفظة: 2844083</p>
                         <p>الاسم: احمد زبن الله علي عيشان</p>
                         <p className="text-yellow-400 mt-2">⚠️ بعد الإرسال، أرفق صورة التحويل</p>
+                      </div>
+                    </>
+                  )}
+                  
+                  {isBank && selectedBank === 'بنك الكريمي' && (
+                    <>
+                      أرسل المبلغ إلى حساب بنك الكريمي:
+                      <div className="mt-2 p-3 bg-black/30 rounded-lg text-gray-300">
+                        <p>رقم الحساب: 3101557757</p>
+                        <p>الاسم: احمد زبن الله علي عيشان</p>
+                        <p>الفرع: الرئيسي - صنعاء</p>
+                        <p className="text-yellow-400 mt-2">⚠️ بعد الإرسال، أرفق صورة الإيصال</p>
                       </div>
                     </>
                   )}
@@ -636,4 +655,3 @@ const CryptoOption = ({ type, name, address, onSelect, onCopy, copied }) => (
 )
 
 export default PaymentModal
-
