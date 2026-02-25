@@ -157,3 +157,18 @@ export const PLAN_LIMITS = {
   UPLOAD_ERROR: 'حدث خطأ أثناء رفع الملف',
   LIMIT_REACHED: 'لقد وصلت للحد الأقصى المسموح به'
 }
+// ===========================================
+// رسائل النجاح والخطأ
+// ===========================================
+export const SUCCESS_MESSAGES = {
+  UPDATE_SUCCESS: 'تم التحديث بنجاح',
+  DELETE_SUCCESS: 'تم الحذف بنجاح',
+  UPLOAD_SUCCESS: 'تم رفع الملف بنجاح'
+};
+
+export const ERROR_MESSAGES = {
+  UPDATE_ERROR: 'حدث خطأ أثناء التحديث',
+  DELETE_ERROR: 'حدث خطأ أثناء الحذف',
+  UPLOAD_ERROR: 'حدث خطأ أثناء رفع الملف',
+  LIMIT_REACHED: 'لقد وصلت للحد الأقصى المسموح به'
+};
