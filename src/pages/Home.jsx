@@ -12,13 +12,19 @@ import AOS from "aos";
 import "aos/dist/aos.css";
 import { useDeveloper } from '../context/DeveloperContext';
 
-// Memoized Components
+// مكون الخلفية المتحركة (4 أضواء)
+const AnimatedBackground = () => (
+  <div className="fixed inset-0 overflow-hidden pointer-events-none">
+    <div className="absolute top-0 -left-4 w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-blob"></div>
+    <div className="absolute top-0 -right-4 w-96 h-96 bg-cyan-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-blob animation-delay-2000 hidden sm:block"></div>
+    <div className="absolute -bottom-8 left-20 w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-blob animation-delay-4000"></div>
+    <div className="absolute -bottom-10 right-20 w-96 h-96 bg-indigo-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-10 animate-blob animation-delay-6000 hidden sm:block"></div>
+    <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f10_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f10_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+  </div>
+);
+
 const StatusBadge = memo(({ name }) => (
-  <div
-    className="inline-block animate-float lg:mx-0"
-    data-aos="zoom-in"
-    data-aos-delay="400"
-  >
+  <div className="inline-block animate-float lg:mx-0" data-aos="zoom-in" data-aos-delay="400">
     <div className="relative group">
       <div className="absolute -inset-0.5 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-full blur opacity-30 group-hover:opacity-50 transition duration-1000"></div>
       <div className="relative px-3 sm:px-4 py-2 rounded-full bg-black/40 backdrop-blur-xl border border-white/10">
@@ -31,25 +37,28 @@ const StatusBadge = memo(({ name }) => (
   </div>
 ));
 
-const MainTitle = memo(({ developer }) => (
-  <div className="space-y-2" data-aos="fade-up" data-aos-delay="600">
-    <h1 className="text-5xl sm:text-6xl md:text-6xl lg:text-6xl xl:text-7xl font-bold tracking-tight">
-      <span className="relative inline-block">
-        <span className="absolute -inset-2 bg-gradient-to-r from-[#6366f1] to-[#a855f7] blur-2xl opacity-20"></span>
-        <span className="relative bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent">
-          {developer?.title?.split(' ')[0] || 'Frontend'}
+const MainTitle = memo(({ title }) => {
+  const words = title?.split(' ') || ['Frontend', 'Developer'];
+  return (
+    <div className="space-y-2" data-aos="fade-up" data-aos-delay="600">
+      <h1 className="text-5xl sm:text-6xl md:text-6xl lg:text-6xl xl:text-7xl font-bold tracking-tight">
+        <span className="relative inline-block">
+          <span className="absolute -inset-2 bg-gradient-to-r from-[#6366f1] to-[#a855f7] blur-2xl opacity-20"></span>
+          <span className="relative bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent">
+            {words[0]}
+          </span>
         </span>
-      </span>
-      <br />
-      <span className="relative inline-block mt-2">
-        <span className="absolute -inset-2 bg-gradient-to-r from-[#6366f1] to-[#a855f7] blur-2xl opacity-20"></span>
-        <span className="relative bg-gradient-to-r from-[#6366f1] to-[#a855f7] bg-clip-text text-transparent">
-          {developer?.title?.split(' ').slice(1).join(' ') || 'Developer'}
+        <br />
+        <span className="relative inline-block mt-2">
+          <span className="absolute -inset-2 bg-gradient-to-r from-[#6366f1] to-[#a855f7] blur-2xl opacity-20"></span>
+          <span className="relative bg-gradient-to-r from-[#6366f1] to-[#a855f7] bg-clip-text text-transparent">
+            {words.slice(1).join(' ') || 'Developer'}
+          </span>
         </span>
-      </span>
-    </h1>
-  </div>
-));
+      </h1>
+    </div>
+  );
+});
 
 const TechStack = memo(({ tech }) => (
   <div className="px-4 py-2 hidden sm:block rounded-full bg-white/5 backdrop-blur-sm border border-white/10 text-sm text-gray-300 hover:bg-white/10 transition-colors">
@@ -91,12 +100,6 @@ const SocialLink = memo(({ icon: Icon, link }) => (
   </a>
 ));
 
-// Constants
-const TYPING_SPEED = 100;
-const ERASING_SPEED = 50;
-const PAUSE_DURATION = 2000;
-const WORDS = ["Network & Telecom Student", "Tech Enthusiast"];
-
 const Home = ({ developer: propDeveloper }) => {
   const context = useDeveloper();
   const developer = propDeveloper || context.publicDeveloper;
@@ -109,11 +112,17 @@ const Home = ({ developer: propDeveloper }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
 
-  // جلب المهارات من قاعدة البيانات
-  const quickSkills = getSkills().slice(0, 4).map(s => s.name);
-  const displaySkills = quickSkills.length > 0 ? quickSkills : ["React", "Javascript", "Node.js", "Tailwind"];
-  
-  // جلب روابط التواصل
+  // كلمات للكتابة (من skills أو ثابتة)
+  const skillsList = getSkills();
+  const WORDS = skillsList.length > 0 
+    ? skillsList.slice(0, 3).map(s => s.name) 
+    : ["Frontend Developer", "React Enthusiast", "UI/UX Designer"];
+
+  // المهارات السريعة (أول 4)
+  const quickSkills = skillsList.slice(0, 4).map(s => s.name);
+  const displaySkills = quickSkills.length > 0 ? quickSkills : ["React", "JavaScript", "Node.js", "Tailwind"];
+
+  // روابط التواصل
   const socialLinks = getSocialLinks();
   const socialLinksArray = [
     { icon: Github, link: socialLinks.github || "#" },
@@ -121,188 +130,123 @@ const Home = ({ developer: propDeveloper }) => {
     { icon: Instagram, link: socialLinks.instagram || "#" },
   ].filter(item => item.link !== "#");
 
-  // Optimize AOS initialization
   useEffect(() => {
-    const initAOS = () => {
-      AOS.init({
-        once: true,
-        offset: 10,
-      });
-    };
-    initAOS();
-    window.addEventListener("resize", initAOS);
-    return () => window.removeEventListener("resize", initAOS);
-  }, []);
-
-  useEffect(() => {
+    AOS.init({ once: true, offset: 10 });
     setIsLoaded(true);
-    return () => setIsLoaded(false);
   }, []);
 
-  // Optimize typing effect
-  const handleTyping = useCallback(() => {
-    if (isTyping) {
-      if (charIndex < WORDS[wordIndex].length) {
-        setText((prev) => prev + WORDS[wordIndex][charIndex]);
-        setCharIndex((prev) => prev + 1);
-      } else {
-        setTimeout(() => setIsTyping(false), PAUSE_DURATION);
-      }
-    } else {
-      if (charIndex > 0) {
-        setText((prev) => prev.slice(0, -1));
-        setCharIndex((prev) => prev - 1);
-      } else {
-        setWordIndex((prev) => (prev + 1) % WORDS.length);
-        setIsTyping(true);
-      }
-    }
-  }, [charIndex, isTyping, wordIndex]);
-
+  // تأثير الكتابة
   useEffect(() => {
-    const timeout = setTimeout(
-      handleTyping,
-      isTyping ? TYPING_SPEED : ERASING_SPEED
-    );
-    return () => clearTimeout(timeout);
-  }, [handleTyping]);
+    const TYPING_SPEED = 100;
+    const ERASING_SPEED = 50;
+    const PAUSE_DURATION = 2000;
 
-  // Lottie configuration
-  const lottieOptions = {
-    src: "https://lottie.host/58753882-bb6a-49f5-a2c0-950eda1e135a/NLbpVqGegK.lottie",
-    loop: true,
-    autoplay: true,
-    rendererSettings: {
-      preserveAspectRatio: "xMidYMid slice",
-      progressiveLoad: true,
-    },
-    style: { width: "100%", height: "100%" },
-    className: `w-full h-full transition-all duration-500 ${
-      isHovering
-        ? "scale-[180%] sm:scale-[160%] md:scale-[150%] lg:scale-[145%] rotate-2"
-        : "scale-[175%] sm:scale-[155%] md:scale-[145%] lg:scale-[140%]"
-    }`,
-  };
+    const handleTyping = () => {
+      if (isTyping) {
+        if (charIndex < WORDS[wordIndex].length) {
+          setText(prev => prev + WORDS[wordIndex][charIndex]);
+          setCharIndex(prev => prev + 1);
+        } else {
+          setTimeout(() => setIsTyping(false), PAUSE_DURATION);
+        }
+      } else {
+        if (charIndex > 0) {
+          setText(prev => prev.slice(0, -1));
+          setCharIndex(prev => prev - 1);
+        } else {
+          setWordIndex(prev => (prev + 1) % WORDS.length);
+          setIsTyping(true);
+        }
+      }
+    };
+
+    const timeout = setTimeout(handleTyping, isTyping ? TYPING_SPEED : ERASING_SPEED);
+    return () => clearTimeout(timeout);
+  }, [charIndex, isTyping, wordIndex, WORDS]);
 
   return (
-    <div className="min-h-screen bg-[#030014] overflow-hidden" id="Home">
-      <div
-        className={`relative z-10 transition-all duration-1000 ${
-          isLoaded ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        <div className="container mx-auto px-[5%] sm:px-6 lg:px-[0%] min-h-screen">
-          <div className="flex flex-col lg:flex-row items-center justify-center h-screen md:justify-between gap-0 sm:gap-12 lg:gap-20">
-            {/* Left Column */}
-            <div
-              className="w-full lg:w-1/2 space-y-6 sm:space-y-8 text-left lg:text-left order-1 lg:order-1 lg:mt-0"
-              data-aos="fade-right"
-              data-aos-delay="200"
-            >
-              <div className="space-y-4 sm:space-y-6">
-                <StatusBadge name={developer?.full_name || "Ready to Innovate"} />
-                <MainTitle developer={developer} />
+    <div className="min-h-screen bg-[#030014] overflow-hidden relative" id="Home">
+      <AnimatedBackground />
+      
+      <div className={`relative z-10 transition-all duration-1000 ${isLoaded ? "opacity-100" : "opacity-0"}`}>
+        <div className="container mx-auto px-[5%] min-h-screen">
+          <div className="flex flex-col lg:flex-row items-center justify-center h-screen md:justify-between gap-12">
+            
+            {/* القسم الأيسر - النصوص */}
+            <div className="w-full lg:w-1/2 space-y-6 sm:space-y-8 text-left lg:text-left order-1">
+              <StatusBadge name={developer?.full_name || "Ready to Innovate"} />
+              <MainTitle title={developer?.title} />
 
-                {/* Typing Effect */}
-                <div
-                  className="h-8 flex items-center"
-                  data-aos="fade-up"
-                  data-aos-delay="800"
-                >
-                  <span className="text-xl md:text-2xl bg-gradient-to-r from-gray-100 to-gray-300 bg-clip-text text-transparent font-light">
-                    {text}
-                  </span>
-                  <span className="w-[3px] h-6 bg-gradient-to-t from-[#6366f1] to-[#a855f7] ml-1 animate-blink"></span>
-                </div>
+              {/* النص المتحرك */}
+              <div className="h-8 flex items-center" data-aos="fade-up" data-aos-delay="800">
+                <span className="text-xl md:text-2xl bg-gradient-to-r from-gray-100 to-gray-300 bg-clip-text text-transparent font-light">
+                  {text}
+                </span>
+                <span className="w-[3px] h-6 bg-gradient-to-t from-[#6366f1] to-[#a855f7] ml-1 animate-blink"></span>
+              </div>
 
-                {/* Description */}
-                <p
-                  className="text-base md:text-lg text-gray-400 max-w-xl leading-relaxed font-light"
-                  data-aos="fade-up"
-                  data-aos-delay="1000"
-                >
-                  {developer?.bio || "Menciptakan Website Yang Inovatif, Fungsional, dan User-Friendly untuk Solusi Digital."}
-                </p>
+              {/* الوصف - من قاعدة البيانات */}
+              <p className="text-base md:text-lg text-gray-400 max-w-xl leading-relaxed font-light">
+                {developer?.bio || "Passionate developer creating innovative web solutions."}
+              </p>
 
-                {/* Tech Stack */}
-                <div
-                  className="flex flex-wrap gap-3 justify-start"
-                  data-aos="fade-up"
-                  data-aos-delay="1200"
-                >
-                  {displaySkills.map((tech, index) => (
-                    <TechStack key={index} tech={tech} />
+              {/* المهارات */}
+              <div className="flex flex-wrap gap-3 justify-start">
+                {displaySkills.map((skill, index) => (
+                  <TechStack key={index} tech={skill} />
+                ))}
+              </div>
+
+              {/* الأزرار */}
+              <div className="flex flex-row gap-3 w-full justify-start">
+                <CTAButton href="#Portofolio" text="Projects" icon={ExternalLink} />
+                <CTAButton href="#Contact" text="Contact" icon={Mail} />
+              </div>
+
+              {/* روابط التواصل */}
+              {socialLinksArray.length > 0 && (
+                <div className="hidden sm:flex gap-4 justify-start">
+                  {socialLinksArray.map((social, index) => (
+                    <SocialLink key={index} icon={social.icon} link={social.link} />
                   ))}
                 </div>
-
-                {/* CTA Buttons */}
-                <div
-                  className="flex flex-row gap-3 w-full justify-start"
-                  data-aos="fade-up"
-                  data-aos-delay="1400"
-                >
-                  <CTAButton
-                    href="#Portofolio"
-                    text="Projects"
-                    icon={ExternalLink}
-                  />
-                  <CTAButton href="#Contact" text="Contact" icon={Mail} />
-                </div>
-
-                {/* Social Links */}
-                {socialLinksArray.length > 0 && (
-                  <div
-                    className="hidden sm:flex gap-4 justify-start"
-                    data-aos="fade-up"
-                    data-aos-delay="1600"
-                  >
-                    {socialLinksArray.map((social, index) => (
-                      <SocialLink key={index} icon={social.icon} link={social.link} />
-                    ))}
-                  </div>
-                )}
-              </div>
+              )}
             </div>
 
-            {/* Right Column - Optimized Lottie Animation */}
+            {/* القسم الأيمن - الصورة (يسار النص) */}
             <div
-              className="w-full py-[10%] sm:py-0 lg:w-1/2 h-auto lg:h-[600px] xl:h-[750px] relative flex items-center justify-center order-2 lg:order-2 mt-8 lg:mt-0"
-              onMouseEnter={() => setIsHovering(true)}
-              onMouseLeave={() => setIsHovering(false)}
+              className="w-full lg:w-1/2 h-auto relative flex items-center justify-center order-2"
               data-aos="fade-left"
               data-aos-delay="600"
             >
-              <div className="relative w-full opacity-90">
-                <div
-                  className={`absolute inset-0 bg-gradient-to-r from-[#6366f1]/10 to-[#a855f7]/10 rounded-3xl blur-3xl transition-all duration-700 ease-in-out ${
-                    isHovering ? "opacity-50 scale-105" : "opacity-20 scale-100"
-                  }`}
-                ></div>
-
-                <div
-                  className={`relative z-10 w-full opacity-90 transform transition-transform duration-500 ${
-                    isHovering ? "scale-105" : "scale-100"
-                  }`}
-                >
-                  <DotLottieReact {...lottieOptions} />
-                </div>
-
-                <div
-                  className={`absolute inset-0 pointer-events-none transition-all duration-700 ${
-                    isHovering ? "opacity-50" : "opacity-20"
-                  }`}
-                >
-                  <div
-                    className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-gradient-to-br from-indigo-500/10 to-purple-500/10 blur-3xl animate-[pulse_6s_cubic-bezier(0.4,0,0.6,1)_infinite] transition-all duration-700 ${
-                      isHovering ? "scale-110" : "scale-100"
-                    }`}
-                  ></div>
-                </div>
+              <div className="relative w-full max-w-[500px]">
+                <div className="absolute inset-0 bg-gradient-to-r from-[#6366f1]/20 to-[#a855f7]/20 rounded-full blur-3xl opacity-30"></div>
+                <img
+                  src={developer?.profile_image || "/Coding.gif"}
+                  alt="Profile animation"
+                  className="relative w-full h-auto object-contain z-10"
+                  style={{ imageRendering: 'high-quality' }}
+                />
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes blob {
+          0% { transform: translate(0px, 0px) scale(1); }
+          33% { transform: translate(30px, -50px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+          100% { transform: translate(0px, 0px) scale(1); }
+        }
+        .animate-blob { animation: blob 10s infinite; }
+        .animation-delay-2000 { animation-delay: 2s; }
+        .animation-delay-4000 { animation-delay: 4s; }
+        .animation-delay-6000 { animation-delay: 6s; }
+        .animate-blink { animation: blink 1s step-end infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+      `}</style>
     </div>
   );
 };
