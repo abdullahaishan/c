@@ -20,12 +20,13 @@ import {
 } from 'lucide-react'
 
 const Education = () => {
-  const { user } = useAuth() // ✅ استخدم useAuth بدلاً من useDeveloper
+  const { user } = useAuth()
   const { checkLimit, limits } = usePlan()
   const [educations, setEducations] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
 
   // جلب التعليم عند تحميل الصفحة
@@ -76,11 +77,13 @@ const Education = () => {
 
     setSaving(true)
     setError('')
+    setSuccess('')
 
     try {
       const educationData = {
         ...newEducation,
-        display_order: educations.length
+        display_order: educations.length,
+        developer_id: user.id  // ✅ مهم: ربط المؤهل بالمطور
       }
 
       const created = await educationService.create(user.id, educationData)
@@ -99,9 +102,12 @@ const Education = () => {
         description: '',
         activities: ''
       })
+      
+      setSuccess('✅ تم إضافة المؤهل بنجاح')
+      setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('Error adding education:', err)
-      setError('فشل في إضافة المؤهل التعليمي')
+      setError(err.message || 'فشل في إضافة المؤهل التعليمي')
     } finally {
       setSaving(false)
     }
@@ -109,13 +115,18 @@ const Education = () => {
 
   const handleUpdateEducation = async (id, updates) => {
     setSaving(true)
+    setError('')
+    setSuccess('')
+    
     try {
       const updated = await educationService.update(id, updates)
       setEducations(educations.map(edu => edu.id === id ? updated : edu))
       setEditingId(null)
+      setSuccess('✅ تم تحديث المؤهل بنجاح')
+      setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('Error updating education:', err)
-      setError('فشل في تحديث المؤهل التعليمي')
+      setError(err.message || 'فشل في تحديث المؤهل التعليمي')
     } finally {
       setSaving(false)
     }
@@ -127,9 +138,11 @@ const Education = () => {
     try {
       await educationService.delete(id)
       setEducations(educations.filter(edu => edu.id !== id))
+      setSuccess('✅ تم حذف المؤهل بنجاح')
+      setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('Error deleting education:', err)
-      setError('فشل في حذف المؤهل التعليمي')
+      setError(err.message || 'فشل في حذف المؤهل التعليمي')
     }
   }
 
@@ -161,6 +174,13 @@ const Education = () => {
     }
   }
 
+  // تنسيق التاريخ للعرض
+  const formatDate = (dateString) => {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    return date.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long' })
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center">
@@ -178,7 +198,7 @@ const Education = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">المؤهلات التعليمية</h1>
         <div className="text-sm text-gray-400">
-          {educations.length} / {limits.maxEducation === -1 ? '∞' : limits.maxEducation}
+          {educations.length} / {limits?.maxEducation === -1 ? '∞' : limits?.maxEducation || 5}
         </div>
       </div>
 
@@ -190,7 +210,15 @@ const Education = () => {
         </div>
       )}
 
-      {/* Add new education form - يظهر دائماً */}
+      {/* Success message */}
+      {success && (
+        <div className="flex items-center gap-2 p-4 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <p>{success}</p>
+        </div>
+      )}
+
+      {/* Add new education form */}
       <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
         <h2 className="text-lg font-semibold text-white mb-4">إضافة مؤهل تعليمي جديد</h2>
         
@@ -267,7 +295,7 @@ const Education = () => {
                   disabled={newEducation.is_current}
                   className="flex-1 p-3 bg-white/10 border border-white/20 rounded-lg text-white disabled:opacity-50"
                 />
-                <label className="flex items-center gap-2 text-sm text-gray-400">
+                <label className="flex items-center gap-2 text-sm text-gray-400 whitespace-nowrap">
                   <input
                     type="checkbox"
                     checked={newEducation.is_current}
@@ -349,6 +377,7 @@ const Education = () => {
               onMoveDown={() => handleMoveEducation(index, 'down')}
               isEditing={editingId === education.id}
               onUpdate={handleUpdateEducation}
+              formatDate={formatDate}
             />
           ))
         )}
@@ -357,7 +386,7 @@ const Education = () => {
   )
 }
 
-// مكون بطاقة التعليم (مع ترجمة)
+// مكون بطاقة التعليم
 const EducationCard = ({ 
   education, 
   index, 
@@ -367,7 +396,8 @@ const EducationCard = ({
   onMoveUp, 
   onMoveDown,
   isEditing,
-  onUpdate 
+  onUpdate,
+  formatDate 
 }) => {
   const [editData, setEditData] = useState(education)
 
@@ -378,7 +408,7 @@ const EducationCard = ({
           {/* Degree and field */}
           <div className="grid grid-cols-2 gap-4">
             <select
-              value={editData.degree}
+              value={editData.degree || ''}
               onChange={(e) => setEditData({ ...editData, degree: e.target.value })}
               className="p-3 bg-white/10 border border-white/20 rounded-lg text-white"
             >
@@ -388,42 +418,51 @@ const EducationCard = ({
             </select>
             <input
               type="text"
-              value={editData.field_of_study}
+              value={editData.field_of_study || ''}
               onChange={(e) => setEditData({ ...editData, field_of_study: e.target.value })}
               className="p-3 bg-white/10 border border-white/20 rounded-lg text-white"
               placeholder="التخصص"
             />
           </div>
 
-          {/* Institution */}
-          <input
-            type="text"
-            value={editData.institution}
-            onChange={(e) => setEditData({ ...editData, institution: e.target.value })}
-            className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-            placeholder="الجامعة"
-          />
+          {/* Institution and location */}
+          <div className="grid grid-cols-2 gap-4">
+            <input
+              type="text"
+              value={editData.institution || ''}
+              onChange={(e) => setEditData({ ...editData, institution: e.target.value })}
+              className="p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+              placeholder="الجامعة"
+            />
+            <input
+              type="text"
+              value={editData.location || ''}
+              onChange={(e) => setEditData({ ...editData, location: e.target.value })}
+              className="p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+              placeholder="الموقع"
+            />
+          </div>
 
           {/* Dates */}
           <div className="grid grid-cols-2 gap-4">
             <input
               type="month"
-              value={editData.start_date}
+              value={editData.start_date || ''}
               onChange={(e) => setEditData({ ...editData, start_date: e.target.value })}
               className="p-3 bg-white/10 border border-white/20 rounded-lg text-white"
             />
             <div className="flex items-center gap-2">
               <input
                 type="month"
-                value={editData.end_date}
+                value={editData.end_date || ''}
                 onChange={(e) => setEditData({ ...editData, end_date: e.target.value })}
                 disabled={editData.is_current}
                 className="flex-1 p-3 bg-white/10 border border-white/20 rounded-lg text-white disabled:opacity-50"
               />
-              <label className="flex items-center gap-2 text-sm text-gray-400">
+              <label className="flex items-center gap-2 text-sm text-gray-400 whitespace-nowrap">
                 <input
                   type="checkbox"
-                  checked={editData.is_current}
+                  checked={editData.is_current || false}
                   onChange={(e) => setEditData({ ...editData, is_current: e.target.checked })}
                   className="w-4 h-4"
                 />
@@ -435,7 +474,7 @@ const EducationCard = ({
           {/* Grade */}
           <input
             type="text"
-            value={editData.grade}
+            value={editData.grade || ''}
             onChange={(e) => setEditData({ ...editData, grade: e.target.value })}
             className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
             placeholder="التقدير"
@@ -443,7 +482,7 @@ const EducationCard = ({
 
           {/* Description */}
           <textarea
-            value={editData.description}
+            value={editData.description || ''}
             onChange={(e) => setEditData({ ...editData, description: e.target.value })}
             rows="2"
             className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
@@ -452,7 +491,7 @@ const EducationCard = ({
 
           {/* Activities */}
           <textarea
-            value={editData.activities}
+            value={editData.activities || ''}
             onChange={(e) => setEditData({ ...editData, activities: e.target.value })}
             rows="2"
             className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
@@ -482,7 +521,7 @@ const EducationCard = ({
 
   return (
     <div className="group relative bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all">
-      {/* Move buttons - على اليمين */}
+      {/* Move buttons */}
       <div className="absolute left-4 top-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         {index > 0 && (
           <button onClick={onMoveUp} className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded">
@@ -523,7 +562,7 @@ const EducationCard = ({
           <div className="flex flex-wrap items-center gap-4 text-sm">
             <span className="flex items-center gap-1 text-gray-400">
               <Calendar className="w-4 h-4" />
-              {new Date(education.start_date).getFullYear()} - {education.is_current ? 'حتى الآن' : new Date(education.end_date).getFullYear()}
+              {formatDate(education.start_date)} - {education.is_current ? 'حتى الآن' : formatDate(education.end_date)}
             </span>
             {education.grade && (
               <span className="flex items-center gap-1 text-gray-400">
