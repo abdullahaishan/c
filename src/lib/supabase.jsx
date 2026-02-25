@@ -1034,3 +1034,251 @@ export const authService = {
     return developer
   }
 }
+// ===========================================
+// خدمات الإحصائيات والتحليلات - StatsService
+// ===========================================
+export const statsService = {
+  // 📊 إحصائيات أساسية للمطور
+  async getDeveloperStats(developerId) {
+    try {
+      // جلب بيانات المطور الأساسية
+      const { data: developer } = await supabase
+        .from('developers')
+        .select('views_count, likes_count, created_at')
+        .eq('id', developerId)
+        .single()
+
+      // جلب عدد الرسائل
+      const { count: messagesCount } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('developer_id', developerId)
+
+      // جلب عدد الرسائل غير المقروءة
+      const { count: unreadCount } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('developer_id', developerId)
+        .eq('is_read', false)
+
+      // جلب عدد الزوار
+      const { count: visitorsCount } = await supabase
+        .from('visitors')
+        .select('*', { count: 'exact', head: true })
+        .eq('developer_id', developerId)
+
+      // جلب عدد المشاهدات اليومية لآخر 7 أيام
+      const last7Days = new Date()
+      last7Days.setDate(last7Days.getDate() - 7)
+
+      const { data: recentViews } = await supabase
+        .from('visitors')
+        .select('visited_at')
+        .eq('developer_id', developerId)
+        .gte('visited_at', last7Days.toISOString())
+
+      // تجميع المشاهدات حسب اليوم
+      const dailyViews = {}
+      recentViews?.forEach(view => {
+        const date = new Date(view.visited_at).toLocaleDateString('ar-SA')
+        dailyViews[date] = (dailyViews[date] || 0) + 1
+      })
+
+      return {
+        views: developer?.views_count || 0,
+        likes: developer?.likes_count || 0,
+        messages: messagesCount || 0,
+        unreadMessages: unreadCount || 0,
+        visitors: visitorsCount || 0,
+        dailyViews,
+        memberSince: developer?.created_at,
+        weeklyTrend: Object.values(dailyViews).reduce((a, b) => a + b, 0)
+      }
+    } catch (error) {
+      console.error('Error in getDeveloperStats:', error)
+      return {
+        views: 0,
+        likes: 0,
+        messages: 0,
+        unreadMessages: 0,
+        visitors: 0,
+        dailyViews: {},
+        weeklyTrend: 0
+      }
+    }
+  },
+
+  // 📈 إحصائيات المحتوى
+  async getContentStats(developerId) {
+    try {
+      const [
+        projects,
+        skills,
+        certificates,
+        experience,
+        education
+      ] = await Promise.all([
+        supabase.from('projects').select('*', { count: 'exact', head: true }).eq('developer_id', developerId),
+        supabase.from('skills').select('*', { count: 'exact', head: true }).eq('developer_id', developerId),
+        supabase.from('certificates').select('*', { count: 'exact', head: true }).eq('developer_id', developerId),
+        supabase.from('experience').select('*', { count: 'exact', head: true }).eq('developer_id', developerId),
+        supabase.from('education').select('*', { count: 'exact', head: true }).eq('developer_id', developerId)
+      ])
+
+      // جلب أحدث المشاريع
+      const { data: latestProjects } = await supabase
+        .from('projects')
+        .select('title, created_at, image')
+        .eq('developer_id', developerId)
+        .order('created_at', { ascending: false })
+        .limit(3)
+
+      // جلب أكثر المهارات إتقاناً
+      const { data: topSkills } = await supabase
+        .from('skills')
+        .select('name, proficiency')
+        .eq('developer_id', developerId)
+        .order('proficiency', { ascending: false })
+        .limit(5)
+
+      return {
+        counts: {
+          projects: projects.count || 0,
+          skills: skills.count || 0,
+          certificates: certificates.count || 0,
+          experience: experience.count || 0,
+          education: education.count || 0
+        },
+        latestProjects: latestProjects || [],
+        topSkills: topSkills || []
+      }
+    } catch (error) {
+      console.error('Error in getContentStats:', error)
+      return {
+        counts: {
+          projects: 0,
+          skills: 0,
+          certificates: 0,
+          experience: 0,
+          education: 0
+        },
+        latestProjects: [],
+        topSkills: []
+      }
+    }
+  },
+
+  // 🌍 إحصائيات الزوار المتقدمة (للمستخدمين المدفوعين)
+  async getAdvancedVisitorStats(developerId) {
+    try {
+      // جلب آخر 30 يوم
+      const last30Days = new Date()
+      last30Days.setDate(last30Days.getDate() - 30)
+
+      const { data: visitors } = await supabase
+        .from('visitors')
+        .select('*')
+        .eq('developer_id', developerId)
+        .gte('visited_at', last30Days.toISOString())
+
+      // تحليل الدول
+      const countries = {}
+      // تحليل الأجهزة
+      const devices = { mobile: 0, desktop: 0, tablet: 0 }
+      // تحليل المتصفحات
+      const browsers = {}
+      // تحليل مصادر الزيارات
+      const referrers = {}
+
+      visitors?.forEach(visitor => {
+        if (visitor.visitor_country) {
+          countries[visitor.visitor_country] = (countries[visitor.visitor_country] || 0) + 1
+        }
+        if (visitor.device_type) {
+          devices[visitor.device_type] = (devices[visitor.device_type] || 0) + 1
+        }
+        if (visitor.browser) {
+          browsers[visitor.browser] = (browsers[visitor.browser] || 0) + 1
+        }
+        if (visitor.referrer) {
+          const source = this.extractReferrerSource(visitor.referrer)
+          referrers[source] = (referrers[source] || 0) + 1
+        }
+      })
+
+      return {
+        total: visitors?.length || 0,
+        countries: Object.entries(countries).sort((a, b) => b[1] - a[1]),
+        devices,
+        browsers: Object.entries(browsers).sort((a, b) => b[1] - a[1]),
+        referrers: Object.entries(referrers).sort((a, b) => b[1] - a[1]),
+        daily: this.aggregateDailyVisits(visitors || [])
+      }
+    } catch (error) {
+      console.error('Error in getAdvancedVisitorStats:', error)
+      return null
+    }
+  },
+
+  // 🤖 تحليلات الذكاء الاصطناعي (للمستخدمين مع AI Analysis)
+  async getAIAnalysisStats(developerId) {
+    try {
+      const { data: analyses } = await supabase
+        .from('ai_analyses')
+        .select('*')
+        .eq('user_id', developerId)
+        .order('analyzed_at', { ascending: false })
+
+      if (!analyses) return null
+
+      // تحليل نتائج الذكاء الاصطناعي
+      const skillsExtracted = []
+      const suggestions = []
+
+      analyses?.forEach(analysis => {
+        if (analysis.analysis_result?.skills) {
+          skillsExtracted.push(...analysis.analysis_result.skills)
+        }
+        if (analysis.analysis_result?.suggestions) {
+          suggestions.push(...analysis.analysis_result.suggestions)
+        }
+      })
+
+      return {
+        totalAnalyses: analyses.length,
+        lastAnalysis: analyses[0]?.analyzed_at,
+        extractedSkills: [...new Set(skillsExtracted)],
+        suggestions: [...new Set(suggestions)],
+        improvementScore: this.calculateImprovementScore(analyses)
+      }
+    } catch (error) {
+      console.error('Error in getAIAnalysisStats:', error)
+      return null
+    }
+  },
+
+  // دوال مساعدة
+  extractReferrerSource(referrer) {
+    if (!referrer) return 'مباشر'
+    if (referrer.includes('google')) return 'Google'
+    if (referrer.includes('linkedin')) return 'LinkedIn'
+    if (referrer.includes('github')) return 'GitHub'
+    if (referrer.includes('twitter')) return 'Twitter'
+    return 'آخر'
+  },
+
+  aggregateDailyVisits(visitors) {
+    const daily = {}
+    visitors.forEach(v => {
+      const date = new Date(v.visited_at).toLocaleDateString('ar-SA')
+      daily[date] = (daily[date] || 0) + 1
+    })
+    return daily
+  },
+
+  calculateImprovementScore(analyses) {
+    // حساب نسبة التحسن بين التحليلات
+    if (analyses.length < 2) return 0
+    return Math.min(100, analyses.length * 15) // مثال بسيط
+  }
+        }
