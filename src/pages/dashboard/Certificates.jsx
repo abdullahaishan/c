@@ -71,7 +71,6 @@ const Certificates = () => {
       const imageUrl = await storageService.uploadCertificateImage(
         file,
         user.id,
-        editingId || 'new',
         null
       )
       return imageUrl
