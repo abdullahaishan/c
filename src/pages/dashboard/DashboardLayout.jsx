@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import { messagesService } from '../../lib/supabase'
 import {
   LayoutDashboard,
   FolderKanban,
@@ -14,33 +15,59 @@ import {
   Code,
   ChevronDown,
   Bell,
-  Sparkles, // 🆕 أضف هذا
-  Crown  
+  Sparkles,
+  Crown,
+  MessageSquare
 } from 'lucide-react'
 
 const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
   const { user, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
 
+  // جلب عدد الرسائل غير المقروءة
+  useEffect(() => {
+    if (user) {
+      fetchUnreadCount()
+      
+      // تحديث العدد كل 30 ثانية
+      const interval = setInterval(fetchUnreadCount, 30000)
+      return () => clearInterval(interval)
+    }
+  }, [user])
+
+  const fetchUnreadCount = async () => {
+    try {
+      const count = await messagesService.getUnreadCount(user.id)
+      setUnreadCount(count)
+    } catch (error) {
+      console.error('Error fetching unread count:', error)
+    }
+  }
+
   const navigation = [
-  { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
-  { name: 'Skills', href: '/dashboard/skills', icon: Code },
-  { name: 'Certificates', href: '/dashboard/certificates', icon: Award },
-  { name: 'Experience', href: '/dashboard/experience', icon: Briefcase },
-  { name: 'Education', href: '/dashboard/education', icon: GraduationCap },
-  { name: 'AI Builder', href: '/app/builder', icon: Sparkles }, // 🆕 أضف هذا
-  { name: 'Plan Status', href: '/dashboard/plan-status', icon: Crown }, // 🆕 أضف هذا
-  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
-]
+    { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
+    { name: 'Skills', href: '/dashboard/skills', icon: Code },
+    { name: 'Certificates', href: '/dashboard/certificates', icon: Award },
+    { name: 'Experience', href: '/dashboard/experience', icon: Briefcase },
+    { name: 'Education', href: '/dashboard/education', icon: GraduationCap },
+    { name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
+    { name: 'AI Builder', href: '/app/builder', icon: Sparkles },
+    { name: 'Plan Status', href: '/dashboard/plan-status', icon: Crown },
+    { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+  ]
 
   const handleLogout = () => {
-  
     logout()
     navigate('/')
+  }
+
+  const handleNotificationClick = () => {
+    navigate('/dashboard/messages')
   }
 
   const isActive = (path) => location.pathname === path
@@ -86,11 +113,13 @@ const DashboardLayout = () => {
         <nav className="p-4 space-y-1">
           {navigation.map((item) => {
             const Icon = item.icon
+            const isMessagesPage = item.href === '/dashboard/messages'
+            
             return (
               <Link
                 key={item.name}
                 to={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all relative ${
                   isActive(item.href)
                     ? 'bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white'
                     : 'text-gray-400 hover:bg-white/5 hover:text-white'
@@ -99,6 +128,13 @@ const DashboardLayout = () => {
               >
                 <Icon className="w-5 h-5" />
                 <span>{item.name}</span>
+                
+                {/* عرض عدد الرسائل غير المقروءة بجانب Messages */}
+                {isMessagesPage && unreadCount > 0 && (
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 min-w-[20px] h-[20px] flex items-center justify-center bg-red-500 text-white text-xs rounded-full px-1">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </Link>
             )
           })}
@@ -140,9 +176,16 @@ const DashboardLayout = () => {
             {/* Right side */}
             <div className="flex items-center gap-4 ml-auto">
               {/* Notifications */}
-              <button className="relative p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg">
+              <button 
+                onClick={handleNotificationClick}
+                className="relative p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg"
+              >
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-xs rounded-full px-1">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </button>
 
               {/* Profile dropdown */}
