@@ -920,7 +920,7 @@ export const storageService = {
       if (!file.type.startsWith('image/')) throw new Error('الملف ليس صورة')
       if (file.size > 5 * 1024 * 1024) throw new Error('الصورة أكبر من 5 ميجابايت')
 
-      const fileName = `${userId}/certificates/${certificateId}/${uuidv4()}-${file.name}`
+      const fileName = `${userId}/profile/${certificateId}/${uuidv4()}-${file.name}`
 
       const { error: uploadError } = await supabase.storage
         .from('developers')
