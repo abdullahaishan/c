@@ -76,16 +76,10 @@ const StatCard = memo(({ icon: Icon, color, value, label, description, animation
   </div>
 ))
 
-const AboutPage = () => {
-  const { 
-    developer, 
-    getProfileImage,
-    getProjects,
-    getCertificates,
-    getSkills,
-    getExperience,
-    getEducation
-  } = useDeveloper()
+const AboutPage = ({ developer: propDeveloper }) => {
+  const context = useDeveloper()
+  const developer = propDeveloper || context.publicDeveloper
+  const { getProfileImage, getProjects, getCertificates, getSkills, getExperience } = context
 
   // حساب الإحصائيات
   const stats = useMemo(() => {
