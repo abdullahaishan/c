@@ -33,6 +33,13 @@ const PaymentModal = ({ plan, billingCycle, currency, convertedPrice, userCountr
   
   const { user } = useAuth()
   
+  // ✅ متغيرات التحقق من طريقة الدفع
+  const isWestern = method === 'western'
+  const isMoneyGram = method === 'moneygram'
+  const isOneCash = method === 'onecash'
+  const isCrypto = method === 'crypto'
+  const isBank = method === 'bank'
+  
   // رقم واتساب الأدمن
   const ADMIN_WHATSAPP = '+967771315459'
   const ADMIN_NAME = 'مدير الموقع'
@@ -404,7 +411,8 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
               <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
                 <h3 className="text-white font-medium mb-2">📋 تعليمات الدفع:</h3>
                 <p className="text-sm text-blue-400">
-                  {method === 'western' && (
+                  {/* ✅ استخدام المتغيرات الجديدة */}
+                  {isWestern && (
                     <>
                       أرسل حوالة ويسترن يونيون إلى:
                       <div className="mt-2 p-3 bg-black/30 rounded-lg text-gray-300">
@@ -416,7 +424,7 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
                     </>
                   )}
                   
-                  {method === 'moneygram' && (
+                  {isMoneyGram && (
                     <>
                       أرسل حوالة موني جرام إلى:
                       <div className="mt-2 p-3 bg-black/30 rounded-lg text-gray-300">
@@ -428,7 +436,7 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
                     </>
                   )}
                   
-                  {method === 'onecash' && (
+                  {isOneCash && (
                     <>
                       أرسل المبلغ إلى محفظة OneCash:
                       <div className="mt-2 p-3 bg-black/30 rounded-lg text-gray-300">
@@ -442,7 +450,7 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
               </div>
 
               {/* Wallet Address (for crypto) */}
-              {method === 'crypto' && cryptoType && (
+              {isCrypto && cryptoType && (
                 <div className="p-4 bg-black/30 rounded-xl">
                   <p className="text-sm text-gray-400 mb-2">أرسل إلى هذا العنوان:</p>
                   <div className="flex items-center gap-2 p-3 bg-white/5 rounded-lg">
@@ -628,4 +636,3 @@ const CryptoOption = ({ type, name, address, onSelect, onCopy, copied }) => (
 )
 
 export default PaymentModal
-
