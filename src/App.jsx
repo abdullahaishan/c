@@ -9,7 +9,7 @@ import LandingPage from './pages/LandingPage'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import PublicPortfolio from './pages/PublicPortfolio'
-import ProjectDetail from './pages/ProjectDetail';
+import ProjectDetail from './components/ProjectDetail';
 
 
 // AI Builder
