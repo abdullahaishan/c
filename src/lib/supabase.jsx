@@ -326,10 +326,10 @@ export const projectService = {
 }
 
 // ===========================================
-// خدمات المهارات (Skills) - نسخة مصححة
+// خدمات المهارات (Skills) - محدث
 // ===========================================
 export const skillService = {
-  // ✅ جلب مهارات مطور معين
+  // جلب مهارات مطور معين
   async getByDeveloperId(developerId) {
     const { data, error } = await supabase
       .from('skills')
@@ -344,9 +344,9 @@ export const skillService = {
     return data || []
   },
 
-  // ✅ إنشاء مهارة جديدة
+  // إنشاء مهارة جديدة
   async create(developerId, skillData) {
-    // التحقق من حد الباقة (اختياري)
+    // التحقق من حد الباقة
     const { data: existingSkills } = await supabase
       .from('skills')
       .select('id')
@@ -379,7 +379,7 @@ export const skillService = {
     return data
   },
 
-  // ✅ تحديث مهارة
+  // تحديث مهارة
   async update(id, updates) {
     const { data, error } = await supabase
       .from('skills')
@@ -398,7 +398,7 @@ export const skillService = {
     return data
   },
 
-  // ✅ حذف مهارة
+  // حذف مهارة
   async delete(id) {
     const { error } = await supabase
       .from('skills')
@@ -410,9 +410,34 @@ export const skillService = {
       throw error
     }
     return true
+  },
+
+  // جلب المهارات الرئيسية فقط
+  async getMainSkills(developerId) {
+    const { data, error } = await supabase
+      .from('skills')
+      .select('*')
+      .eq('developer_id', developerId)
+      .eq('is_main', true)
+      .order('display_order', { ascending: true })
+    
+    if (error) throw error
+    return data || []
+  },
+
+  // جلب المهارات حسب التصنيف
+  async getSkillsByCategory(developerId, category) {
+    const { data, error } = await supabase
+      .from('skills')
+      .select('*')
+      .eq('developer_id', developerId)
+      .eq('category', category)
+      .order('proficiency', { ascending: false })
+    
+    if (error) throw error
+    return data || []
   }
 }
-
 // ===========================================
 // خدمات الشهادات (Certificates) - نسخة مصححة
 // ===========================================
