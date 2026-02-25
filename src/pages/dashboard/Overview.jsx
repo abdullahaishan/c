@@ -29,14 +29,15 @@ import {
 const Overview = () => {
   const { user } = useAuth()
   const { 
-  planId, 
-  limits, 
-  usage,              // ✅ أضف هذا
-  getUsagePercentage, // ✅ أضف هذا
-  canUseFeature, 
-  isFree,
-  getRemainingAnalyses 
-} = usePlan()
+    planId, 
+    limits, 
+    usage,
+    getUsagePercentage,
+    canUseFeature, 
+    isFree,
+    getRemainingAnalyses 
+  } = usePlan()  // ✅ تعريف واحد فقط
+  
   const [stats, setStats] = useState(null)
   const [contentStats, setContentStats] = useState(null)
   const [visitorStats, setVisitorStats] = useState(null)
@@ -44,13 +45,13 @@ const Overview = () => {
   const [remainingAnalyses, setRemainingAnalyses] = useState(0)
   const [loading, setLoading] = useState(true)
   const [selectedPeriod, setSelectedPeriod] = useState('week')
-const { limits, usage, getUsagePercentage } = usePlan()
   
   useEffect(() => {
     if (user) {
       fetchAllStats()
     }
   }, [user])
+  
 
   const fetchAllStats = async () => {
     setLoading(true)
