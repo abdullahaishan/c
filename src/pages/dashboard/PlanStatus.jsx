@@ -169,81 +169,79 @@ const PlanStatus = () => {
           
           {showCurrencyDropdown && (
   <>
-    {/* طبقة خلفية شفافة تمنع النقر على البطاقات */}
+    {/* خلفية سوداء شفافة تغطي الشاشة */}
     <div 
-      className="fixed inset-0 z-40" 
+      className="fixed inset-0 bg-black/50 z-[100]" 
       onClick={() => setShowCurrencyDropdown(false)} 
     />
     
-    {/* قائمة العملات - فوق كل شيء */}
-    <div className="absolute top-full left-0 mt-2 w-64 bg-gray-900 border border-white/10 rounded-xl shadow-xl z-[100] max-h-96 overflow-y-auto">
-      {/* اليمن - بخيارات متعددة */}
-      <div className="px-3 py-2 text-xs text-gray-500 bg-white/5">🇾🇪 اليمن</div>
+    {/* القائمة - fixed في منتصف الشاشة */}
+    <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 bg-gray-900 border border-white/10 rounded-xl shadow-xl z-[101] max-h-96 overflow-y-auto">
+      {/* محتوى القائمة كما هو */}
+      <div className="px-3 py-2 text-xs text-gray-500 bg-white/5 sticky top-0">🇾🇪 اليمن</div>
       <button
         onClick={() => {
           setSelectedCurrency('YER_ADEN')
           setShowCurrencyDropdown(false)
         }}
-        className={`w-full flex items-center gap-3 px-4 py-3 text-right hover:bg-white/5 transition-all ${
+        className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all ${
           selectedCurrency === 'YER_ADEN' ? 'bg-[#6366f1]/20' : ''
         }`}
       >
-        <span className="text-white font-bold">ر.ي</span>
-        <span className="flex-1 text-gray-300">ريال يمني (عدن) - 1620</span>
+        <span className="text-white font-bold w-8">ر.ي</span>
+        <span className="flex-1 text-gray-300 text-right">ريال يمني (عدن) - 1620</span>
       </button>
       <button
         onClick={() => {
           setSelectedCurrency('YER_SANA')
           setShowCurrencyDropdown(false)
         }}
-        className={`w-full flex items-center gap-3 px-4 py-3 text-right hover:bg-white/5 transition-all ${
+        className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all ${
           selectedCurrency === 'YER_SANA' ? 'bg-[#6366f1]/20' : ''
         }`}
       >
-        <span className="text-white font-bold">ر.ي</span>
-        <span className="flex-1 text-gray-300">ريال يمني (صنعاء) - 530</span>
+        <span className="text-white font-bold w-8">ر.ي</span>
+        <span className="flex-1 text-gray-300 text-right">ريال يمني (صنعاء) - 530</span>
       </button>
       
-      {/* دول الخليج */}
-      <div className="px-3 py-2 text-xs text-gray-500 bg-white/5 mt-2">🇸🇦 دول الخليج</div>
+      <div className="px-3 py-2 text-xs text-gray-500 bg-white/5 sticky top-0 mt-2">🇸🇦 دول الخليج</div>
       <button
         onClick={() => {
           setSelectedCurrency('SAR')
           setShowCurrencyDropdown(false)
         }}
-        className={`w-full flex items-center gap-3 px-4 py-3 text-right hover:bg-white/5 transition-all ${
+        className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all ${
           selectedCurrency === 'SAR' ? 'bg-[#6366f1]/20' : ''
         }`}
       >
-        <span className="text-white font-bold">ر.س</span>
-        <span className="flex-1 text-gray-300">ريال سعودي</span>
+        <span className="text-white font-bold w-8">ر.س</span>
+        <span className="flex-1 text-gray-300 text-right">ريال سعودي</span>
       </button>
       <button
         onClick={() => {
           setSelectedCurrency('AED')
           setShowCurrencyDropdown(false)
         }}
-        className={`w-full flex items-center gap-3 px-4 py-3 text-right hover:bg-white/5 transition-all ${
+        className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all ${
           selectedCurrency === 'AED' ? 'bg-[#6366f1]/20' : ''
         }`}
       >
-        <span className="text-white font-bold">د.إ</span>
-        <span className="flex-1 text-gray-300">درهم إماراتي</span>
+        <span className="text-white font-bold w-8">د.إ</span>
+        <span className="flex-1 text-gray-300 text-right">درهم إماراتي</span>
       </button>
       
-      {/* دول أخرى */}
-      <div className="px-3 py-2 text-xs text-gray-500 bg-white/5 mt-2">🌍 أخرى</div>
+      <div className="px-3 py-2 text-xs text-gray-500 bg-white/5 sticky top-0 mt-2">🌍 أخرى</div>
       <button
         onClick={() => {
           setSelectedCurrency('USD')
           setShowCurrencyDropdown(false)
         }}
-        className={`w-full flex items-center gap-3 px-4 py-3 text-right hover:bg-white/5 transition-all ${
+        className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all ${
           selectedCurrency === 'USD' ? 'bg-[#6366f1]/20' : ''
         }`}
       >
-        <span className="text-white font-bold">$</span>
-        <span className="flex-1 text-gray-300">دولار أمريكي</span>
+        <span className="text-white font-bold w-8">$</span>
+        <span className="flex-1 text-gray-300 text-right">دولار أمريكي</span>
       </button>
     </div>
   </>
