@@ -177,61 +177,93 @@ export const portfolioService = {
 }
 
 // ===========================================
-// خدمات المشاريع (Projects)
+// خدمات المشاريع (Projects) - نسخة مصححة ومكتملة
 // ===========================================
 export const projectService = {
-  // جلب مشاريع بورتفليو
-  async getByPortfolioId(portfolioId) {
+  // ✅ جلب مشاريع مطور معين (الأهم)
+  async getByDeveloperId(developerId) {
     const { data, error } = await supabase
       .from('projects')
       .select('*')
-      .eq('portfolio_id', portfolioId)
+      .eq('developer_id', developerId)
       .order('display_order', { ascending: true })
     
-    if (error) throw error
-    return data
+    if (error) {
+      console.error('Error fetching projects:', error)
+      throw error
+    }
+    return data || []
   },
 
-  // إنشاء مشروع جديد
-  async create(portfolioId, projectData) {
+  // ✅ إنشاء مشروع جديد
+  async create(developerId, projectData) {
+    // التحقق من وجود المشاريع الحالية
+    const { data: existingProjects } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('developer_id', developerId)
+
+    // التحقق من حد الباقة (اختياري)
+    const { data: developer } = await supabase
+      .from('developers')
+      .select('plan_id')
+      .eq('id', developerId)
+      .single()
+
+    // إذا كان مستخدم عادي (plan_id = 1) والحد 3 مشاريع
+    if (developer?.plan_id === 1 && existingProjects?.length >= 3) {
+      throw new Error('لقد تجاوزت الحد المسموح به من المشاريع للباقة المجانية')
+    }
+
     const { data, error } = await supabase
       .from('projects')
       .insert([{
-        portfolio_id: portfolioId,
+        developer_id: developerId,
         ...projectData,
-        created_at: new Date(),
-        updated_at: new Date()
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }])
       .select()
+      .single()
     
-    if (error) throw error
-    return data[0]
+    if (error) {
+      console.error('Error creating project:', error)
+      throw error
+    }
+    return data
   },
 
-  // تحديث مشروع
+  // ✅ تحديث مشروع
   async update(id, updates) {
     const { data, error } = await supabase
       .from('projects')
       .update({
         ...updates,
-        updated_at: new Date()
+        updated_at: new Date().toISOString()
       })
       .eq('id', id)
       .select()
       .single()
     
-    if (error) throw error
+    if (error) {
+      console.error('Error updating project:', error)
+      throw error
+    }
     return data
   },
 
-  // حذف مشروع
+  // ✅ حذف مشروع
   async delete(id) {
     const { error } = await supabase
       .from('projects')
       .delete()
       .eq('id', id)
     
-    if (error) throw error
+    if (error) {
+      console.error('Error deleting project:', error)
+      throw error
+    }
+    return true
   }
 }
 
@@ -573,6 +605,48 @@ export const aiAnalysisService = {
 // خدمات رفع الملفات (Storage) - النسخة المصححة
 // ===========================================
 export const storageService = {
+  // ✅ دالة رفع صورة المشروع
+  async uploadProjectImage(file, userId, projectId, oldImageUrl = null) {
+    try {
+      if (!file) throw new Error('لا يوجد ملف')
+      if (!file.type.startsWith('image/')) throw new Error('الملف ليس صورة')
+      if (file.size > 5 * 1024 * 1024) throw new Error('الصورة أكبر من 5 ميجابايت')
+
+      // مسار الصورة: userId/projects/projectId/timestamp-uuid
+      const fileName = `${userId}/projects/${projectId}/${uuidv4()}-${file.name}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('developers')
+        .upload(fileName, file, {
+          upsert: true,
+          cacheControl: '3600'
+        })
+
+      if (uploadError) throw uploadError
+
+      const { data } = supabase.storage
+        .from('developers')
+        .getPublicUrl(fileName)
+
+      // لا تقم بتحديث قاعدة البيانات هنا - سيتم تحديثها في صفحة المشاريع
+      
+      // حذف الصورة القديمة إذا وجدت
+      if (oldImageUrl) {
+        try {
+          const oldPath = oldImageUrl.split('/developers/')[1]
+          if (oldPath) {
+            await supabase.storage.from('developers').remove([oldPath])
+          }
+        } catch (e) {}
+      }
+
+      return data.publicUrl
+
+    } catch (error) {
+      console.error('فشل رفع صورة المشروع:', error)
+      throw error
+    }
+  }
   async uploadProfileImage(file, userId, oldImageUrl = null) {
     try {
       if (!file) throw new Error('لا يوجد ملف')
