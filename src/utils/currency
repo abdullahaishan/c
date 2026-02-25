@@ -1,0 +1,171 @@
+// ===========================================
+// العملات وأسعار الصرف - تحديث خاص باليمن
+// ===========================================
+
+// أسعار الصرف المحدثة حسب السوق اليمني
+export const CURRENCIES = {
+  // العملات الرئيسية
+  USD: { code: 'USD', symbol: '$', name: 'الدولار الأمريكي', rate: 1 },
+  
+  // اليمن - أسعار متعددة حسب المحافظات
+  YER_SANA: { code: 'YER', symbol: 'ر.ي', name: 'ريال يمني (صنعاء)', rate: 530, region: 'sanaa' },
+  YER_ADEN: { code: 'YER', symbol: 'ر.ي', name: 'ريال يمني (عدن)', rate: 1620, region: 'aden' },
+  YER_TAIZ: { code: 'YER', symbol: 'ر.ي', name: 'ريال يمني (تعز)', rate: 1590, region: 'taiz' },
+  YER_HADRAMOUT: { code: 'YER', symbol: 'ر.ي', name: 'ريال يمني (حضرموت)', rate: 1610, region: 'hadramout' },
+  
+  // دول الخليج
+  SAR: { code: 'SAR', symbol: 'ر.س', name: 'ريال سعودي', rate: 3.75 },
+  AED: { code: 'AED', symbol: 'د.إ', name: 'درهم إماراتي', rate: 3.67 },
+  QAR: { code: 'QAR', symbol: 'ر.ق', name: 'ريال قطري', rate: 3.64 },
+  KWD: { code: 'KWD', symbol: 'د.ك', name: 'دينار كويتي', rate: 0.31 },
+  
+  // دول عربية أخرى
+  EGP: { code: 'EGP', symbol: 'ج.م', name: 'جنيه مصري', rate: 30.90 },
+  JOD: { code: 'JOD', symbol: 'د.ا', name: 'دينار أردني', rate: 0.71 },
+  MAD: { code: 'MAD', symbol: 'د.م', name: 'درهم مغربي', rate: 10.05 },
+  TND: { code: 'TND', symbol: 'د.ت', name: 'دينار تونسي', rate: 3.12 },
+  
+  // عملات رقمية
+  BTC: { code: 'BTC', symbol: '₿', name: 'بيتكوين', rate: 0.000016 },
+  ETH: { code: 'ETH', symbol: 'Ξ', name: 'إيثيريوم', rate: 0.00028 },
+  USDT: { code: 'USDT', symbol: '₮', name: 'تيثير', rate: 1 }
+}
+
+// معلومات الدول مع تحديد المنطقة لليمن
+export const COUNTRIES = {
+  // اليمن - مع تحديد المحافظات
+  YE_SANA: { name: 'اليمن - صنعاء', currency: 'YER_SANA', flag: '🇾🇪', region: 'sanaa' },
+  YE_ADEN: { name: 'اليمن - عدن', currency: 'YER_ADEN', flag: '🇾🇪', region: 'aden' },
+  YE_TAIZ: { name: 'اليمن - تعز', currency: 'YER_TAIZ', flag: '🇾🇪', region: 'taiz' },
+  YE_HADRAMOUT: { name: 'اليمن - حضرموت', currency: 'YER_HADRAMOUT', flag: '🇾🇪', region: 'hadramout' },
+  YE_OTHER: { name: 'اليمن - محافظات أخرى', currency: 'YER_ADEN', flag: '🇾🇪', region: 'other' },
+  
+  // دول الخليج
+  SA: { name: 'السعودية', currency: 'SAR', flag: '🇸🇦', region: 'gulf' },
+  AE: { name: 'الإمارات', currency: 'AED', flag: '🇦🇪', region: 'gulf' },
+  QA: { name: 'قطر', currency: 'QAR', flag: '🇶🇦', region: 'gulf' },
+  KW: { name: 'الكويت', currency: 'KWD', flag: '🇰🇼', region: 'gulf' },
+  
+  // دول عربية أخرى
+  EG: { name: 'مصر', currency: 'EGP', flag: '🇪🇬', region: 'arab' },
+  JO: { name: 'الأردن', currency: 'JOD', flag: '🇯🇴', region: 'arab' },
+  MA: { name: 'المغرب', currency: 'MAD', flag: '🇲🇦', region: 'arab' },
+  TN: { name: 'تونس', currency: 'TND', flag: '🇹🇳', region: 'arab' },
+  
+  // دول غربية
+  US: { name: 'الولايات المتحدة', currency: 'USD', flag: '🇺🇸', region: 'western' },
+  GB: { name: 'بريطانيا', currency: 'GBP', flag: '🇬🇧', region: 'western' }
+}
+
+// طرق الدفع حسب المنطقة
+export const PAYMENT_METHODS_BY_REGION = {
+  // اليمن - جميع المحافظات
+  yemen: [
+    { 
+      id: 'western', 
+      name: 'Western Union', 
+      icon: 'Send', 
+      description: 'حوالات ويسترن يونيون - الأسرع والأكثر أماناً',
+      required: true,
+      instructions: 'أرسل الحوالة إلى: احمد زبن الله علي عيشان - صنعاء - رقم الهاتف: +967771315459'
+    },
+    { 
+      id: 'moneygram', 
+      name: 'MoneyGram', 
+      icon: 'Send', 
+      description: 'حوالات موني جرام - متوفرة في جميع المحافظات',
+      instructions: 'أرسل الحوالة إلى: احمد زبن الله علي عيشان - عدن - رقم الهاتف: +967771315459'
+    },
+    { 
+      id: 'crypto', 
+      name: 'العملات الرقمية', 
+      icon: 'Bitcoin', 
+      description: 'USDT - BTC - ETH (حول مباشرة للمحفظة)',
+      types: ['usdt', 'btc', 'eth']
+    },
+    { 
+      id: 'bank', 
+      name: 'تحويل بنكي', 
+      icon: 'Landmark', 
+      description: 'حوالات بنكية محلية',
+      banks: ['البنك الأهلي اليمني', 'بنك التسليف', 'بنك الكريمي']
+    },
+    { 
+      id: 'onecash', 
+      name: 'OneCash', 
+      icon: 'Wallet', 
+      description: 'محفظة OneCash - تحويل فوري',
+      phone: '771315459'
+    }
+  ],
+  
+  // دول الخليج
+  gulf: [
+    { id: 'crypto', name: 'العملات الرقمية', icon: 'Bitcoin' },
+    { id: 'bank', name: 'تحويل بنكي', icon: 'Landmark' }
+  ],
+  
+  // دول عربية أخرى
+  arab: [
+    { id: 'western', name: 'Western Union', icon: 'Send' },
+    { id: 'crypto', name: 'العملات الرقمية', icon: 'Bitcoin' }
+  ],
+  
+  // دول غربية
+  western: [
+    { id: 'crypto', name: 'Cryptocurrency', icon: 'Bitcoin' },
+    { id: 'card', name: 'Credit Card', icon: 'CreditCard' }
+  ]
+}
+
+// دالة تحويل العملات مع مراعاة سعر اليمن
+export const convertPrice = (priceUSD, targetCurrency) => {
+  const currency = CURRENCIES[targetCurrency]
+  if (!currency) return { price: priceUSD, currency: 'USD', symbol: '$', rate: 1 }
+  
+  // إذا كان اليمن، نستخدم السعر حسب المحافظة
+  if (targetCurrency.includes('YER_')) {
+    return {
+      price: (priceUSD * currency.rate).toFixed(0), // بدون كسور للريال
+      currency: 'YER',
+      symbol: currency.symbol,
+      rate: currency.rate,
+      region: currency.region
+    }
+  }
+  
+  return {
+    price: (priceUSD * currency.rate).toFixed(2),
+    currency: targetCurrency,
+    symbol: currency.symbol,
+    rate: currency.rate
+  }
+}
+
+// دالة كشف الدولة والمنطقة من IP
+export const detectCountryFromIP = async () => {
+  try {
+    const response = await fetch('https://ipapi.co/json/')
+    const data = await response.json()
+    
+    // تحديد المنطقة
+    let region = 'western'
+    if (data.country_code === 'YE') region = 'yemen'
+    else if (['SA', 'AE', 'QA', 'KW', 'BH', 'OM'].includes(data.country_code)) region = 'gulf'
+    else if (['EG', 'JO', 'MA', 'TN', 'DZ', 'LY', 'SD'].includes(data.country_code)) region = 'arab'
+    
+    return {
+      country: data.country_code,
+      region,
+      city: data.city,
+      currency: data.currency || 'USD'
+    }
+  } catch {
+    return { country: 'US', region: 'western', currency: 'USD' }
+  }
+}
+
+// دالة الحصول على طرق الدفع حسب المنطقة
+export const getPaymentMethodsForRegion = (region) => {
+  return PAYMENT_METHODS_BY_REGION[region] || PAYMENT_METHODS_BY_REGION.western
+}
