@@ -16,12 +16,13 @@ import {
 } from 'lucide-react'
 
 const Skills = () => {
-  const { user } = useAuth() // ✅ استخدم useAuth بدلاً من useDeveloper
+  const { user } = useAuth()
   const { checkLimit, limits } = usePlan()
   const [skills, setSkills] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
 
   // نموذج مهارة جديدة
@@ -66,14 +67,16 @@ const Skills = () => {
 
     setSaving(true)
     setError('')
+    setSuccess('')
 
     try {
       const skillData = {
         name: newSkill.name,
         category: newSkill.category,
         proficiency: newSkill.proficiency,
-        icon: newSkill.icon || `${newSkill.name.toLowerCase()}.svg`,
-        display_order: skills.length
+        icon: newSkill.icon || `${newSkill.name.toLowerCase().replace(/\s+/g, '-')}.svg`,
+        display_order: skills.length,
+        developer_id: user.id  // ✅ مهم: ربط المهارة بالمطور
       }
 
       const created = await skillService.create(user.id, skillData)
@@ -86,9 +89,12 @@ const Skills = () => {
         proficiency: 75,
         icon: ''
       })
+      
+      setSuccess('✅ تم إضافة المهارة بنجاح')
+      setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('Error adding skill:', err)
-      setError('فشل في إضافة المهارة')
+      setError(err.message || 'فشل في إضافة المهارة')
     } finally {
       setSaving(false)
     }
@@ -96,13 +102,18 @@ const Skills = () => {
 
   const handleUpdateSkill = async (id, updates) => {
     setSaving(true)
+    setError('')
+    setSuccess('')
+    
     try {
       const updated = await skillService.update(id, updates)
       setSkills(skills.map(s => s.id === id ? updated : s))
       setEditingId(null)
+      setSuccess('✅ تم تحديث المهارة بنجاح')
+      setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('Error updating skill:', err)
-      setError('فشل في تحديث المهارة')
+      setError(err.message || 'فشل في تحديث المهارة')
     } finally {
       setSaving(false)
     }
@@ -114,9 +125,11 @@ const Skills = () => {
     try {
       await skillService.delete(id)
       setSkills(skills.filter(s => s.id !== id))
+      setSuccess('✅ تم حذف المهارة بنجاح')
+      setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('Error deleting skill:', err)
-      setError('فشل في حذف المهارة')
+      setError(err.message || 'فشل في حذف المهارة')
     }
   }
 
@@ -150,7 +163,7 @@ const Skills = () => {
 
   // تجميع المهارات حسب الفئة
   const skillsByCategory = skills.reduce((acc, skill) => {
-    const category = skill.category || 'Other'
+    const category = skill.category || 'أخرى'
     if (!acc[category]) acc[category] = []
     acc[category].push(skill)
     return acc
@@ -173,7 +186,7 @@ const Skills = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">المهارات</h1>
         <div className="text-sm text-gray-400">
-          {skills.length} / {limits.maxSkills === -1 ? '∞' : limits.maxSkills}
+          {skills.length} / {limits?.maxSkills === -1 ? '∞' : limits?.maxSkills || 10}
         </div>
       </div>
 
@@ -185,11 +198,19 @@ const Skills = () => {
         </div>
       )}
 
-      {/* Add new skill form - يظهر دائماً */}
+      {/* Success message */}
+      {success && (
+        <div className="flex items-center gap-2 p-4 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <p>{success}</p>
+        </div>
+      )}
+
+      {/* Add new skill form */}
       <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
         <h2 className="text-lg font-semibold text-white mb-4">إضافة مهارة جديدة</h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Skill name */}
           <div>
             <label className="block text-sm text-gray-400 mb-2">اسم المهارة *</label>
@@ -244,29 +265,33 @@ const Skills = () => {
 
       {/* Skills by category */}
       <div className="space-y-6">
-        {Object.entries(skillsByCategory).map(([category, categorySkills]) => (
-          <div key={category} className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-            <h2 className="text-lg font-semibold text-white mb-4">{category}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {categorySkills.map((skill, index) => (
-                <SkillCard
-                  key={skill.id}
-                  skill={skill}
-                  index={index}
-                  total={categorySkills.length}
-                  onEdit={() => setEditingId(skill.id)}
-                  onDelete={() => handleDeleteSkill(skill.id)}
-                  onMoveUp={() => handleMoveSkill(skills.indexOf(skill), 'up')}
-                  onMoveDown={() => handleMoveSkill(skills.indexOf(skill), 'down')}
-                  isEditing={editingId === skill.id}
-                  onUpdate={handleUpdateSkill}
-                />
-              ))}
+        {Object.keys(skillsByCategory).length > 0 ? (
+          Object.entries(skillsByCategory).map(([category, categorySkills]) => (
+            <div key={category} className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
+              <h2 className="text-lg font-semibold text-white mb-4">{category}</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {categorySkills.map((skill, index) => {
+                  // البحث عن المؤشر الحقيقي في المصفوفة الكاملة
+                  const globalIndex = skills.findIndex(s => s.id === skill.id)
+                  return (
+                    <SkillCard
+                      key={skill.id}
+                      skill={skill}
+                      index={globalIndex}
+                      total={skills.length}
+                      onEdit={() => setEditingId(skill.id)}
+                      onDelete={() => handleDeleteSkill(skill.id)}
+                      onMoveUp={() => handleMoveSkill(globalIndex, 'up')}
+                      onMoveDown={() => handleMoveSkill(globalIndex, 'down')}
+                      isEditing={editingId === skill.id}
+                      onUpdate={handleUpdateSkill}
+                    />
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        ))}
-
-        {skills.length === 0 && (
+          ))
+        ) : (
           <div className="text-center py-12">
             <AlertCircle className="w-16 h-16 text-gray-600 mx-auto mb-4" />
             <p className="text-gray-400">لا توجد مهارات بعد</p>
@@ -278,7 +303,7 @@ const Skills = () => {
   )
 }
 
-// مكون بطاقة المهارة (نفس الكود مع ترجمة الأزرار)
+// مكون بطاقة المهارة
 const SkillCard = ({ 
   skill, 
   index, 
@@ -291,7 +316,7 @@ const SkillCard = ({
   onUpdate 
 }) => {
   const [editData, setEditData] = useState(skill)
-  const gradient = SKILL_GRADIENTS[editData.category] || 'from-gray-500 to-slate-500'
+  const gradient = SKILL_GRADIENTS?.[editData.category] || 'from-gray-500 to-slate-500'
 
   if (isEditing) {
     return (
@@ -299,13 +324,13 @@ const SkillCard = ({
         <div className="space-y-3">
           <input
             type="text"
-            value={editData.name}
+            value={editData.name || ''}
             onChange={(e) => setEditData({ ...editData, name: e.target.value })}
             className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
             placeholder="اسم المهارة"
           />
           <select
-            value={editData.category}
+            value={editData.category || 'Frontend'}
             onChange={(e) => setEditData({ ...editData, category: e.target.value })}
             className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
           >
@@ -314,7 +339,7 @@ const SkillCard = ({
             ))}
           </select>
           <select
-            value={editData.proficiency}
+            value={editData.proficiency || 75}
             onChange={(e) => setEditData({ ...editData, proficiency: Number(e.target.value) })}
             className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
           >
@@ -347,7 +372,9 @@ const SkillCard = ({
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
           <div className={`w-8 h-8 rounded-lg bg-gradient-to-r ${gradient} flex items-center justify-center`}>
-            <span className="text-white text-xs font-bold">{skill.name[0]}</span>
+            <span className="text-white text-xs font-bold">
+              {skill.name?.[0]?.toUpperCase() || '?'}
+            </span>
           </div>
           <h3 className="font-medium text-white">{skill.name}</h3>
         </div>
@@ -378,12 +405,12 @@ const SkillCard = ({
       <div className="mt-3">
         <div className="flex items-center justify-between text-xs mb-1">
           <span className="text-gray-400">نسبة الإتقان</span>
-          <span className="text-white">{skill.proficiency}%</span>
+          <span className="text-white">{skill.proficiency || 0}%</span>
         </div>
         <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
           <div
             className={`h-full bg-gradient-to-r ${gradient} transition-all duration-300`}
-            style={{ width: `${skill.proficiency}%` }}
+            style={{ width: `${skill.proficiency || 0}%` }}
           />
         </div>
       </div>
