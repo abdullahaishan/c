@@ -16,29 +16,30 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 // ===========================================
 export const developerService = {
   // جلب مطور بواسطة اسم المستخدم
-  async getByUsername(username) {
-    const { data, error } = await supabase
-      .from('developers')
-      .select(`
-        *,
-        portfolios (*),
-        projects (*),
-        skills (*),
-        certificates (*),
-        experience (*),
-        education (*),
-        social_links (*)
-      `)
-      .eq('username', username)
-      .eq('is_active', true)
-      .single()
+  // جلب مطور بواسطة اسم المستخدم
+async getByUsername(username) {
+  const { data, error } = await supabase
+    .from('developers')
+    .select(`
+      *,
+      portfolios (*),
+      projects (*),
+      skills (*),
+      certificates (*),
+      experience (*),
+      education (*),
+      social_links (*)
+    `)
+    .eq('username', username)
+    .eq('is_active', true)
+    .maybeSingle()  // ✅ استخدم maybeSingle بدلاً من single
   
-    if (error) {
-      console.error('Error fetching developer:', error)
-      throw error
-    }
-    return data
-  },
+  if (error) {
+    console.error('Error fetching developer:', error)
+    throw error
+  }
+  return data  // قد يكون null إذا لم يوجد المستخدم
+},
 
   // جلب مطور بواسطة ID
   async getById(id) {
