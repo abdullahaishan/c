@@ -1,199 +1,155 @@
-// الباقات
+// src/utils/constants.js
 export const PLANS = [
   {
     id: 1,
     name: 'Free',
     name_ar: 'مجاني',
     price: 0,
+    description: 'جرب المنصة وتعرف على مميزاتها',
     features: [
-      '3 مشاريع كحد أقصى',
-      '10 مهارات',
-      '3 شهادات',
-      '5 سنوات خبرة',
-      '5 مؤهلات تعليمية',
-      '50 ميجابايت مساحة تخزين'
-    ]
+      { text: 'المشاريع', limit: '1', value: 1 },
+      { text: 'المهارات', limit: '2', value: 2 },
+      { text: 'الشهادات', limit: '1', value: 1 },
+      { text: 'الخبرات', limit: '1', value: 1 },
+      { text: 'المؤهلات التعليمية', limit: '1', value: 1 },
+      { text: 'تحليلات الذكاء الاصطناعي', limit: '1', value: 1, badge: 'تجريبي' },
+      { text: 'إحصائيات الزوار', limit: 'غير متاح', value: 0, included: false },
+      { text: 'رفع الملفات', limit: '50 ميجابايت', value: 50 }
+    ],
+    isPopular: false,
+    buttonText: 'مجاني',
+    buttonVariant: 'outline',
+    color: 'from-gray-500 to-gray-600'
   },
   {
     id: 2,
     name: 'Basic',
     name_ar: 'أساسي',
-    price: 9.99,
+    price: 29.99,
+    description: 'لمدى الحياة - ترقية دائمة لحسابك',
     features: [
-      '10 مشاريع',
-      '20 مهارة',
-      '10 شهادات',
-      '10 سنوات خبرة',
-      '10 مؤهلات تعليمية',
-      '200 ميجابايت مساحة تخزين',
-      'إحصائيات وتحليلات'
-    ]
+      { text: 'المشاريع', limit: '5', value: 5 },
+      { text: 'المهارات', limit: '8', value: 8 },
+      { text: 'الشهادات', limit: '5', value: 5 },
+      { text: 'الخبرات', limit: '5', value: 5 },
+      { text: 'المؤهلات التعليمية', limit: '5', value: 5 },
+      { text: 'تحليلات الذكاء الاصطناعي', limit: '5', value: 5, badge: 'مدى الحياة' },
+      { text: 'إحصائيات الزوار', limit: '✓', value: 1, included: true },
+      { text: 'رفع الملفات', limit: '200 ميجابايت', value: 200 },
+      { text: 'أولوية الدعم', limit: '✓', value: 1, included: true }
+    ],
+    isPopular: false,
+    badge: 'ترقية دائمة',
+    buttonText: 'اشتر الآن',
+    savings: 'دفعة واحدة فقط',
+    color: 'from-blue-500 to-cyan-500'
   },
   {
     id: 3,
-    name: 'Pro',
+    name: 'Professional',
     name_ar: 'محترف',
-    price: 19.99,
-    isPopular: true,
+    price: 59.99,
+    description: 'لمدى الحياة - جميع المميزات المتقدمة',
     features: [
-      '30 مشروع',
-      '50 مهارة',
-      '30 شهادة',
-      '20 سنة خبرة',
-      '20 مؤهل تعليمي',
-      '500 ميجابايت مساحة تخزين',
-      'إحصائيات متقدمة',
-      'نطاق مخصص',
-      'إزالة العلامة التجارية'
-    ]
+      { text: 'المشاريع', limit: '15', value: 15 },
+      { text: 'المهارات', limit: '20', value: 20 },
+      { text: 'الشهادات', limit: '15', value: 15 },
+      { text: 'الخبرات', limit: '15', value: 15 },
+      { text: 'المؤهلات التعليمية', limit: '15', value: 15 },
+      { text: 'تحليلات الذكاء الاصطناعي', limit: '15', value: 15, badge: 'مدى الحياة' },
+      { text: 'إحصائيات متقدمة', limit: '✓', value: 1, included: true },
+      { text: 'تقارير مفصلة', limit: '✓', value: 1, included: true },
+      { text: 'رفع الملفات', limit: '500 ميجابايت', value: 500 },
+      { text: 'دعم VIP', limit: '✓', value: 1, included: true }
+    ],
+    isPopular: true,
+    badge: 'الأكثر طلباً',
+    buttonText: 'اشتر الآن',
+    savings: 'وفر 40%',
+    color: 'from-purple-500 to-pink-500'
   },
   {
     id: 4,
     name: 'Enterprise',
     name_ar: 'مؤسسات',
-    price: 49.99,
+    price: 99.99,
+    description: 'لمدى الحياة - جميع المميزات بدون حدود',
     features: [
-      '100 مشروع',
-      '100 مهارة',
-      '100 شهادة',
-      '50 سنة خبرة',
-      '50 مؤهل تعليمي',
-      '2 جيجابايت مساحة تخزين',
-      'كل ميزات الباقة المحترفة',
-      'دعم فوري وأولوية'
-    ]
+      { text: 'المشاريع', limit: 'غير محدود', value: -1 },
+      { text: 'المهارات', limit: 'غير محدود', value: -1 },
+      { text: 'الشهادات', limit: 'غير محدود', value: -1 },
+      { text: 'الخبرات', limit: 'غير محدود', value: -1 },
+      { text: 'المؤهلات التعليمية', limit: 'غير محدود', value: -1 },
+      { text: 'تحليلات الذكاء الاصطناعي', limit: 'غير محدود', value: -1, badge: 'مدى الحياة' },
+      { text: 'إحصائيات متقدمة', limit: '✓', value: 1, included: true },
+      { text: 'تقارير مخصصة', limit: '✓', value: 1, included: true },
+      { text: 'رفع الملفات', limit: '2 جيجابايت', value: 2048 },
+      { text: 'إزالة العلامة التجارية', limit: '✓', value: 1, included: true },
+      { text: 'دعم VIP مخصص', limit: '✓', value: 1, included: true }
+    ],
+    isPopular: false,
+    badge: 'الأقوى',
+    buttonText: 'اشتر الآن',
+    savings: 'صفقة العمر',
+    color: 'from-yellow-500 to-orange-500'
   }
-]
+];
 
-// فئات المهارات
-export const SKILL_CATEGORIES = [
-  'Frontend',
-  'Backend',
-  'Database',
-  'DevOps',
-  'Mobile',
-  'Design',
-  'Tools',
-  'Soft Skills'
-]
-
-// منصات التواصل الاجتماعي
-export const SOCIAL_PLATFORMS = [
-  { id: 'github', name: 'GitHub', icon: 'github', placeholder: 'https://github.com/username' },
-  { id: 'linkedin', name: 'LinkedIn', icon: 'linkedin', placeholder: 'https://linkedin.com/in/username' },
-  { id: 'twitter', name: 'Twitter', icon: 'twitter', placeholder: 'https://twitter.com/username' },
-  { id: 'instagram', name: 'Instagram', icon: 'instagram', placeholder: 'https://instagram.com/username' },
-  { id: 'facebook', name: 'Facebook', icon: 'facebook', placeholder: 'https://facebook.com/username' },
-  { id: 'youtube', name: 'YouTube', icon: 'youtube', placeholder: 'https://youtube.com/@username' },
-  { id: 'website', name: 'الموقع الشخصي', icon: 'globe', placeholder: 'https://example.com' }
-]
-
-// طرق الدفع
-export const PAYMENT_METHODS = [
-  {
-    id: 'crypto',
-    name: 'عملات رقمية',
-    icon: 'bitcoin',
-    types: [
-      { id: 'btc', name: 'Bitcoin (BTC)' },
-      { id: 'eth', name: 'Ethereum (ETH)' },
-      { id: 'usdt', name: 'Tether (USDT) - TRC20' }
-    ]
+// الحدود لكل باقة (للاستخدام في التحقق)
+export const PLAN_LIMITS = {
+  1: { // مجاني
+    maxProjects: 1,
+    maxSkills: 2,
+    maxCertificates: 1,
+    maxExperience: 1,
+    maxEducation: 1,
+    maxAiAnalyses: 1,
+    storageLimit: 50, // ميجابايت
+    hasAdvancedStats: false,
+    hasReports: false,
+    hasPrioritySupport: false,
+    hasRemoveBranding: false
   },
-  {
-    id: 'onecash',
-    name: 'ون كاش',
-    icon: 'wallet'
+  2: { // أساسي
+    maxProjects: 5,
+    maxSkills: 8,
+    maxCertificates: 5,
+    maxExperience: 5,
+    maxEducation: 5,
+    maxAiAnalyses: 5,
+    storageLimit: 200,
+    hasAdvancedStats: true,
+    hasReports: false,
+    hasPrioritySupport: true,
+    hasRemoveBranding: false
   },
-  {
-    id: 'bank',
-    name: 'تحويل بنكي',
-    icon: 'landmark'
+  3: { // محترف
+    maxProjects: 15,
+    maxSkills: 20,
+    maxCertificates: 15,
+    maxExperience: 15,
+    maxEducation: 15,
+    maxAiAnalyses: 15,
+    storageLimit: 500,
+    hasAdvancedStats: true,
+    hasReports: true,
+    hasPrioritySupport: true,
+    hasRemoveBranding: false
+  },
+  4: { // مؤسسات
+    maxProjects: -1, // غير محدود
+    maxSkills: -1,
+    maxCertificates: -1,
+    maxExperience: -1,
+    maxEducation: -1,
+    maxAiAnalyses: -1,
+    storageLimit: 2048,
+    hasAdvancedStats: true,
+    hasReports: true,
+    hasPrioritySupport: true,
+    hasRemoveBranding: true
   }
-]
-
-// أيقونات التقنيات (من مجلد public/icons)
-export const TECH_ICONS = [
-  { name: 'HTML', icon: '/icons/html.svg' },
-  { name: 'CSS', icon: '/icons/css.svg' },
-  { name: 'JavaScript', icon: '/icons/javascript.svg' },
-  { name: 'Tailwind CSS', icon: '/icons/tailwind.svg' },
-  { name: 'React', icon: '/icons/reactjs.svg' },
-  { name: 'Vite', icon: '/icons/vite.svg' },
-  { name: 'Node.js', icon: '/icons/nodejs.svg' },
-  { name: 'Bootstrap', icon: '/icons/bootstrap.svg' },
-  { name: 'Firebase', icon: '/icons/firebase.svg' },
-  { name: 'Material UI', icon: '/icons/MUI.svg' },
-  { name: 'Vercel', icon: '/icons/vercel.svg' },
-  { name: 'SweetAlert2', icon: '/icons/SweetAlert.svg' }
-]
-
-// ألوان التدرج للمهارات
-export const SKILL_GRADIENTS = {
-  Frontend: 'from-blue-500 to-cyan-500',
-  Backend: 'from-green-500 to-emerald-500',
-  Database: 'from-yellow-500 to-orange-500',
-  DevOps: 'from-purple-500 to-pink-500',
-  Mobile: 'from-indigo-500 to-purple-500',
-  Design: 'from-pink-500 to-rose-500',
-  Tools: 'from-gray-500 to-slate-500',
-  'Soft Skills': 'from-red-500 to-orange-500'
-}
-
-// مستويات الكفاءة
-export const PROFICIENCY_LEVELS = [
-  { value: 25, label: 'Beginner' },
-  { value: 50, label: 'Intermediate' },
-  { value: 75, label: 'Advanced' },
-  { value: 100, label: 'Expert' }
-]
-
-// أنواع التوظيف
-export const EMPLOYMENT_TYPES = [
-  { id: 'full-time', name: 'دوام كامل' },
-  { id: 'part-time', name: 'دوام جزئي' },
-  { id: 'freelance', name: 'عمل حر' },
-  { id: 'contract', name: 'عقد' },
-  { id: 'internship', name: 'تدريب' }
-]
-
-// مواقع العمل
-export const LOCATION_TYPES = [
-  { id: 'on-site', name: 'في المكتب' },
-  { id: 'remote', name: 'عن بعد' },
-  { id: 'hybrid', name: 'هجين' }
-]
-
-// الدرجات العلمية
-export const DEGREE_TYPES = [
-  'بكالوريوس',
-  'ماجستير',
-  'دكتوراه',
-  'دبلوم',
-  'شهادة مهنية',
-  'دورة تدريبية'
-]
-
-// حالات الدفع
-export const PAYMENT_STATUS = {
-  PENDING: 'pending',
-  APPROVED: 'approved',
-  REJECTED: 'rejected'
-}
-
-// أدوار المستخدمين
-export const USER_ROLES = {
-  DEVELOPER: 'developer',
-  ADMIN: 'admin'
-}
-
-// رسائل النظام
-export const MESSAGES = {
-  LOGIN_SUCCESS: 'تم تسجيل الدخول بنجاح',
-  LOGIN_ERROR: 'خطأ في البريد الإلكتروني أو كلمة المرور',
-  REGISTER_SUCCESS: 'تم إنشاء الحساب بنجاح',
-  REGISTER_ERROR: 'حدث خطأ أثناء إنشاء الحساب',
-  UPDATE_SUCCESS: 'تم التحديث بنجاح',
+};  UPDATE_SUCCESS: 'تم التحديث بنجاح',
   UPDATE_ERROR: 'حدث خطأ أثناء التحديث',
   DELETE_SUCCESS: 'تم الحذف بنجاح',
   DELETE_ERROR: 'حدث خطأ أثناء الحذف',
