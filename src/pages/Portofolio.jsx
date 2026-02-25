@@ -3,28 +3,30 @@ import { useDeveloper } from '../context/DeveloperContext'
 import CardProject from "../components/CardProject"
 import TechStackIcon from "../components/TechStackIcon"
 import Certificate from "../components/Certificate"
-import { Code, Award, Boxes } from "lucide-react"
+import { Code, Award, Boxes, ExternalLink, Github } from "lucide-react"
 import AOS from "aos"
 import "aos/dist/aos.css"
 import LoadingScreen from "../components/LoadingScreen"
 
-// أيقونات التقنيات (من المجلد public/icons)
+// مكون العلامة المائية
+const Watermark = () => (
+  <div className="fixed inset-0 pointer-events-none select-none flex items-center justify-center opacity-[0.03] text-8xl font-bold text-white rotate-[-30deg] scale-150 uppercase tracking-wider">
+    Portfolio-v5
+  </div>
+)
+
 const techIcons = [
-  { icon: "/icons/html.svg", name: "HTML" },
-  { icon: "/icons/css.svg", name: "CSS" },
-  { icon: "/icons/javascript.svg", name: "JavaScript" },
-  { icon: "/icons/tailwind.svg", name: "Tailwind CSS" },
-  { icon: "/icons/reactjs.svg", name: "ReactJS" },
-  { icon: "/icons/vite.svg", name: "Vite" },
-  { icon: "/icons/nodejs.svg", name: "Node JS" },
-  { icon: "/icons/bootstrap.svg", name: "Bootstrap" },
-  { icon: "/icons/firebase.svg", name: "Firebase" },
-  { icon: "/icons/MUI.svg", name: "Material UI" },
-  { icon: "/icons/vercel.svg", name: "Vercel" },
-  { icon: "/icons/SweetAlert.svg", name: "SweetAlert2" },
+  { icon: "../../public/icons/html.svg", name: "HTML" },
+  { icon: "../../public/icons/css.svg", name: "CSS" },
+  { icon: "../../public/icons/javascript.svg", name: "JavaScript" },
+  { icon: "../../public/icons/tailwind.svg", name: "Tailwind CSS" },
+  { icon: "../../public/icons/reactjs.svg", name: "ReactJS" },
+  { icon: "../../public/icons/nodejs.svg", name: "Node JS" },
+  { icon: "../../public/icons/python.svg", name: "Python" },
+  { icon: "../../public/icons/django.svg", name: "Django" },
 ]
 
-const Portofolio = ({ developer: propDeveloper }) => {
+const Portfolio = ({ developer: propDeveloper }) => {
   const context = useDeveloper()
   const developer = propDeveloper || context.publicDeveloper
   const { loading } = context
@@ -33,12 +35,10 @@ const Portofolio = ({ developer: propDeveloper }) => {
   const [showAllProjects, setShowAllProjects] = useState(false)
   const [showAllCerts, setShowAllCerts] = useState(false)
 
-  // مشاريع المطور
   const projects = developer?.projects || []
   const certificates = developer?.certificates || []
   const skills = developer?.skills || []
 
-  // عدد العناصر في العرض الأول
   const [initialItems, setInitialItems] = useState(6)
 
   useEffect(() => {
@@ -62,18 +62,18 @@ const Portofolio = ({ developer: propDeveloper }) => {
   }
 
   return (
-    <div className="md:px-[10%] px-[5%] w-full bg-[#030014] overflow-hidden" id="Portofolio">
-      {/* Header */}
+    <div className="md:px-[10%] px-[5%] w-full bg-[#030014] overflow-hidden relative" id="Portfolio">
+      <Watermark />
+      
       <div className="text-center pb-10" data-aos="fade-up">
         <h2 className="inline-block text-3xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6366f1] to-[#a855f7]">
           Portfolio Showcase
         </h2>
         <p className="text-slate-400 max-w-2xl mx-auto text-sm md:text-base mt-2">
-          {developer?.bio?.substring(0, 100) || "Explore my journey through projects, certifications, and technical expertise."}
+          Explore my journey through projects, certifications, and technical expertise.
         </p>
       </div>
 
-      {/* Tabs */}
       <div className="flex justify-center gap-4 mb-8">
         <button
           onClick={() => setActiveTab(0)}
@@ -110,14 +110,12 @@ const Portofolio = ({ developer: propDeveloper }) => {
         </button>
       </div>
 
-      {/* محتوى التبويبات */}
       <div className="mt-8">
-        {/* تبويب المشاريع */}
         {activeTab === 0 && (
           <div>
             {projects.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-gray-400">لا توجد مشاريع بعد</p>
+                <p className="text-gray-400">No projects yet</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -150,12 +148,11 @@ const Portofolio = ({ developer: propDeveloper }) => {
           </div>
         )}
 
-        {/* تبويب الشهادات */}
         {activeTab === 1 && (
           <div>
             {certificates.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-gray-400">لا توجد شهادات بعد</p>
+                <p className="text-gray-400">No certificates yet</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -181,9 +178,8 @@ const Portofolio = ({ developer: propDeveloper }) => {
           </div>
         )}
 
-        {/* تبويب التقنيات */}
         {activeTab === 2 && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {skills.length > 0 ? (
               skills.map((skill, index) => (
                 <div
@@ -218,4 +214,4 @@ const Portofolio = ({ developer: propDeveloper }) => {
   )
 }
 
-export default Portofolio
+export default Portfolio
