@@ -1,138 +1,163 @@
+// hooks/usePlan.js
+import { useState, useEffect } from 'react'
 import { useAuth } from './useAuth'
 import { supabase } from '../lib/supabase'
-
-// حدود الباقات
-const PLAN_LIMITS = {
-  1: { // Free
-    maxProjects: 1,
-    maxSkills: 2,
-    maxCertificates: 1,
-    maxExperience: 1,
-    maxEducation: 1,
-    storageLimit: 50,
-    aiAnalysisCount: 1, // ✅ تحليل واحد مجاني
-    canCustomDomain: false,
-    canRemoveBranding: false,
-    canAnalytics: false
-  },
-  2: { // Basic
-    maxProjects: 10,
-    maxSkills: 20,
-    maxCertificates: 10,
-    maxExperience: 10,
-    maxEducation: 10,
-    storageLimit: 200,
-    aiAnalysisCount: 5, // ✅ 5 تحليلات
-    canCustomDomain: false,
-    canRemoveBranding: false,
-    canAnalytics: true
-  },
-  3: { // Pro
-    maxProjects: 30,
-    maxSkills: 50,
-    maxCertificates: 30,
-    maxExperience: 20,
-    maxEducation: 20,
-    storageLimit: 500,
-    aiAnalysisCount: 20, // ✅ 20 تحليل
-    canCustomDomain: true,
-    canRemoveBranding: true,
-    canAnalytics: true
-  },
-  4: { // Enterprise
-    maxProjects: 100,
-    maxSkills: 100,
-    maxCertificates: 100,
-    maxExperience: 50,
-    maxEducation: 50,
-    storageLimit: 2000,
-    aiAnalysisCount: -1, // ✅ غير محدود
-    canCustomDomain: true,
-    canRemoveBranding: true,
-    canAnalytics: true
-  }
-}
+import { PLAN_LIMITS } from '../utils/constants'
 
 export const usePlan = () => {
   const { user } = useAuth()
+  const [plan, setPlan] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [usage, setUsage] = useState(null)
+
+  useEffect(() => {
+    if (user) {
+      fetchPlanData()
+      fetchCurrentUsage()
+    }
+  }, [user])
+
+  const fetchPlanData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('developers')
+        .select('plan_id, plans(*)')
+        .eq('id', user.id)
+        .single()
+
+      if (error) throw error
+      setPlan(data?.plans)
+    } catch (error) {
+      console.error('Error fetching plan:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchCurrentUsage = async () => {
+    if (!user) return
+
+    try {
+      const [projects, skills, certificates, experience, education, analyses] = await Promise.all([
+        supabase.from('projects').select('*', { count: 'exact', head: true }).eq('developer_id', user.id),
+        supabase.from('skills').select('*', { count: 'exact', head: true }).eq('developer_id', user.id),
+        supabase.from('certificates').select('*', { count: 'exact', head: true }).eq('developer_id', user.id),
+        supabase.from('experience').select('*', { count: 'exact', head: true }).eq('developer_id', user.id),
+        supabase.from('education').select('*', { count: 'exact', head: true }).eq('developer_id', user.id),
+        supabase.from('ai_analyses').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
+      ])
+
+      setUsage({
+        projects: projects.count || 0,
+        skills: skills.count || 0,
+        certificates: certificates.count || 0,
+        experience: experience.count || 0,
+        education: education.count || 0,
+        analyses: analyses.count || 0
+      })
+    } catch (error) {
+      console.error('Error fetching usage:', error)
+    }
+  }
 
   const getPlanId = () => user?.plan_id || 1
   const getPlanLimits = () => PLAN_LIMITS[getPlanId()] || PLAN_LIMITS[1]
 
-  // ✅ دالة جديدة لجلب عدد التحليلات المتبقية
+  const checkLimit = (type, currentCount = null) => {
+    const limits = getPlanLimits()
+    const count = currentCount ?? usage?.[type] ?? 0
+    
+    switch(type) {
+      case 'projects':
+        return limits.maxProjects === -1 ? true : count < limits.maxProjects
+      case 'skills':
+        return limits.maxSkills === -1 ? true : count < limits.maxSkills
+      case 'certificates':
+        return limits.maxCertificates === -1 ? true : count < limits.maxCertificates
+      case 'experience':
+        return limits.maxExperience === -1 ? true : count < limits.maxExperience
+      case 'education':
+        return limits.maxEducation === -1 ? true : count < limits.maxEducation
+      default:
+        return false
+    }
+  }
+
   const getRemainingAnalyses = async () => {
     if (!user) return 0
     
     try {
-      const { count, error } = await supabase
+      const { count } = await supabase
         .from('ai_analyses')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
       
-      if (error) {
-        console.error('Error counting analyses:', error)
-        return 0
-      }
-      
       const limits = getPlanLimits()
-      if (limits.aiAnalysisCount === -1) return Infinity // غير محدود
       
-      return Math.max(0, limits.aiAnalysisCount - (count || 0))
+      if (limits.maxAiAnalyses === -1) return Infinity
+      return Math.max(0, (limits.maxAiAnalyses || 0) - (count || 0))
     } catch (error) {
-      console.error('Error in getRemainingAnalyses:', error)
+      console.error('Error:', error)
       return 0
     }
   }
 
-  const checkLimit = (type, currentCount) => {
+  const getRemainingStorage = (usedStorage) => {
     const limits = getPlanLimits()
-    
-    switch(type) {
-      case 'projects':
-        return currentCount < limits.maxProjects
-      case 'skills':
-        return currentCount < limits.maxSkills
-      case 'certificates':
-        return currentCount < limits.maxCertificates
-      case 'experience':
-        return currentCount < limits.maxExperience
-      case 'education':
-        return currentCount < limits.maxEducation
-      default:
-        return false
-    }
+    return Math.max(0, limits.storageLimit - usedStorage)
   }
 
   const canUseFeature = (feature) => {
     const limits = getPlanLimits()
     
     switch(feature) {
-      case 'custom_domain':
-        return limits.canCustomDomain
+      case 'advanced_stats':
+        return limits.hasAdvancedStats
+      case 'reports':
+        return limits.hasReports
+      case 'priority_support':
+        return limits.hasPrioritySupport
       case 'remove_branding':
-        return limits.canRemoveBranding
-      case 'analytics':
-        return limits.canAnalytics
+        return limits.hasRemoveBranding
       default:
         return false
     }
   }
 
-  const getRemainingStorage = (usedStorage) => {
+  const getUsagePercentage = (type) => {
     const limits = getPlanLimits()
-    return limits.storageLimit - usedStorage
+    const current = usage?.[type] ?? 0
+    
+    switch(type) {
+      case 'projects':
+        return limits.maxProjects === -1 ? 0 : Math.min(100, (current / limits.maxProjects) * 100)
+      case 'skills':
+        return limits.maxSkills === -1 ? 0 : Math.min(100, (current / limits.maxSkills) * 100)
+      case 'certificates':
+        return limits.maxCertificates === -1 ? 0 : Math.min(100, (current / limits.maxCertificates) * 100)
+      case 'experience':
+        return limits.maxExperience === -1 ? 0 : Math.min(100, (current / limits.maxExperience) * 100)
+      case 'education':
+        return limits.maxEducation === -1 ? 0 : Math.min(100, (current / limits.maxEducation) * 100)
+      default:
+        return 0
+    }
   }
 
   return {
     planId: getPlanId(),
     limits: getPlanLimits(),
+    usage,
+    loading,
     checkLimit,
-    canUseFeature,
+    getRemainingAnalyses,
     getRemainingStorage,
-    getRemainingAnalyses, // ✅ تم إضافة هذه الدالة
+    canUseFeature,
+    getUsagePercentage,
+    refreshUsage: fetchCurrentUsage,
     isFree: getPlanId() === 1,
     isBasic: getPlanId() === 2,
     isPro: getPlanId() === 3,
     isEnterprise: getPlanId() === 4
   }
-    }
+}
