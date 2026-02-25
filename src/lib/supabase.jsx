@@ -356,60 +356,92 @@ export const skillService = {
 }
 
 // ===========================================
-// خدمات الشهادات (Certificates)
+// خدمات الشهادات (Certificates) - نسخة مصححة
 // ===========================================
 export const certificateService = {
-  // جلب شهادات بورتفليو
-  async getByPortfolioId(portfolioId) {
+  // ✅ جلب شهادات مطور معين
+  async getByDeveloperId(developerId) {
     const { data, error } = await supabase
       .from('certificates')
       .select('*')
-      .eq('portfolio_id', portfolioId)
+      .eq('developer_id', developerId)
       .order('display_order', { ascending: true })
     
-    if (error) throw error
-    return data
+    if (error) {
+      console.error('Error fetching certificates:', error)
+      throw error
+    }
+    return data || []
   },
 
-  // إنشاء شهادة جديدة
-  async create(portfolioId, certificateData) {
+  // ✅ إنشاء شهادة جديدة
+  async create(developerId, certificateData) {
+    // التحقق من حد الباقة
+    const { data: existingCertificates } = await supabase
+      .from('certificates')
+      .select('id')
+      .eq('developer_id', developerId)
+
+    const { data: developer } = await supabase
+      .from('developers')
+      .select('plan_id')
+      .eq('id', developerId)
+      .single()
+
+    if (developer?.plan_id === 1 && existingCertificates?.length >= 3) {
+      throw new Error('لقد تجاوزت الحد المسموح به من الشهادات للباقة المجانية')
+    }
+
     const { data, error } = await supabase
       .from('certificates')
       .insert([{
-        portfolio_id: portfolioId,
+        developer_id: developerId,
         ...certificateData,
-        created_at: new Date()
+        created_at: new Date().toISOString()
       }])
       .select()
+      .single()
     
-    if (error) throw error
-    return data[0]
+    if (error) {
+      console.error('Error creating certificate:', error)
+      throw error
+    }
+    return data
   },
 
-  // تحديث شهادة
+  // ✅ تحديث شهادة
   async update(id, updates) {
     const { data, error } = await supabase
       .from('certificates')
-      .update(updates)
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', id)
       .select()
       .single()
     
-    if (error) throw error
+    if (error) {
+      console.error('Error updating certificate:', error)
+      throw error
+    }
     return data
   },
 
-  // حذف شهادة
+  // ✅ حذف شهادة
   async delete(id) {
     const { error } = await supabase
       .from('certificates')
       .delete()
       .eq('id', id)
     
-    if (error) throw error
+    if (error) {
+      console.error('Error deleting certificate:', error)
+      throw error
+    }
+    return true
   }
 }
-
 // ===========================================
 // ===========================================
 // خدمات الخبرات (Experience) - نسخة مصححة
