@@ -411,64 +411,94 @@ export const certificateService = {
 }
 
 // ===========================================
-// خدمات الخبرات (Experience)
+// ===========================================
+// خدمات الخبرات (Experience) - نسخة مصححة
 // ===========================================
 export const experienceService = {
-  // جلب خبرات بورتفليو
-  async getByPortfolioId(portfolioId) {
+  // ✅ جلب خبرات مطور معين
+  async getByDeveloperId(developerId) {
     const { data, error } = await supabase
       .from('experience')
       .select('*')
-      .eq('portfolio_id', portfolioId)
+      .eq('developer_id', developerId)
       .order('display_order', { ascending: true })
     
-    if (error) throw error
-    return data
+    if (error) {
+      console.error('Error fetching experiences:', error)
+      throw error
+    }
+    return data || []
   },
 
-  // إنشاء خبرة جديدة
-  async create(portfolioId, experienceData) {
+  // ✅ إنشاء خبرة جديدة
+  async create(developerId, experienceData) {
+    // التحقق من حد الباقة
+    const { data: existingExperiences } = await supabase
+      .from('experience')
+      .select('id')
+      .eq('developer_id', developerId)
+
+    const { data: developer } = await supabase
+      .from('developers')
+      .select('plan_id')
+      .eq('id', developerId)
+      .single()
+
+    if (developer?.plan_id === 1 && existingExperiences?.length >= 5) {
+      throw new Error('لقد تجاوزت الحد المسموح به من الخبرات للباقة المجانية')
+    }
+
     const { data, error } = await supabase
       .from('experience')
       .insert([{
-        portfolio_id: portfolioId,
+        developer_id: developerId,
         ...experienceData,
-        created_at: new Date(),
-        updated_at: new Date()
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }])
       .select()
+      .single()
     
-    if (error) throw error
-    return data[0]
+    if (error) {
+      console.error('Error creating experience:', error)
+      throw error
+    }
+    return data
   },
 
-  // تحديث خبرة
+  // ✅ تحديث خبرة
   async update(id, updates) {
     const { data, error } = await supabase
       .from('experience')
       .update({
         ...updates,
-        updated_at: new Date()
+        updated_at: new Date().toISOString()
       })
       .eq('id', id)
       .select()
       .single()
     
-    if (error) throw error
+    if (error) {
+      console.error('Error updating experience:', error)
+      throw error
+    }
     return data
   },
 
-  // حذف خبرة
+  // ✅ حذف خبرة
   async delete(id) {
     const { error } = await supabase
       .from('experience')
       .delete()
       .eq('id', id)
     
-    if (error) throw error
+    if (error) {
+      console.error('Error deleting experience:', error)
+      throw error
+    }
+    return true
   }
 }
-
 // ===========================================
 // خدمات التعليم (Education) - نسخة مصححة
 // ===========================================
