@@ -29,13 +29,14 @@ import {
 const Overview = () => {
   const { user } = useAuth()
   const { 
-    planId, 
-    limits, 
-    canUseFeature, 
-    isFree,
-    getRemainingAnalyses 
-  } = usePlan()
-  
+  planId, 
+  limits, 
+  usage,              // ✅ أضف هذا
+  getUsagePercentage, // ✅ أضف هذا
+  canUseFeature, 
+  isFree,
+  getRemainingAnalyses 
+} = usePlan()
   const [stats, setStats] = useState(null)
   const [contentStats, setContentStats] = useState(null)
   const [visitorStats, setVisitorStats] = useState(null)
