@@ -470,57 +470,90 @@ export const experienceService = {
 }
 
 // ===========================================
-// خدمات التعليم (Education)
+// خدمات التعليم (Education) - نسخة مصححة
 // ===========================================
 export const educationService = {
-  // جلب تعليم بورتفليو
-  async getByPortfolioId(portfolioId) {
+  // ✅ جلب مؤهلات مطور معين
+  async getByDeveloperId(developerId) {
     const { data, error } = await supabase
       .from('education')
       .select('*')
-      .eq('portfolio_id', portfolioId)
+      .eq('developer_id', developerId)
       .order('display_order', { ascending: true })
     
-    if (error) throw error
-    return data
+    if (error) {
+      console.error('Error fetching education:', error)
+      throw error
+    }
+    return data || []
   },
 
-  // إنشاء تعليم جديد
-  async create(portfolioId, educationData) {
+  // ✅ إنشاء مؤهل جديد
+  async create(developerId, educationData) {
+    // التحقق من حد الباقة
+    const { data: existingEducation } = await supabase
+      .from('education')
+      .select('id')
+      .eq('developer_id', developerId)
+
+    const { data: developer } = await supabase
+      .from('developers')
+      .select('plan_id')
+      .eq('id', developerId)
+      .single()
+
+    if (developer?.plan_id === 1 && existingEducation?.length >= 5) {
+      throw new Error('لقد تجاوزت الحد المسموح به من المؤهلات للباقة المجانية')
+    }
+
     const { data, error } = await supabase
       .from('education')
       .insert([{
-        portfolio_id: portfolioId,
+        developer_id: developerId,
         ...educationData,
-        created_at: new Date()
+        created_at: new Date().toISOString()
       }])
       .select()
+      .single()
     
-    if (error) throw error
-    return data[0]
+    if (error) {
+      console.error('Error creating education:', error)
+      throw error
+    }
+    return data
   },
 
-  // تحديث تعليم
+  // ✅ تحديث مؤهل
   async update(id, updates) {
     const { data, error } = await supabase
       .from('education')
-      .update(updates)
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', id)
       .select()
       .single()
     
-    if (error) throw error
+    if (error) {
+      console.error('Error updating education:', error)
+      throw error
+    }
     return data
   },
 
-  // حذف تعليم
+  // ✅ حذف مؤهل
   async delete(id) {
     const { error } = await supabase
       .from('education')
       .delete()
       .eq('id', id)
     
-    if (error) throw error
+    if (error) {
+      console.error('Error deleting education:', error)
+      throw error
+    }
+    return true
   }
 }
 
