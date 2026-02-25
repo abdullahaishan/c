@@ -268,57 +268,90 @@ export const projectService = {
 }
 
 // ===========================================
-// خدمات المهارات (Skills)
+// خدمات المهارات (Skills) - نسخة مصححة
 // ===========================================
 export const skillService = {
-  // جلب مهارات بورتفليو
-  async getByPortfolioId(portfolioId) {
+  // ✅ جلب مهارات مطور معين
+  async getByDeveloperId(developerId) {
     const { data, error } = await supabase
       .from('skills')
       .select('*')
-      .eq('portfolio_id', portfolioId)
+      .eq('developer_id', developerId)
       .order('display_order', { ascending: true })
     
-    if (error) throw error
-    return data
+    if (error) {
+      console.error('Error fetching skills:', error)
+      throw error
+    }
+    return data || []
   },
 
-  // إنشاء مهارة جديدة
-  async create(portfolioId, skillData) {
+  // ✅ إنشاء مهارة جديدة
+  async create(developerId, skillData) {
+    // التحقق من حد الباقة (اختياري)
+    const { data: existingSkills } = await supabase
+      .from('skills')
+      .select('id')
+      .eq('developer_id', developerId)
+
+    const { data: developer } = await supabase
+      .from('developers')
+      .select('plan_id')
+      .eq('id', developerId)
+      .single()
+
+    if (developer?.plan_id === 1 && existingSkills?.length >= 10) {
+      throw new Error('لقد تجاوزت الحد المسموح به من المهارات للباقة المجانية')
+    }
+
     const { data, error } = await supabase
       .from('skills')
       .insert([{
-        portfolio_id: portfolioId,
+        developer_id: developerId,
         ...skillData,
-        created_at: new Date()
+        created_at: new Date().toISOString()
       }])
       .select()
+      .single()
     
-    if (error) throw error
-    return data[0]
+    if (error) {
+      console.error('Error creating skill:', error)
+      throw error
+    }
+    return data
   },
 
-  // تحديث مهارة
+  // ✅ تحديث مهارة
   async update(id, updates) {
     const { data, error } = await supabase
       .from('skills')
-      .update(updates)
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', id)
       .select()
       .single()
     
-    if (error) throw error
+    if (error) {
+      console.error('Error updating skill:', error)
+      throw error
+    }
     return data
   },
 
-  // حذف مهارة
+  // ✅ حذف مهارة
   async delete(id) {
     const { error } = await supabase
       .from('skills')
       .delete()
       .eq('id', id)
     
-    if (error) throw error
+    if (error) {
+      console.error('Error deleting skill:', error)
+      throw error
+    }
+    return true
   }
 }
 
