@@ -158,6 +158,86 @@ export const PLAN_LIMITS = {
 };
 
 // ===========================================
+// منصات التواصل الاجتماعي
+// ===========================================
+export const SOCIAL_PLATFORMS = [
+  { id: 'github', name: 'GitHub', placeholder: 'https://github.com/username', icon: 'Github' },
+  { id: 'linkedin', name: 'LinkedIn', placeholder: 'https://linkedin.com/in/username', icon: 'Linkedin' },
+  { id: 'twitter', name: 'Twitter', placeholder: 'https://twitter.com/username', icon: 'Twitter' },
+  { id: 'instagram', name: 'Instagram', placeholder: 'https://instagram.com/username', icon: 'Instagram' },
+  { id: 'facebook', name: 'Facebook', placeholder: 'https://facebook.com/username', icon: 'Facebook' },
+  { id: 'youtube', name: 'YouTube', placeholder: 'https://youtube.com/@username', icon: 'Youtube' }
+];
+
+// ===========================================
+// أنواع الدرجات العلمية
+// ===========================================
+export const DEGREE_TYPES = [
+  'بكالوريوس',
+  'ماجستير',
+  'دكتوراه',
+  'دبلوم',
+  'شهادة مهنية',
+  'دورة تدريبية',
+  'أخرى'
+];
+
+// ===========================================
+// أنواع التوظيف
+// ===========================================
+export const EMPLOYMENT_TYPES = [
+  { id: 'full-time', name: 'دوام كامل' },
+  { id: 'part-time', name: 'دوام جزئي' },
+  { id: 'contract', name: 'عقد' },
+  { id: 'freelance', name: 'حر' },
+  { id: 'internship', name: 'تدريب' }
+];
+
+// ===========================================
+// أنواع المواقع
+// ===========================================
+export const LOCATION_TYPES = [
+  { id: 'on-site', name: 'حضوري' },
+  { id: 'remote', name: 'عن بعد' },
+  { id: 'hybrid', name: 'هجين' }
+];
+
+// ===========================================
+// مستويات الإتقان
+// ===========================================
+export const PROFICIENCY_LEVELS = [
+  { value: 20, label: 'مبتدئ' },
+  { value: 40, label: 'متوسط' },
+  { value: 60, label: 'جيد' },
+  { value: 80, label: 'متقدم' },
+  { value: 100, label: 'خبير' }
+];
+
+// ===========================================
+// ألوان المهارات
+// ===========================================
+export const SKILL_GRADIENTS = {
+  'Frontend': 'from-blue-500 to-cyan-500',
+  'Backend': 'from-green-500 to-emerald-500',
+  'Database': 'from-yellow-500 to-orange-500',
+  'DevOps': 'from-purple-500 to-pink-500',
+  'Mobile': 'from-indigo-500 to-purple-500',
+  'Other': 'from-gray-500 to-slate-500'
+};
+
+// ===========================================
+// تصنيفات المهارات
+// ===========================================
+export const SKILL_CATEGORIES = [
+  'Frontend',
+  'Backend',
+  'Database',
+  'DevOps',
+  'Mobile',
+  'Other'
+];
+
+// ===========================================
 // رسائل النجاح والخطأ
 // ===========================================
 export const SUCCESS_MESSAGES = {
