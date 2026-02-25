@@ -1,18 +1,21 @@
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
-import { getDocs, addDoc, collection, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../firebase-comment';
-import { MessageCircle, UserCircle2, Loader2, AlertCircle, Send, ImagePlus, X } from 'lucide-react';
-import AOS from "aos";
-import "aos/dist/aos.css";
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react'
+import { useAuth } from '../hooks/useAuth'
+import { supabase } from '../lib/supabase'
+import { MessageCircle, UserCircle2, Loader2, AlertCircle, Send, ImagePlus, X } from 'lucide-react'
+import AOS from "aos"
+import "aos/dist/aos.css"
 
 const Comment = memo(({ comment, formatDate, index }) => (
-  <div className="px-4 pt-4 pb-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group hover:shadow-lg hover:-translate-y-0.5">
+  <div 
+    className="px-4 pt-4 pb-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group hover:shadow-lg hover:-translate-y-0.5"
+    data-aos="fade-up"
+    data-aos-delay={index * 100}
+  >
     <div className="flex items-start gap-3">
-      {comment.profileImage ? (
+      {comment.profile_image ? (
         <img
-          src={comment.profileImage}
-          alt={`${comment.userName}'s profile`}
+          src={comment.profile_image}
+          alt={`${comment.sender_name}'s profile`}
           className="w-10 h-10 rounded-full object-cover border-2 border-indigo-500/30"
           loading="lazy"
         />
@@ -23,55 +26,65 @@ const Comment = memo(({ comment, formatDate, index }) => (
       )}
       <div className="flex-grow min-w-0">
         <div className="flex items-center justify-between gap-4 mb-2">
-          <h4 className="font-medium text-white truncate">{comment.userName}</h4>
+          <h4 className="font-medium text-white truncate">{comment.sender_name}</h4>
           <span className="text-xs text-gray-400 whitespace-nowrap">
-            {formatDate(comment.createdAt)}
+            {formatDate(comment.created_at)}
           </span>
         </div>
-        <p className="text-gray-300 text-sm break-words leading-relaxed">{comment.content}</p>
+        <p className="text-gray-300 text-sm break-words leading-relaxed">{comment.message}</p>
       </div>
     </div>
   </div>
-));
+))
 
-const CommentForm = memo(({ onSubmit, isSubmitting, error }) => {
-  const [newComment, setNewComment] = useState('');
-  const [userName, setUserName] = useState('');
-  const [imagePreview, setImagePreview] = useState(null);
-  const [imageFile, setImageFile] = useState(null);
-  const textareaRef = useRef(null);
-  const fileInputRef = useRef(null);
+const CommentForm = memo(({ developerId, onSubmit, isSubmitting, error }) => {
+  const [newComment, setNewComment] = useState('')
+  const [userName, setUserName] = useState('')
+  const [userEmail, setUserEmail] = useState('')
+  const [imagePreview, setImagePreview] = useState(null)
+  const [imageFile, setImageFile] = useState(null)
+  const textareaRef = useRef(null)
+  const fileInputRef = useRef(null)
 
   const handleImageChange = useCallback((e) => {
-    const file = e.target.files[0];
+    const file = e.target.files[0]
     if (file) {
-      if (file.size > 5 * 1024 * 1024) return;
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result);
-      reader.readAsDataURL(file);
+      if (file.size > 5 * 1024 * 1024) {
+        alert('حجم الملف يجب أن يكون أقل من 5 ميجابايت')
+        return
+      }
+      setImageFile(file)
+      const reader = new FileReader()
+      reader.onloadend = () => setImagePreview(reader.result)
+      reader.readAsDataURL(file)
     }
-  }, []);
+  }, [])
 
   const handleTextareaChange = useCallback((e) => {
-    setNewComment(e.target.value);
+    setNewComment(e.target.value)
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      textareaRef.current.style.height = 'auto'
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
     }
-  }, []);
+  }, [])
 
-  const handleSubmit = useCallback((e) => {
-    e.preventDefault();
-    if (!newComment.trim() || !userName.trim()) return;
+  const handleSubmit = useCallback(async (e) => {
+    e.preventDefault()
+    if (!newComment.trim() || !userName.trim() || !userEmail.trim()) return
     
-    onSubmit({ newComment, userName, imageFile });
-    setNewComment('');
-    setImagePreview(null);
-    setImageFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    if (textareaRef.current) textareaRef.current.style.height = 'auto';
-  }, [newComment, userName, imageFile, onSubmit]);
+    await onSubmit({ 
+      newComment, 
+      userName, 
+      userEmail,
+      imageFile 
+    })
+    
+    setNewComment('')
+    setImagePreview(null)
+    setImageFile(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
+  }, [newComment, userName, userEmail, imageFile, onSubmit])
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -95,6 +108,20 @@ const CommentForm = memo(({ onSubmit, isSubmitting, error }) => {
 
       <div className="space-y-2" data-aos="fade-up" data-aos-duration="1200">
         <label className="block text-sm font-medium text-white">
+          Email <span className="text-red-400">*</span>
+        </label>
+        <input
+          type="email"
+          value={userEmail}
+          onChange={(e) => setUserEmail(e.target.value)}
+          placeholder="Enter your email"
+          className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+          required
+        />
+      </div>
+
+      <div className="space-y-2" data-aos="fade-up" data-aos-duration="1400">
+        <label className="block text-sm font-medium text-white">
           Message <span className="text-red-400">*</span>
         </label>
         <textarea
@@ -107,7 +134,7 @@ const CommentForm = memo(({ onSubmit, isSubmitting, error }) => {
         />
       </div>
 
-      <div className="space-y-2" data-aos="fade-up" data-aos-duration="1400">
+      <div className="space-y-2" data-aos="fade-up" data-aos-duration="1600">
         <label className="block text-sm font-medium text-white">
           Profile Photo <span className="text-gray-400">(optional)</span>
         </label>
@@ -122,9 +149,9 @@ const CommentForm = memo(({ onSubmit, isSubmitting, error }) => {
               <button
                 type="button"
                 onClick={() => {
-                  setImagePreview(null);
-                  setImageFile(null);
-                  if (fileInputRef.current) fileInputRef.current.value = '';
+                  setImagePreview(null)
+                  setImageFile(null)
+                  if (fileInputRef.current) fileInputRef.current.value = ''
                 }}
                 className="flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-all group"
               >
@@ -178,80 +205,137 @@ const CommentForm = memo(({ onSubmit, isSubmitting, error }) => {
         </div>
       </button>
     </form>
-  );
-});
+  )
+})
 
-const Komentar = () => {
-  const [comments, setComments] = useState([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
+const Komentar = ({ developerId }) => {
+  const [comments, setComments] = useState([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState('')
+  const { user } = useAuth()
 
   useEffect(() => {
     AOS.init({
       once: false,
       duration: 1000,
-    });
-  }, []);
+    })
+  }, [])
 
+  // جلب التعليقات من Supabase
   useEffect(() => {
-    const commentsRef = collection(db, 'portfolio-comments');
-    const q = query(commentsRef, orderBy('createdAt', 'desc'));
-    
-    return onSnapshot(q, (querySnapshot) => {
-      const commentsData = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setComments(commentsData);
-    });
-  }, []);
+    if (!developerId) return
 
+    const fetchComments = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('developer_id', developerId)
+          .order('created_at', { ascending: false })
+          .limit(50)
+
+        if (error) throw error
+        setComments(data || [])
+      } catch (err) {
+        console.error('Error fetching comments:', err)
+        setError('فشل في تحميل التعليقات')
+      }
+    }
+
+    fetchComments()
+
+    // استماع للتحديثات الجديدة (اختياري)
+    const subscription = supabase
+      .channel('messages_channel')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `developer_id=eq.${developerId}` },
+        (payload) => {
+          setComments(prev => [payload.new, ...prev])
+        }
+      )
+      .subscribe()
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [developerId])
+
+  // رفع الصورة إلى Supabase Storage
   const uploadImage = useCallback(async (imageFile) => {
-    if (!imageFile) return null;
-    const storageRef = ref(storage, `profile-images/${Date.now()}_${imageFile.name}`);
-    await uploadBytes(storageRef, imageFile);
-    return getDownloadURL(storageRef);
-  }, []);
+    if (!imageFile) return null
+    
+    const fileName = `comment-images/${Date.now()}_${imageFile.name}`
+    
+    const { error: uploadError } = await supabase.storage
+      .from('developers')
+      .upload(fileName, imageFile)
 
-  const handleCommentSubmit = useCallback(async ({ newComment, userName, imageFile }) => {
-    setError('');
-    setIsSubmitting(true);
+    if (uploadError) throw uploadError
+
+    const { data } = supabase.storage
+      .from('developers')
+      .getPublicUrl(fileName)
+
+    return data.publicUrl
+  }, [])
+
+  // إضافة تعليق جديد
+  const handleCommentSubmit = useCallback(async ({ newComment, userName, userEmail, imageFile }) => {
+    if (!developerId) {
+      setError('معرف المطور غير موجود')
+      return
+    }
+
+    setError('')
+    setIsSubmitting(true)
     
     try {
-      const profileImageUrl = await uploadImage(imageFile);
-      await addDoc(collection(db, 'portfolio-comments'), {
-        content: newComment,
-        userName,
-        profileImage: profileImageUrl,
-        createdAt: serverTimestamp(),
-      });
-    } catch (error) {
-      setError('Failed to post comment. Please try again.');
-      console.error('Error adding comment: ', error);
+      let profileImageUrl = null
+      if (imageFile) {
+        profileImageUrl = await uploadImage(imageFile)
+      }
+
+      const { error: insertError } = await supabase
+        .from('messages')
+        .insert([{
+          developer_id: developerId,
+          sender_name: userName,
+          sender_email: userEmail,
+          message: newComment,
+          profile_image: profileImageUrl,
+          is_read: false,
+          created_at: new Date()
+        }])
+
+      if (insertError) throw insertError
+
+    } catch (err) {
+      console.error('Error adding comment:', err)
+      setError('فشل في إضافة التعليق. الرجاء المحاولة مرة أخرى.')
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
-  }, [uploadImage]);
+  }, [developerId, uploadImage])
 
   const formatDate = useCallback((timestamp) => {
-    if (!timestamp) return '';
-    const date = timestamp.toDate();
-    const now = new Date();
-    const diffMinutes = Math.floor((now - date) / (1000 * 60));
-    const diffHours = Math.floor(diffMinutes / 60);
-    const diffDays = Math.floor(diffHours / 24);
+    if (!timestamp) return ''
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffMinutes = Math.floor((now - date) / (1000 * 60))
+    const diffHours = Math.floor(diffMinutes / 60)
+    const diffDays = Math.floor(diffHours / 24)
 
-    if (diffMinutes < 1) return 'Just now';
-    if (diffMinutes < 60) return `${diffMinutes}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffMinutes < 1) return 'Just now'
+    if (diffMinutes < 60) return `${diffMinutes}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
 
     return new Intl.DateTimeFormat('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
-    }).format(date);
-  }, []);
+    }).format(date)
+  }, [])
 
   return (
     <div className="w-full bg-gradient-to-b from-white/10 to-white/5 rounded-2xl overflow-hidden backdrop-blur-xl shadow-xl" data-aos="fade-up" data-aos-duration="1000">
@@ -275,7 +359,12 @@ const Komentar = () => {
         )}
         
         <div>
-          <CommentForm onSubmit={handleCommentSubmit} isSubmitting={isSubmitting} error={error} />
+          <CommentForm 
+            developerId={developerId}
+            onSubmit={handleCommentSubmit} 
+            isSubmitting={isSubmitting} 
+            error={error} 
+          />
         </div>
 
         <div className="space-y-4 h-[300px] overflow-y-auto custom-scrollbar" data-aos="fade-up" data-aos-delay="200">
@@ -315,7 +404,7 @@ const Komentar = () => {
         }
       `}</style>
     </div>
-  );
-};
+  )
+}
 
-export default Komentar;
+export default Komentar
