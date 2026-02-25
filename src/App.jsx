@@ -23,7 +23,8 @@ import Experience from './pages/dashboard/Experience'
 import Education from './pages/dashboard/Education'
 import Settings from './pages/dashboard/Settings'
 import PlanStatus from './pages/dashboard/PlanStatus'
-
+// في قائمة المسارات المحمية داخل DashboardLayout
+<Route path="messages" element={<Messages />} />
 // صفحة 404
 import NotFound from './pages/NotFound'
 
