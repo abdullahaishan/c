@@ -10,15 +10,19 @@ import {
 import AOS from "aos"
 import "aos/dist/aos.css"
 import { useDeveloper } from '../context/DeveloperContext'
-import codingAnimation from '../../public/Coding.json'
-import LottieAnimation from '../components/LottieAnimation'
 
-// مكونات مساعدة
+// مكون العلامة المائية
+const Watermark = () => (
+  <div className="fixed inset-0 pointer-events-none select-none flex items-center justify-center opacity-[0.03] text-8xl font-bold text-white rotate-[-30deg] scale-150 uppercase tracking-wider">
+    Portfolio Website
+  </div>
+)
+
 const StatusBadge = memo(({ name }) => (
   <div className="inline-block animate-float" data-aos="zoom-in">
     <div className="relative group">
       <div className="absolute -inset-0.5 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-full blur opacity-30 group-hover:opacity-50 transition duration-1000"></div>
-      <div className="relative px-4 py-2 rounded-full bg-black/40 backdrop-blur-xl border border-white/10">
+      <div className="relative px-6 py-3 rounded-full bg-black/40 backdrop-blur-xl border border-white/10">
         <span className="bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-transparent bg-clip-text text-sm font-medium flex items-center">
           <Sparkles className="w-4 h-4 mr-2 text-blue-400" />
           {name}
@@ -49,111 +53,23 @@ const MainTitle = memo(({ title }) => {
   )
 })
 
-const AnimatedProfileImage = memo(({ image }) => {
-  const [isHovered, setIsHovered] = useState(false)
-  
-  const gradientColors = "from-[#6366f1] via-[#a855f7] to-[#ec4899]"
-  
-  return (
-    <div 
-      className="relative group"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {/* الخلفية المتحركة */}
-      <div className="absolute -inset-8">
-        <div className={`absolute inset-0 bg-gradient-to-r ${gradientColors} rounded-full blur-3xl opacity-30 transition-all duration-1000 ${
-          isHovered ? 'scale-150 opacity-40' : 'scale-100 opacity-30'
-        }`} />
-        
-        <div className="absolute inset-0 animate-spin-slow">
-          <div className={`absolute top-0 left-1/2 w-32 h-32 bg-gradient-to-r ${gradientColors} rounded-full blur-2xl opacity-40 transition-all duration-700 ${
-            isHovered ? 'scale-125' : 'scale-100'
-          }`} />
-        </div>
-        
-        <div className="absolute inset-0 animate-spin-slower">
-          <div className={`absolute bottom-0 right-1/2 w-40 h-40 bg-gradient-to-r ${gradientColors} rounded-full blur-2xl opacity-40 transition-all duration-700 ${
-            isHovered ? 'scale-125' : 'scale-100'
-          }`} />
-        </div>
-      </div>
-
-      {/* الخطوط الدائرية */}
-      <div className="absolute -inset-4">
-        <svg className="absolute inset-0 w-full h-full animate-spin-slower">
-          <circle
-            cx="50%"
-            cy="50%"
-            r="45%"
-            fill="none"
-            stroke="url(#gradient)"
-            strokeWidth="2"
-            strokeDasharray="8 8"
-            className="opacity-30"
-          />
-        </svg>
-        
-        <svg className="absolute inset-0 w-full h-full animate-spin-slow">
-          <circle
-            cx="50%"
-            cy="50%"
-            r="35%"
-            fill="none"
-            stroke="url(#gradient)"
-            strokeWidth="1.5"
-            strokeDasharray="6 6"
-            className="opacity-20"
-          />
-        </svg>
-        
-        <defs>
-          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#6366f1" />
-            <stop offset="50%" stopColor="#a855f7" />
-            <stop offset="100%" stopColor="#ec4899" />
-          </linearGradient>
-        </defs>
-      </div>
-
-      {/* الصورة */}
-      <div className={`relative w-72 h-72 sm:w-80 sm:h-80 rounded-full overflow-hidden shadow-2xl transition-all duration-700 transform ${
-        isHovered ? 'scale-110 rotate-6' : 'scale-100 rotate-0'
-      }`}>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-        <img
-          src={image}
-          alt="Profile"
-          className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110"
-        />
-      </div>
-
-      <div className={`absolute inset-0 rounded-full transition-opacity duration-700 ${
-        isHovered ? 'opacity-100' : 'opacity-0'
-      }`}>
-        <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-transparent rounded-full blur-xl" />
-      </div>
-    </div>
-  )
-})
-
 const TechStack = memo(({ tech }) => (
-  <div className="px-4 py-2 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 text-sm text-gray-300 hover:bg-white/10 transition-colors">
+  <div className="px-6 py-3 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 text-sm text-gray-300 hover:bg-white/10 hover:border-[#6366f1]/30 transition-all">
     {tech}
   </div>
 ))
 
-const CTAButton = memo(({ href, text, icon: Icon }) => (
+const CTAButton = memo(({ href, text, icon: Icon, primary = false }) => (
   <a href={href}>
-    <button className="group relative w-[160px]">
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-[#4f52c9] to-[#8644c5] rounded-xl opacity-50 blur-md group-hover:opacity-90 transition-all duration-700"></div>
-      <div className="relative h-11 bg-[#030014] backdrop-blur-xl rounded-lg border border-white/10 leading-none overflow-hidden">
+    <button className={`group relative ${primary ? 'w-[180px]' : 'w-[160px]'}`}>
+      <div className={`absolute -inset-0.5 ${primary ? 'bg-gradient-to-r from-[#6366f1] to-[#a855f7]' : 'bg-gradient-to-r from-[#4f52c9] to-[#8644c5]'} rounded-xl opacity-50 blur-md group-hover:opacity-90 transition-all duration-700`}></div>
+      <div className="relative h-12 bg-[#030014] backdrop-blur-xl rounded-lg border border-white/10 leading-none overflow-hidden">
         <div className="absolute inset-0 scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-500 bg-gradient-to-r from-[#4f52c9]/20 to-[#8644c5]/20"></div>
         <span className="absolute inset-0 flex items-center justify-center gap-2 text-sm group-hover:gap-3 transition-all duration-300">
-          <span className="bg-gradient-to-r from-gray-200 to-white bg-clip-text text-transparent font-medium z-10">
+          <span className={`${primary ? 'text-white' : 'bg-gradient-to-r from-gray-200 to-white bg-clip-text text-transparent'} font-medium z-10`}>
             {text}
           </span>
-          <Icon className={`w-4 h-4 text-gray-200 ${text === "Contact" ? "group-hover:translate-x-1" : "group-hover:rotate-45"} transform transition-all duration-300 z-10`} />
+          <Icon className={`w-4 h-4 ${primary ? 'text-white' : 'text-gray-200'} ${text === "Contact" ? "group-hover:translate-x-1" : "group-hover:rotate-45"} transform transition-all duration-300 z-10`} />
         </span>
       </div>
     </button>
@@ -184,9 +100,9 @@ const Home = ({ developer: propDeveloper }) => {
   const [isHovering, setIsHovering] = useState(false)
 
   const WORDS = developer?.titles || [
-    "Network & Telecom Student",
-    "Tech Enthusiast",
-    "Frontend Developer"
+    "Frontend Developer",
+    "Network & Telecom",
+    "Tech Enthusiast"
   ]
 
   const quickSkills = getSkills()
@@ -235,13 +151,14 @@ const Home = ({ developer: propDeveloper }) => {
   }, [charIndex, isTyping, wordIndex, WORDS])
 
   return (
-    <div className="min-h-screen bg-[#030014] overflow-hidden" id="Home">
+    <div className="min-h-screen bg-[#030014] overflow-hidden relative" id="Home">
+      <Watermark />
       <div className={`relative z-10 transition-all duration-1000 ${isLoaded ? "opacity-100" : "opacity-0"}`}>
         <div className="container mx-auto px-[5%] min-h-screen">
           <div className="flex flex-col lg:flex-row items-center justify-center h-screen md:justify-between gap-12">
             
             {/* القسم الأيسر - النصوص */}
-            <div className="w-full lg:w-1/2 space-y-6 text-left lg:text-left order-1">
+            <div className="w-full lg:w-1/2 space-y-8 text-left lg:text-left order-1">
               <StatusBadge name={developer?.full_name || "Ready to Innovate"} />
               <MainTitle title={developer?.title || "Frontend Developer"} />
 
@@ -262,9 +179,9 @@ const Home = ({ developer: propDeveloper }) => {
                 ))}
               </div>
 
-              <div className="flex flex-row gap-3 w-full justify-start">
+              <div className="flex flex-row gap-4 w-full justify-start">
                 <CTAButton href="#Portofolio" text="Projects" icon={ExternalLink} />
-                <CTAButton href="#Contact" text="Contact" icon={Mail} />
+                <CTAButton href="#Contact" text="Contact" icon={Mail} primary={true} />
               </div>
 
               <div className="hidden sm:flex gap-4 justify-start">
@@ -280,7 +197,7 @@ const Home = ({ developer: propDeveloper }) => {
               </div>
             </div>
 
-            {/* القسم الأيمن - الصورة المتحركة (Lottie) */}
+            {/* القسم الأيمن - الصورة المتحركة */}
             <div
               className="w-full lg:w-1/2 h-[500px] relative flex items-center justify-center order-2"
               onMouseEnter={() => setIsHovering(true)}
@@ -295,9 +212,10 @@ const Home = ({ developer: propDeveloper }) => {
                 <div className={`relative z-10 w-full opacity-90 transform transition-transform duration-500 ${
                   isHovering ? "scale-105" : "scale-100"
                 }`}>
-                  <LottieAnimation
-                    animationData={codingAnimation}
-                    className={`w-full h-full transition-all duration-500 ${
+                  <img 
+                    src="/Coding.gif" 
+                    alt="Coding animation"
+                    className={`w-full h-full object-contain transition-all duration-500 ${
                       isHovering
                         ? "scale-[180%] sm:scale-[160%] md:scale-[150%] lg:scale-[145%] rotate-2"
                         : "scale-[175%] sm:scale-[155%] md:scale-[145%] lg:scale-[140%]"
