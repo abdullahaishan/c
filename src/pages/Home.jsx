@@ -48,6 +48,102 @@ const MainTitle = memo(({ title }) => {
   )
 })
 
+// ✅ مكون الصورة المتحركة الجديد
+const AnimatedProfileImage = memo(({ image }) => {
+  const [isHovered, setIsHovered] = useState(false)
+  
+  // ألوان متدرجة حسب الصورة (يمكن تخصيصها)
+  const gradientColors = "from-[#6366f1] via-[#a855f7] to-[#ec4899]"
+  
+  return (
+    <div 
+      className="relative group"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* الخلفية المتحركة */}
+      <div className="absolute -inset-8">
+        {/* دائرة خارجية كبيرة */}
+        <div className={`absolute inset-0 bg-gradient-to-r ${gradientColors} rounded-full blur-3xl opacity-30 transition-all duration-1000 ${
+          isHovered ? 'scale-150 opacity-40' : 'scale-100 opacity-30'
+        }`} />
+        
+        {/* دوائر متحركة */}
+        <div className="absolute inset-0 animate-spin-slow">
+          <div className={`absolute top-0 left-1/2 w-32 h-32 bg-gradient-to-r ${gradientColors} rounded-full blur-2xl opacity-40 transition-all duration-700 ${
+            isHovered ? 'scale-125' : 'scale-100'
+          }`} />
+        </div>
+        
+        <div className="absolute inset-0 animate-spin-slower">
+          <div className={`absolute bottom-0 right-1/2 w-40 h-40 bg-gradient-to-r ${gradientColors} rounded-full blur-2xl opacity-40 transition-all duration-700 ${
+            isHovered ? 'scale-125' : 'scale-100'
+          }`} />
+        </div>
+      </div>
+
+      {/* الخطوط الدائرية */}
+      <div className="absolute -inset-4">
+        {/* خط دائري خارجي */}
+        <svg className="absolute inset-0 w-full h-full animate-spin-slower">
+          <circle
+            cx="50%"
+            cy="50%"
+            r="45%"
+            fill="none"
+            stroke="url(#gradient)"
+            strokeWidth="2"
+            strokeDasharray="8 8"
+            className="opacity-30"
+          />
+        </svg>
+        
+        {/* خط دائري داخلي */}
+        <svg className="absolute inset-0 w-full h-full animate-spin-slow">
+          <circle
+            cx="50%"
+            cy="50%"
+            r="35%"
+            fill="none"
+            stroke="url(#gradient)"
+            strokeWidth="1.5"
+            strokeDasharray="6 6"
+            className="opacity-20"
+          />
+        </svg>
+        
+        {/* تعريف التدرج للخطوط */}
+        <defs>
+          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#6366f1" />
+            <stop offset="50%" stopColor="#a855f7" />
+            <stop offset="100%" stopColor="#ec4899" />
+          </linearGradient>
+        </defs>
+      </div>
+
+      {/* الصورة */}
+      <div className={`relative w-72 h-72 sm:w-80 sm:h-80 rounded-full overflow-hidden shadow-2xl transition-all duration-700 transform ${
+        isHovered ? 'scale-110 rotate-6' : 'scale-100 rotate-0'
+      }`}>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <img
+          src={image}
+          alt="Profile"
+          className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110"
+        />
+      </div>
+
+      {/* تأثير بريق إضافي */}
+      <div className={`absolute inset-0 rounded-full transition-opacity duration-700 ${
+        isHovered ? 'opacity-100' : 'opacity-0'
+      }`}>
+        <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-transparent rounded-full blur-xl" />
+      </div>
+    </div>
+  )
+})
+
 const TechStack = memo(({ tech }) => (
   <div className="px-4 py-2 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 text-sm text-gray-300 hover:bg-white/10 transition-colors">
     {tech}
@@ -82,29 +178,26 @@ const SocialLink = memo(({ icon: Icon, link }) => (
   </a>
 ))
 
-const Home = () => {
-  const { 
-    developer, 
-    getProfileImage, 
-    getSocialLinks,
-    getSkills 
-  } = useDeveloper()
+const Home = ({ developer: propDeveloper }) => {
+  const context = useDeveloper()
+  // استخدام developer من props إذا وجد، وإلا من context
+  const developer = propDeveloper || context.publicDeveloper
+  const { getProfileImage, getSocialLinks, getSkills } = context
   
   const [text, setText] = useState("")
   const [isTyping, setIsTyping] = useState(true)
   const [wordIndex, setWordIndex] = useState(0)
   const [charIndex, setCharIndex] = useState(0)
   const [isLoaded, setIsLoaded] = useState(false)
-  const [isHovering, setIsHovering] = useState(false)
 
-  // كلمات للكتابة (يمكن جعلها ديناميكية من skills)
+  // كلمات للكتابة
   const WORDS = developer?.titles || [
     "Network & Telecom Student",
     "Tech Enthusiast",
     "Frontend Developer"
   ]
 
-  // المهارات السريعة (أول 4 مهارات)
+  // المهارات السريعة
   const quickSkills = getSkills()
     .slice(0, 4)
     .map(s => s.name) || ["React", "JavaScript", "Node.js", "Tailwind"]
@@ -204,40 +297,8 @@ const Home = () => {
             </div>
 
             {/* القسم الأيمن - الصورة المتحركة */}
-            <div
-              className="w-full lg:w-1/2 h-[500px] relative flex items-center justify-center order-2"
-              onMouseEnter={() => setIsHovering(true)}
-              onMouseLeave={() => setIsHovering(false)}
-              data-aos="fade-left"
-            >
-              <div className="relative w-full opacity-90">
-                <div className={`absolute inset-0 bg-gradient-to-r from-[#6366f1]/10 to-[#a855f7]/10 rounded-3xl blur-3xl transition-all duration-700 ease-in-out ${
-                  isHovering ? "opacity-50 scale-105" : "opacity-20 scale-100"
-                }`}></div>
-
-                <div className={`relative z-10 w-full opacity-90 transform transition-transform duration-500 ${
-                  isHovering ? "scale-105" : "scale-100"
-                }`}>
-                  <DotLottieReact
-                    src="https://lottie.host/58753882-bb6a-49f5-a2c0-950eda1e135a/NLbpVqGegK.lottie"
-                    loop
-                    autoplay
-                    className={`w-full h-full transition-all duration-500 ${
-                      isHovering
-                        ? "scale-[180%] sm:scale-[160%] md:scale-[150%] lg:scale-[145%] rotate-2"
-                        : "scale-[175%] sm:scale-[155%] md:scale-[145%] lg:scale-[140%]"
-                    }`}
-                  />
-                </div>
-
-                <div className={`absolute inset-0 pointer-events-none transition-all duration-700 ${
-                  isHovering ? "opacity-50" : "opacity-20"
-                }`}>
-                  <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-gradient-to-br from-indigo-500/10 to-purple-500/10 blur-3xl animate-pulse transition-all duration-700 ${
-                    isHovering ? "scale-110" : "scale-100"
-                  }`}></div>
-                </div>
-              </div>
+            <div className="w-full lg:w-1/2 flex items-center justify-center order-2">
+              <AnimatedProfileImage image={getProfileImage()} />
             </div>
           </div>
         </div>
