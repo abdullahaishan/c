@@ -6,6 +6,7 @@ import Certificate from "../components/Certificate"
 import { Code, Award, Boxes } from "lucide-react"
 import AOS from "aos"
 import "aos/dist/aos.css"
+import LoadingScreen from "../components/LoadingScreen"
 
 // أيقونات التقنيات (من المجلد public/icons)
 const techIcons = [
@@ -23,8 +24,11 @@ const techIcons = [
   { icon: "/icons/SweetAlert.svg", name: "SweetAlert2" },
 ]
 
-const Portofolio = () => {
-  const { developer, loading } = useDeveloper()
+const Portofolio = ({ developer: propDeveloper }) => {
+  const context = useDeveloper()
+  const developer = propDeveloper || context.publicDeveloper
+  const { loading } = context
+  
   const [activeTab, setActiveTab] = useState(0)
   const [showAllProjects, setShowAllProjects] = useState(false)
   const [showAllCerts, setShowAllCerts] = useState(false)
@@ -35,7 +39,17 @@ const Portofolio = () => {
   const skills = developer?.skills || []
 
   // عدد العناصر في العرض الأول
-  const initialItems = window.innerWidth < 768 ? 4 : 6
+  const [initialItems, setInitialItems] = useState(6)
+
+  useEffect(() => {
+    const handleResize = () => {
+      setInitialItems(window.innerWidth < 768 ? 4 : 6)
+    }
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
   const displayedProjects = showAllProjects ? projects : projects.slice(0, initialItems)
   const displayedCerts = showAllCerts ? certificates : certificates.slice(0, initialItems)
 
@@ -171,7 +185,6 @@ const Portofolio = () => {
         {activeTab === 2 && (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
             {skills.length > 0 ? (
-              // عرض مهارات المطور إذا وجدت
               skills.map((skill, index) => (
                 <div
                   key={skill.id}
@@ -185,7 +198,6 @@ const Portofolio = () => {
                 </div>
               ))
             ) : (
-              // عرض الأيقونات الافتراضية
               techIcons.map((tech, index) => (
                 <div
                   key={index}
