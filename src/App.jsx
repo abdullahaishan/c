@@ -9,6 +9,7 @@ import LandingPage from './pages/LandingPage'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import PublicPortfolio from './pages/PublicPortfolio'
+import ProjectDetail from './pages/ProjectDetail';
 
 
 // AI Builder
@@ -64,7 +65,9 @@ const AppRoutes = () => {
           />
           // أضف هذا المسار داخل Routes
 <Route path="/u/:username" element={<PublicPortfolio />} />
-          
+          // داخل Routes، أضف:
+<Route path="/project/:id" element={<ProjectDetail />} />
+  
           {/* مسارات المصادقة */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
