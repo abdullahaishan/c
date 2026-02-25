@@ -26,7 +26,7 @@ import {
   Award
 } from 'lucide-react'
 
-const Plans = () => {
+const PlanStatus = () => {
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [showPayment, setShowPayment] = useState(false)
   const [billingCycle, setBillingCycle] = useState('monthly')
