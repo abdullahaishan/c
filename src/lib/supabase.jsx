@@ -99,6 +99,63 @@ export const developerService = {
 }
 
 // ===========================================
+// خدمات الرسائل (Messages)
+// ===========================================
+export const messagesService = {
+  // جلب جميع الرسائل لمطور معين
+  async getByDeveloperId(developerId) {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('developer_id', developerId)
+      .order('created_at', { ascending: false })
+    
+    if (error) throw error
+    return data || []
+  },
+
+  // جلب عدد الرسائل غير المقروءة
+  async getUnreadCount(developerId) {
+    const { count, error } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('developer_id', developerId)
+      .eq('is_read', false)
+    
+    if (error) throw error
+    return count || 0
+  },
+
+  // تحديث حالة القراءة
+  async markAsRead(messageId) {
+    const { error } = await supabase
+      .from('messages')
+      .update({ is_read: true, read_at: new Date() })
+      .eq('id', messageId)
+    
+    if (error) throw error
+    return true
+  },
+
+  // حذف رسالة
+  async delete(messageId) {
+    const { error } = await supabase
+      .from('messages')
+      .delete()
+      .eq('id', messageId)
+    
+    if (error) throw error
+    return true
+  },
+
+  // الرد على رسالة (يمكن استخدام خدمة بريد إلكتروني خارجية)
+  async reply(messageId, replyContent) {
+    // يمكن تنفيذ إرسال بريد إلكتروني هنا
+    console.log('Reply to message', messageId, replyContent)
+    return true
+  }
+}
+// ===========================================
 // خدمات البورتفليو (Portfolios) - 🆕 جديد
 // ===========================================
 export const portfolioService = {
