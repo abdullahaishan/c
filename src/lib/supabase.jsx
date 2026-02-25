@@ -32,7 +32,7 @@ export const developerService = {
       .eq('username', username)
       .eq('is_active', true)
       .single()
-    
+  
     if (error) {
       console.error('Error fetching developer:', error)
       throw error
