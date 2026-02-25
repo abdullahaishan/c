@@ -43,7 +43,8 @@ const Overview = () => {
   const [remainingAnalyses, setRemainingAnalyses] = useState(0)
   const [loading, setLoading] = useState(true)
   const [selectedPeriod, setSelectedPeriod] = useState('week')
-
+const { limits, usage, getUsagePercentage } = usePlan()
+  
   useEffect(() => {
     if (user) {
       fetchAllStats()
@@ -161,6 +162,61 @@ const Overview = () => {
         </div>
       </div>
 
+// أضف هذا القسم تحت Welcome Banner
+<div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+  <UsageCard
+    label="المشاريع"
+    current={usage?.projects || 0}
+    max={limits.maxProjects}
+    color="from-blue-500 to-cyan-500"
+  />
+  <UsageCard
+    label="المهارات"
+    current={usage?.skills || 0}
+    max={limits.maxSkills}
+    color="from-purple-500 to-pink-500"
+  />
+  <UsageCard
+    label="الشهادات"
+    current={usage?.certificates || 0}
+    max={limits.maxCertificates}
+    color="from-yellow-500 to-orange-500"
+  />
+  <UsageCard
+    label="الخبرات"
+    current={usage?.experience || 0}
+    max={limits.maxExperience}
+    color="from-green-500 to-emerald-500"
+  />
+  <UsageCard
+    label="التعليم"
+    current={usage?.education || 0}
+    max={limits.maxEducation}
+    color="from-red-500 to-rose-500"
+  />
+</div>
+
+// مكون بطاقة الاستخدام
+const UsageCard = ({ label, current, max, color }) => {
+  const percentage = max === -1 ? 0 : Math.min(100, (current / max) * 100)
+  
+  return (
+    <div className="bg-white/5 backdrop-blur-xl rounded-xl p-4 border border-white/10">
+      <p className="text-sm text-gray-400 mb-2">{label}</p>
+      <p className="text-xl font-bold text-white mb-2">
+        {current} / {max === -1 ? '∞' : max}
+      </p>
+      {max !== -1 && (
+        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div 
+            className={`h-full bg-gradient-to-r ${color} transition-all duration-300`}
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
+      )}
+    </div>
+  )
+    }
       {/* البطاقات الرئيسية */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
