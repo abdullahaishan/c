@@ -17,13 +17,18 @@ import {
   Bell,
   Sparkles,
   Crown,
-  MessageSquare
+  MessageSquare,
+  Share2,
+  Check
 } from 'lucide-react'
 
 const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [showShareTooltip, setShowShareTooltip] = useState(false)
+  const [copied, setCopied] = useState(false)
+  
   const { user, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -33,7 +38,6 @@ const DashboardLayout = () => {
     if (user) {
       fetchUnreadCount()
       
-      // تحديث العدد كل 30 ثانية
       const interval = setInterval(fetchUnreadCount, 30000)
       return () => clearInterval(interval)
     }
@@ -46,6 +50,14 @@ const DashboardLayout = () => {
     } catch (error) {
       console.error('Error fetching unread count:', error)
     }
+  }
+
+  // دالة نسخ رابط الموقع
+  const copyPortfolioLink = () => {
+    const portfolioUrl = `${window.location.origin}/u/${user?.username}`
+    navigator.clipboard.writeText(portfolioUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   const navigation = [
@@ -129,7 +141,6 @@ const DashboardLayout = () => {
                 <Icon className="w-5 h-5" />
                 <span>{item.name}</span>
                 
-                {/* عرض عدد الرسائل غير المقروءة بجانب Messages */}
                 {isMessagesPage && unreadCount > 0 && (
                   <span className="absolute left-2 top-1/2 -translate-y-1/2 min-w-[20px] h-[20px] flex items-center justify-center bg-red-500 text-white text-xs rounded-full px-1">
                     {unreadCount > 9 ? '9+' : unreadCount}
@@ -175,6 +186,38 @@ const DashboardLayout = () => {
 
             {/* Right side */}
             <div className="flex items-center gap-4 ml-auto">
+              
+              {/* زر مشاركة الموقع - جديد */}
+              <div className="relative">
+                <button
+                  onClick={copyPortfolioLink}
+                  onMouseEnter={() => setShowShareTooltip(true)}
+                  onMouseLeave={() => setShowShareTooltip(false)}
+                  className="relative p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all"
+                  title="مشاركة الموقع"
+                >
+                  {copied ? (
+                    <Check className="w-5 h-5 text-green-400" />
+                  ) : (
+                    <Share2 className="w-5 h-5" />
+                  )}
+                </button>
+                
+                {/* Tooltip */}
+                {showShareTooltip && !copied && (
+                  <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 px-3 py-1 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap border border-white/10">
+                    مشاركة الموقع
+                  </div>
+                )}
+                
+                {/* رسالة تم النسخ */}
+                {copied && (
+                  <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 px-3 py-1 bg-green-600 text-white text-xs rounded-lg whitespace-nowrap">
+                    تم نسخ الرابط!
+                  </div>
+                )}
+              </div>
+
               {/* Notifications */}
               <button 
                 onClick={handleNotificationClick}
