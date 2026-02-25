@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from "react"
-import { Share2, User, Mail, MessageSquare, Send } from "lucide-react"
+import { Share2, User, Mail, MessageSquare, Send, MessageCircle, Phone } from "lucide-react"
 import { useDeveloper } from '../context/DeveloperContext'
 import SocialLinks from "../components/SocialLinks"
 import Komentar from "../components/Commentar"
 import Swal from "sweetalert2"
 import AOS from "aos"
 import "aos/dist/aos.css"
+
+// مكون العلامة المائية
+const Watermark = () => (
+  <div className="fixed inset-0 pointer-events-none select-none flex items-center justify-center opacity-[0.03] text-8xl font-bold text-white rotate-[-30deg] scale-150 uppercase tracking-wider">
+    Portfolio Website
+  </div>
+)
 
 const ContactPage = ({ developer: propDeveloper }) => {
   const context = useDeveloper()
@@ -19,7 +26,6 @@ const ContactPage = ({ developer: propDeveloper }) => {
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // روابط التواصل
   const socialLinks = getSocialLinks()
 
   useEffect(() => {
@@ -68,7 +74,9 @@ const ContactPage = ({ developer: propDeveloper }) => {
   }
 
   return (
-    <>
+    <div className="relative min-h-screen bg-[#030014]" id="Contact">
+      <Watermark />
+      
       <div className="text-center lg:mt-[5%] mt-10 mb-2 sm:px-0 px-[5%]">
         <h2
           data-aos="fade-down"
@@ -80,11 +88,11 @@ const ContactPage = ({ developer: propDeveloper }) => {
           data-aos="fade-up"
           className="text-slate-400 max-w-2xl mx-auto text-sm md:text-base mt-2"
         >
-          Got a question? Send me a message, and I'll get back to you soon.
+          Get in touch with me. Send me a message and I'll get back to you soon.
         </p>
       </div>
 
-      <div className="h-auto py-10 flex items-center justify-center px-[5%] md:px-0" id="Contact">
+      <div className="h-auto py-10 flex items-center justify-center px-[5%] md:px-0">
         <div className="container px-[1%] grid grid-cols-1 lg:grid-cols-[45%_55%] gap-12">
           
           {/* نموذج الاتصال */}
@@ -102,6 +110,37 @@ const ContactPage = ({ developer: propDeveloper }) => {
                 </p>
               </div>
               <Share2 className="w-10 h-10 text-[#6366f1] opacity-50" />
+            </div>
+
+            {/* طرق التواصل السريعة */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+              <a
+                href="https://wa.me/967771315459"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-4 bg-green-600/20 rounded-xl hover:bg-green-600/30 transition-all group"
+              >
+                <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
+                  <MessageCircle className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h4 className="text-white font-medium">WhatsApp</h4>
+                  <p className="text-xs text-gray-400">Quick response within 1 hour</p>
+                </div>
+              </a>
+              
+              <a
+                href="mailto:your@email.com"
+                className="flex items-center gap-3 p-4 bg-blue-600/20 rounded-xl hover:bg-blue-600/30 transition-all group"
+              >
+                <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <Mail className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h4 className="text-white font-medium">Email</h4>
+                  <p className="text-xs text-gray-400">Response within 24 hours</p>
+                </div>
+              </a>
             </div>
 
             <form 
@@ -164,10 +203,6 @@ const ContactPage = ({ developer: propDeveloper }) => {
                 {isSubmitting ? 'Sending...' : 'Send Message'}
               </button>
             </form>
-
-            <div className="mt-10 pt-6 border-t border-white/10 flex justify-center space-x-6">
-              <SocialLinks />
-            </div>
           </div>
 
           {/* قسم التعليقات */}
@@ -176,7 +211,7 @@ const ContactPage = ({ developer: propDeveloper }) => {
           </div>
         </div>
       </div>
-    </>
+    </div>
   )
 }
 
