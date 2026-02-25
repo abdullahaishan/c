@@ -6,7 +6,6 @@ import AboutPage from './About';
 import Portofolio from './Portofolio';
 import ContactPage from './Contact';
 import { Loader, AlertCircle, User } from 'lucide-react';
-
 const PublicPortfolio = () => {
   const { username } = useParams();
   const [developer, setDeveloper] = useState(null);
