@@ -20,12 +20,13 @@ import {
 } from 'lucide-react'
 
 const Experience = () => {
-  const { user } = useAuth() // ✅ استخدم useAuth بدلاً من useDeveloper
+  const { user } = useAuth()
   const { checkLimit, limits } = usePlan()
   const [experiences, setExperiences] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
 
   // جلب الخبرات عند تحميل الصفحة
@@ -66,6 +67,12 @@ const Experience = () => {
   const [achievementInput, setAchievementInput] = useState('')
   const [techInput, setTechInput] = useState('')
 
+  // دالة تحويل التاريخ
+  const formatDateForDB = (monthString) => {
+    if (!monthString) return null
+    return `${monthString}-01`
+  }
+
   const handleAddExperience = async () => {
     // التحقق من حدود الباقة
     if (!checkLimit('experience', experiences.length)) {
@@ -80,11 +87,15 @@ const Experience = () => {
 
     setSaving(true)
     setError('')
+    setSuccess('')
 
     try {
       const experienceData = {
         ...newExperience,
-        display_order: experiences.length
+        start_date: formatDateForDB(newExperience.start_date),
+        end_date: formatDateForDB(newExperience.end_date),
+        display_order: experiences.length,
+        developer_id: user.id  // ✅ مهم: ربط الخبرة بالمطور
       }
 
       const created = await experienceService.create(user.id, experienceData)
@@ -106,9 +117,12 @@ const Experience = () => {
       })
       setAchievementInput('')
       setTechInput('')
+      
+      setSuccess('✅ تم إضافة الخبرة بنجاح')
+      setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('Error adding experience:', err)
-      setError('فشل في إضافة الخبرة')
+      setError(err.message || 'فشل في إضافة الخبرة')
     } finally {
       setSaving(false)
     }
@@ -116,13 +130,24 @@ const Experience = () => {
 
   const handleUpdateExperience = async (id, updates) => {
     setSaving(true)
+    setError('')
+    setSuccess('')
+    
     try {
-      const updated = await experienceService.update(id, updates)
+      const formattedUpdates = {
+        ...updates,
+        start_date: formatDateForDB(updates.start_date),
+        end_date: formatDateForDB(updates.end_date)
+      }
+      
+      const updated = await experienceService.update(id, formattedUpdates)
       setExperiences(experiences.map(exp => exp.id === id ? updated : exp))
       setEditingId(null)
+      setSuccess('✅ تم تحديث الخبرة بنجاح')
+      setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('Error updating experience:', err)
-      setError('فشل في تحديث الخبرة')
+      setError(err.message || 'فشل في تحديث الخبرة')
     } finally {
       setSaving(false)
     }
@@ -134,9 +159,11 @@ const Experience = () => {
     try {
       await experienceService.delete(id)
       setExperiences(experiences.filter(exp => exp.id !== id))
+      setSuccess('✅ تم حذف الخبرة بنجاح')
+      setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('Error deleting experience:', err)
-      setError('فشل في حذف الخبرة')
+      setError(err.message || 'فشل في حذف الخبرة')
     }
   }
 
@@ -219,7 +246,7 @@ const Experience = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">الخبرات العملية</h1>
         <div className="text-sm text-gray-400">
-          {experiences.length} / {limits.maxExperience === -1 ? '∞' : limits.maxExperience}
+          {experiences.length} / {limits?.maxExperience === -1 ? '∞' : limits?.maxExperience || 5}
         </div>
       </div>
 
@@ -231,7 +258,15 @@ const Experience = () => {
         </div>
       )}
 
-      {/* Add new experience form - يظهر دائماً */}
+      {/* Success message */}
+      {success && (
+        <div className="flex items-center gap-2 p-4 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <p>{success}</p>
+        </div>
+      )}
+
+      {/* Add new experience form */}
       <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
         <h2 className="text-lg font-semibold text-white mb-4">إضافة خبرة جديدة</h2>
         
@@ -319,7 +354,7 @@ const Experience = () => {
                   disabled={newExperience.is_current}
                   className="flex-1 p-3 bg-white/10 border border-white/20 rounded-lg text-white disabled:opacity-50"
                 />
-                <label className="flex items-center gap-2 text-sm text-gray-400">
+                <label className="flex items-center gap-2 text-sm text-gray-400 whitespace-nowrap">
                   <input
                     type="checkbox"
                     checked={newExperience.is_current}
@@ -453,7 +488,7 @@ const Experience = () => {
   )
 }
 
-// مكون بطاقة الخبرة (مع ترجمة)
+// مكون بطاقة الخبرة
 const ExperienceCard = ({ 
   experience, 
   index, 
@@ -469,11 +504,17 @@ const ExperienceCard = ({
   const [achievementInput, setAchievementInput] = useState('')
   const [techInput, setTechInput] = useState('')
 
+  // دالة تحويل التاريخ
+  const formatDateForDB = (monthString) => {
+    if (!monthString) return null
+    return `${monthString}-01`
+  }
+
   const addAchievement = () => {
-    if (achievementInput.trim() && !editData.achievements.includes(achievementInput.trim())) {
+    if (achievementInput.trim() && !editData.achievements?.includes(achievementInput.trim())) {
       setEditData({
         ...editData,
-        achievements: [...editData.achievements, achievementInput.trim()]
+        achievements: [...(editData.achievements || []), achievementInput.trim()]
       })
       setAchievementInput('')
     }
@@ -482,15 +523,15 @@ const ExperienceCard = ({
   const removeAchievement = (achievement) => {
     setEditData({
       ...editData,
-      achievements: editData.achievements.filter(a => a !== achievement)
+      achievements: (editData.achievements || []).filter(a => a !== achievement)
     })
   }
 
   const addTechnology = () => {
-    if (techInput.trim() && !editData.technologies.includes(techInput.trim())) {
+    if (techInput.trim() && !editData.technologies?.includes(techInput.trim())) {
       setEditData({
         ...editData,
-        technologies: [...editData.technologies, techInput.trim()]
+        technologies: [...(editData.technologies || []), techInput.trim()]
       })
       setTechInput('')
     }
@@ -499,7 +540,7 @@ const ExperienceCard = ({
   const removeTechnology = (tech) => {
     setEditData({
       ...editData,
-      technologies: editData.technologies.filter(t => t !== tech)
+      technologies: (editData.technologies || []).filter(t => t !== tech)
     })
   }
 
@@ -511,40 +552,69 @@ const ExperienceCard = ({
           <div className="grid grid-cols-2 gap-4">
             <input
               type="text"
-              value={editData.job_title}
+              value={editData.job_title || ''}
               onChange={(e) => setEditData({ ...editData, job_title: e.target.value })}
               className="p-3 bg-white/10 border border-white/20 rounded-lg text-white"
               placeholder="المسمى الوظيفي"
             />
             <input
               type="text"
-              value={editData.company}
+              value={editData.company || ''}
               onChange={(e) => setEditData({ ...editData, company: e.target.value })}
               className="p-3 bg-white/10 border border-white/20 rounded-lg text-white"
               placeholder="الشركة"
             />
           </div>
 
+          {/* Location and types */}
+          <div className="grid grid-cols-3 gap-4">
+            <input
+              type="text"
+              value={editData.location || ''}
+              onChange={(e) => setEditData({ ...editData, location: e.target.value })}
+              className="p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+              placeholder="الموقع"
+            />
+            <select
+              value={editData.location_type || 'on-site'}
+              onChange={(e) => setEditData({ ...editData, location_type: e.target.value })}
+              className="p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+            >
+              {LOCATION_TYPES.map(type => (
+                <option key={type.id} value={type.id}>{type.name}</option>
+              ))}
+            </select>
+            <select
+              value={editData.employment_type || 'full-time'}
+              onChange={(e) => setEditData({ ...editData, employment_type: e.target.value })}
+              className="p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+            >
+              {EMPLOYMENT_TYPES.map(type => (
+                <option key={type.id} value={type.id}>{type.name}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Dates */}
           <div className="grid grid-cols-2 gap-4">
             <input
               type="month"
-              value={editData.start_date}
+              value={editData.start_date || ''}
               onChange={(e) => setEditData({ ...editData, start_date: e.target.value })}
               className="p-3 bg-white/10 border border-white/20 rounded-lg text-white"
             />
             <div className="flex items-center gap-2">
               <input
                 type="month"
-                value={editData.end_date}
+                value={editData.end_date || ''}
                 onChange={(e) => setEditData({ ...editData, end_date: e.target.value })}
                 disabled={editData.is_current}
                 className="flex-1 p-3 bg-white/10 border border-white/20 rounded-lg text-white disabled:opacity-50"
               />
-              <label className="flex items-center gap-2 text-sm text-gray-400">
+              <label className="flex items-center gap-2 text-sm text-gray-400 whitespace-nowrap">
                 <input
                   type="checkbox"
-                  checked={editData.is_current}
+                  checked={editData.is_current || false}
                   onChange={(e) => setEditData({ ...editData, is_current: e.target.checked })}
                   className="w-4 h-4"
                 />
@@ -555,7 +625,7 @@ const ExperienceCard = ({
 
           {/* Description */}
           <textarea
-            value={editData.description}
+            value={editData.description || ''}
             onChange={(e) => setEditData({ ...editData, description: e.target.value })}
             rows="3"
             className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
@@ -580,7 +650,7 @@ const ExperienceCard = ({
               </button>
             </div>
             <div className="flex flex-wrap gap-2 mt-2">
-              {editData.achievements?.map((achievement) => (
+              {(editData.achievements || []).map((achievement) => (
                 <span key={achievement} className="flex items-center gap-1 px-2 py-1 bg-green-500/20 text-green-400 rounded-lg text-xs">
                   {achievement}
                   <button onClick={() => removeAchievement(achievement)}>
@@ -609,7 +679,7 @@ const ExperienceCard = ({
               </button>
             </div>
             <div className="flex flex-wrap gap-2 mt-2">
-              {editData.technologies?.map((tech) => (
+              {(editData.technologies || []).map((tech) => (
                 <span key={tech} className="flex items-center gap-1 px-2 py-1 bg-[#6366f1]/20 text-[#6366f1] rounded-lg text-xs">
                   {tech}
                   <button onClick={() => removeTechnology(tech)}>
@@ -643,6 +713,8 @@ const ExperienceCard = ({
 
   // حساب مدة الخبرة
   const calculateDuration = () => {
+    if (!experience.start_date) return ''
+    
     const start = new Date(experience.start_date)
     const end = experience.is_current ? new Date() : new Date(experience.end_date)
     
@@ -653,6 +725,13 @@ const ExperienceCard = ({
     if (months === 0) return `${years} سنوات`
     if (months < 0) return `${years - 1} سنوات و ${12 + months} شهور`
     return `${years} سنوات و ${months} شهور`
+  }
+
+  // تنسيق التاريخ للعرض
+  const formatDate = (dateString) => {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    return date.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long' })
   }
 
   return (
@@ -693,7 +772,7 @@ const ExperienceCard = ({
           )}
           <span className="flex items-center gap-1">
             <Calendar className="w-4 h-4" />
-            {new Date(experience.start_date).getFullYear()} - {experience.is_current ? 'حتى الآن' : new Date(experience.end_date).getFullYear()}
+            {formatDate(experience.start_date)} - {experience.is_current ? 'حتى الآن' : formatDate(experience.end_date)}
             <span className="text-xs text-gray-500 mr-1">({calculateDuration()})</span>
           </span>
         </div>
