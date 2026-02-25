@@ -8,6 +8,8 @@ import WelcomeScreen from './pages/WelcomeScreen'
 import LandingPage from './pages/LandingPage'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
+import PublicPortfolio from './pages/PublicPortfolio'
+
 
 // AI Builder
 import Builder from './pages/Builder'
@@ -60,6 +62,8 @@ const AppRoutes = () => {
               user ? <Navigate to="/dashboard" replace /> : <LandingPage />
             } 
           />
+          // أضف هذا المسار داخل Routes
+<Route path="/u/:username" element={<PublicPortfolio />} />
           
           {/* مسارات المصادقة */}
           <Route path="/login" element={<Login />} />
