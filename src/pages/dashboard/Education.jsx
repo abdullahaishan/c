@@ -62,7 +62,11 @@ const Education = () => {
     description: '',
     activities: ''
   })
-
+// دالة تحويل تنسيق الشهر (YYYY-MM) إلى تاريخ كامل (YYYY-MM-DD)
+const formatDateForDB = (monthString) => {
+  if (!monthString) return null
+  return `${monthString}-01` // إضافة اليوم الأول من الشهر
+}
   const handleAddEducation = async () => {
     // التحقق من حدود الباقة
     if (!checkLimit('education', educations.length)) {
@@ -81,10 +85,12 @@ const Education = () => {
 
     try {
       const educationData = {
-        ...newEducation,
-        display_order: educations.length,
-        developer_id: user.id  // ✅ مهم: ربط المؤهل بالمطور
-      }
+      ...newEducation,
+      start_date: formatDateForDB(newEducation.start_date),
+      end_date: formatDateForDB(newEducation.end_date),
+      display_order: educations.length,
+      developer_id: user.id
+    }
 
       const created = await educationService.create(user.id, educationData)
       setEducations([...educations, created])
@@ -114,23 +120,30 @@ const Education = () => {
   }
 
   const handleUpdateEducation = async (id, updates) => {
-    setSaving(true)
-    setError('')
-    setSuccess('')
-    
-    try {
-      const updated = await educationService.update(id, updates)
-      setEducations(educations.map(edu => edu.id === id ? updated : edu))
-      setEditingId(null)
-      setSuccess('✅ تم تحديث المؤهل بنجاح')
-      setTimeout(() => setSuccess(''), 3000)
-    } catch (err) {
-      console.error('Error updating education:', err)
-      setError(err.message || 'فشل في تحديث المؤهل التعليمي')
-    } finally {
-      setSaving(false)
+  setSaving(true)
+  setError('')
+  setSuccess('')
+  
+  try {
+    // ✅ تحويل التواريخ قبل الإرسال
+    const formattedUpdates = {
+      ...updates,
+      start_date: formatDateForDB(updates.start_date),
+      end_date: formatDateForDB(updates.end_date)
     }
+    
+    const updated = await educationService.update(id, formattedUpdates)
+    setEducations(educations.map(edu => edu.id === id ? updated : edu))
+    setEditingId(null)
+    setSuccess('✅ تم تحديث المؤهل بنجاح')
+    setTimeout(() => setSuccess(''), 3000)
+  } catch (err) {
+    console.error('Error updating education:', err)
+    setError(err.message || 'فشل في تحديث المؤهل التعليمي')
+  } finally {
+    setSaving(false)
   }
+}
 
   const handleDeleteEducation = async (id) => {
     if (!window.confirm('هل أنت متأكد من حذف هذا المؤهل التعليمي؟')) return
