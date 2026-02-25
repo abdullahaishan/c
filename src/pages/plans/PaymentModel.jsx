@@ -49,7 +49,7 @@ const PaymentModal = ({ plan, billingCycle, currency, convertedPrice, userCountr
   const yemenBanks = [
     { 
       id: 'alahli', 
-      name: 'البنك الأهلي اليمني', 
+      name:'بنك القاسمي', 
       account: '1234567890',
       iban: 'YE1234567890',
       branch: 'الفرع الرئيسي - صنعاء'
@@ -57,9 +57,9 @@ const PaymentModal = ({ plan, billingCycle, currency, convertedPrice, userCountr
     { 
       id: 'kuraimi', 
       name: 'بنك الكريمي', 
-      account: '9876543210',
+      account: '123456789',
       iban: 'YE9876543210',
-      branch: 'الفرع الرئيسي - عدن'
+      branch: 'الفرع الرئيسي - صنعاء'
     },
     { 
       id: 'taslif', 
@@ -266,7 +266,7 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
                 id="western"
                 name="Western Union"
                 icon={Send}
-                description="حوالات ويسترن يونيون - الأسرع والأكثر أماناً لليمن"
+                description="حوالات ويسترن يونيون - الأسرع والأكثر أماناً "
                 required={userRegion === 'yemen'}
                 onClick={() => {
                   setMethod('western')
@@ -408,7 +408,7 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
                     <>
                       أرسل حوالة ويسترن يونيون إلى:
                       <div className="mt-2 p-3 bg-black/30 rounded-lg text-gray-300">
-                        <p>الاسم: محمد أحمد</p>
+                        <p>الاسم: احمد زبن الله علي عيشان</p>
                         <p>البلد: اليمن - صنعاء</p>
                         <p>الهاتف: +967771315459</p>
                         <p className="text-yellow-400 mt-2">⚠️ بعد الإرسال، أرفق صورة الإيصال</p>
@@ -420,7 +420,7 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
                     <>
                       أرسل حوالة موني جرام إلى:
                       <div className="mt-2 p-3 bg-black/30 rounded-lg text-gray-300">
-                        <p>الاسم: محمد أحمد</p>
+                        <p>الاسم: احمد زبن الله علي عيشان</p>
                         <p>البلد: اليمن - عدن</p>
                         <p>الهاتف: +967771315459</p>
                         <p className="text-yellow-400 mt-2">⚠️ بعد الإرسال، أرفق صورة الإيصال</p>
@@ -433,7 +433,7 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
                       أرسل المبلغ إلى محفظة OneCash:
                       <div className="mt-2 p-3 bg-black/30 rounded-lg text-gray-300">
                         <p>رقم المحفظة: 771315459</p>
-                        <p>الاسم: محمد أحمد</p>
+                        <p>الاسم: احمد زبن الله علي عيشان</p>
                         <p className="text-yellow-400 mt-2">⚠️ بعد الإرسال، أرفق صورة التحويل</p>
                       </div>
                     </>
@@ -550,7 +550,7 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
               </div>
               <h3 className="text-xl font-bold text-white mb-2">تم إرسال طلب الدفع!</h3>
               <p className="text-gray-400 mb-4">
-                شكراً لك! تم استلام طلب ترقية باقتك. سنقوم بمراجعته وتفعيلها خلال 24 ساعة.
+                شكراً لك! تم استلام طلب ترقية باقتك. سنقوم بمراجعته وتفعيلها في اقرب وقت.
               </p>
               
               {/* زر التواصل بعد النجاح */}
@@ -628,3 +628,4 @@ const CryptoOption = ({ type, name, address, onSelect, onCopy, copied }) => (
 )
 
 export default PaymentModal
+
