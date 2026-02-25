@@ -24,7 +24,7 @@ import Education from './pages/dashboard/Education'
 import Settings from './pages/dashboard/Settings'
 import PlanStatus from './pages/dashboard/PlanStatus'
 import Messages from './pages/dashboard/Messages'
-import Opportunities from './pages/dashboard/Opportunities'
+{*/import Opportunities from './pages/dashboard/Opportunities'*/}
 import NotFound from './pages/NotFound'
 
 // Providers
