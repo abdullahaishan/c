@@ -17,13 +17,14 @@ import {
 } from 'lucide-react'
 
 const Certificates = () => {
-  const { user } = useAuth() // ✅ استخدم useAuth بدلاً من useDeveloper
+  const { user } = useAuth()
   const { checkLimit, limits } = usePlan()
   const [certificates, setCertificates] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
 
   // جلب الشهادات عند تحميل الصفحة
@@ -55,19 +56,28 @@ const Certificates = () => {
     image: null
   })
 
+  // دالة تحويل التاريخ
+  const formatDateForDB = (dateString) => {
+    if (!dateString) return null
+    return dateString // input type="date" يعيد YYYY-MM-DD وهذا مقبول في Supabase
+  }
+
   const handleImageUpload = async (file) => {
     if (!file) return null
     
     setUploading(true)
     try {
-      const imageUrl = await storageService.uploadImage(
+      // استخدام دالة رفع صور الشهادات المخصصة
+      const imageUrl = await storageService.uploadCertificateImage(
         file,
-        `certificates/${user.id}`
+        user.id,
+        editingId || 'new',
+        null
       )
       return imageUrl
     } catch (err) {
       console.error('Error uploading image:', err)
-      setError('فشل في رفع الصورة')
+      setError('فشل في رفع الصورة: ' + err.message)
       return null
     } finally {
       setUploading(false)
@@ -88,6 +98,7 @@ const Certificates = () => {
 
     setSaving(true)
     setError('')
+    setSuccess('')
 
     try {
       let imageUrl = null
@@ -98,10 +109,11 @@ const Certificates = () => {
       const certificateData = {
         name: newCertificate.name,
         issuer: newCertificate.issuer,
-        issue_date: newCertificate.issue_date || null,
-        credential_url: newCertificate.credential_url,
+        issue_date: formatDateForDB(newCertificate.issue_date),
+        credential_url: newCertificate.credential_url || null,
         image: imageUrl,
-        display_order: certificates.length
+        display_order: certificates.length,
+        developer_id: user.id  // ✅ مهم: ربط الشهادة بالمطور
       }
 
       const created = await certificateService.create(user.id, certificateData)
@@ -115,9 +127,12 @@ const Certificates = () => {
         credential_url: '',
         image: null
       })
+      
+      setSuccess('✅ تم إضافة الشهادة بنجاح')
+      setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('Error adding certificate:', err)
-      setError('فشل في إضافة الشهادة')
+      setError(err.message || 'فشل في إضافة الشهادة')
     } finally {
       setSaving(false)
     }
@@ -125,13 +140,23 @@ const Certificates = () => {
 
   const handleUpdateCertificate = async (id, updates) => {
     setSaving(true)
+    setError('')
+    setSuccess('')
+    
     try {
-      const updated = await certificateService.update(id, updates)
+      const formattedUpdates = {
+        ...updates,
+        issue_date: formatDateForDB(updates.issue_date)
+      }
+      
+      const updated = await certificateService.update(id, formattedUpdates)
       setCertificates(certificates.map(c => c.id === id ? updated : c))
       setEditingId(null)
+      setSuccess('✅ تم تحديث الشهادة بنجاح')
+      setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('Error updating certificate:', err)
-      setError('فشل في تحديث الشهادة')
+      setError(err.message || 'فشل في تحديث الشهادة')
     } finally {
       setSaving(false)
     }
@@ -143,9 +168,11 @@ const Certificates = () => {
     try {
       await certificateService.delete(id)
       setCertificates(certificates.filter(c => c.id !== id))
+      setSuccess('✅ تم حذف الشهادة بنجاح')
+      setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('Error deleting certificate:', err)
-      setError('فشل في حذف الشهادة')
+      setError(err.message || 'فشل في حذف الشهادة')
     }
   }
 
@@ -194,7 +221,7 @@ const Certificates = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">الشهادات</h1>
         <div className="text-sm text-gray-400">
-          {certificates.length} / {limits.maxCertificates === -1 ? '∞' : limits.maxCertificates}
+          {certificates.length} / {limits?.maxCertificates === -1 ? '∞' : limits?.maxCertificates || 3}
         </div>
       </div>
 
@@ -206,7 +233,15 @@ const Certificates = () => {
         </div>
       )}
 
-      {/* Add new certificate form - يظهر دائماً */}
+      {/* Success message */}
+      {success && (
+        <div className="flex items-center gap-2 p-4 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <p>{success}</p>
+        </div>
+      )}
+
+      {/* Add new certificate form */}
       <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
         <h2 className="text-lg font-semibold text-white mb-4">إضافة شهادة جديدة</h2>
         
@@ -238,6 +273,7 @@ const Certificates = () => {
                     accept="image/*"
                     onChange={(e) => setNewCertificate({ ...newCertificate, image: e.target.files[0] })}
                     className="hidden"
+                    disabled={uploading}
                   />
                 </label>
               )}
@@ -333,7 +369,7 @@ const Certificates = () => {
   )
 }
 
-// مكون بطاقة الشهادة (مع ترجمة)
+// مكون بطاقة الشهادة
 const CertificateCard = ({ 
   certificate, 
   index, 
@@ -347,27 +383,33 @@ const CertificateCard = ({
 }) => {
   const [editData, setEditData] = useState(certificate)
 
+  // دالة تحويل التاريخ
+  const formatDateForDB = (dateString) => {
+    if (!dateString) return null
+    return dateString
+  }
+
   if (isEditing) {
     return (
       <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-[#6366f1]/50">
         <div className="space-y-3">
           <input
             type="text"
-            value={editData.name}
+            value={editData.name || ''}
             onChange={(e) => setEditData({ ...editData, name: e.target.value })}
             className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
             placeholder="اسم الشهادة"
           />
           <input
             type="text"
-            value={editData.issuer}
+            value={editData.issuer || ''}
             onChange={(e) => setEditData({ ...editData, issuer: e.target.value })}
             className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
             placeholder="الجهة المانحة"
           />
           <input
             type="date"
-            value={editData.issue_date}
+            value={editData.issue_date || ''}
             onChange={(e) => setEditData({ ...editData, issue_date: e.target.value })}
             className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
           />
@@ -403,7 +445,9 @@ const CertificateCard = ({
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-[#6366f1]/20 to-[#a855f7]/20 flex items-center justify-center">
-            <span className="text-4xl font-bold text-white/30">{certificate.name[0]}</span>
+            <span className="text-4xl font-bold text-white/30">
+              {certificate.name?.[0]?.toUpperCase() || '?'}
+            </span>
           </div>
         )}
 
