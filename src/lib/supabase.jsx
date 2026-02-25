@@ -914,13 +914,14 @@ export const storageService = {
   },
 
   // ✅ دالة جديدة لرفع صور الشهادات
-  async uploadCertificateImage(file, userId, certificateId, oldImageUrl = null) {
+  async uploadCertificateImage(file, userId, oldImageUrl = null) {
     try {
       if (!file) throw new Error('لا يوجد ملف')
       if (!file.type.startsWith('image/')) throw new Error('الملف ليس صورة')
       if (file.size > 5 * 1024 * 1024) throw new Error('الصورة أكبر من 5 ميجابايت')
 
-      const fileName = `${userId}/profile/${certificateId}/${uuidv4()}-${file.name}`
+      // ✅ نفس نمط الملف الشخصي: userId/certificates/uuid-filename.jpg
+      const fileName = `${userId}/certificates/${uuidv4()}-${file.name}`
 
       const { error: uploadError } = await supabase.storage
         .from('developers')
@@ -935,6 +936,7 @@ export const storageService = {
         .from('developers')
         .getPublicUrl(fileName)
 
+      // حذف الصورة القديمة إذا وجدت
       if (oldImageUrl) {
         try {
           const oldPath = oldImageUrl.split('/developers/')[1]
