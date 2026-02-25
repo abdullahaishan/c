@@ -10,7 +10,7 @@ import {
 import AOS from "aos"
 import "aos/dist/aos.css"
 import { useDeveloper } from '../context/DeveloperContext'
-import codingAnimation from '/Coding.json'
+import codingAnimation from '../../public/Coding.json'
 import LottieAnimation from '../components/LottieAnimation'
 
 // مكونات مساعدة
