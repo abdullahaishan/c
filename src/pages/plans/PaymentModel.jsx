@@ -46,10 +46,10 @@ const PaymentModal = ({ plan, billingCycle, currency, convertedPrice, userCountr
 
   // عناوين المحافظ
   const walletAddresses = {
-    btc: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
-    eth: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
-    usdt: 'TXkZ3XqKqLQkzQkzQkzQkzQkzQkzQkzQkz',
-    trx: 'TXYZ...'
+    btc: 'لايتوفر حاليا',
+    eth: 'لايتوفر حاليا',
+    usdt: 'لايتوفر حاليا',
+    trx: 'لايتوفر حاليا'
   }
 
   // معلومات البنوك اليمنية
@@ -57,21 +57,21 @@ const PaymentModal = ({ plan, billingCycle, currency, convertedPrice, userCountr
     { 
       id: 'alahli', 
       name:'بنك القاسمي', 
-      account: '1234567890',
-      iban: 'YE1234567890',
+      account: 'لايتوفر حااليا',
+      iban: 'YEلايتوفر حاليا',
       branch: 'الفرع الرئيسي - صنعاء'
     },
     { 
       id: 'kuraimi', 
       name: 'بنك الكريمي', 
-      account: '123456789',
+      account: '3101557757',
       iban: 'YE9876543210',
       branch: 'الفرع الرئيسي - صنعاء'
     },
     { 
       id: 'taslif', 
       name: 'بنك التسليف', 
-      account: '5555555555',
+      account: 'لايتوفر حاليا',
       iban: 'YE5555555555',
       branch: 'الفرع الرئيسي - تعز'
     }
@@ -636,3 +636,4 @@ const CryptoOption = ({ type, name, address, onSelect, onCopy, copied }) => (
 )
 
 export default PaymentModal
+
