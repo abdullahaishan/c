@@ -1,236 +1,459 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { usePlan } from '../../hooks/usePlan'
-import { Link } from 'react-router-dom'
+import { PLANS } from '../../utils/constants'
 import { 
-  Crown, 
-  Sparkles, 
-  Zap, 
-  Infinity, 
-  CheckCircle, 
-  XCircle,
+  CURRENCIES, 
+  COUNTRIES, 
+  convertPrice, 
+  detectCountryFromIP,
+  getPaymentMethodsForRegion 
+} from '../../utils/currency'
+import PaymentModal from '../plans/PaymentModel'
+import {
+  Check,
+  Sparkles,
+  Crown,
+  Zap,
+  Infinity,
   ArrowRight,
-  FolderKanban,
-  Code,
-  Award,
-  Briefcase,
-  GraduationCap,
-  AlertCircle
+  Globe,
+  X,
+  TrendingUp,
+  HardDrive,
+  MessageCircle,
+  Award
 } from 'lucide-react'
 
-const PlanStatus = () => {
-  const { user } = useAuth()
-  const { limits, getRemainingAnalyses } = usePlan()
-  const [remainingAnalyses, setRemainingAnalyses] = useState(0)
-  const [loading, setLoading] = useState(true)
+const Plans = () => {
+  const [selectedPlan, setSelectedPlan] = useState(null)
+  const [showPayment, setShowPayment] = useState(false)
+  const [billingCycle, setBillingCycle] = useState('monthly')
+  const [userCountry, setUserCountry] = useState('US')
+  const [userRegion, setUserRegion] = useState('western')
+  const [selectedCurrency, setSelectedCurrency] = useState('USD')
+  const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false)
+  const [convertedPrices, setConvertedPrices] = useState({})
+  
+  const { user, isAuthenticated } = useAuth()
+  const { planId, usage, limits, getUsagePercentage } = usePlan()
+  const navigate = useNavigate()
 
+  // كشف الدولة عند تحميل الصفحة
   useEffect(() => {
-    if (user) {
-      loadRemainingAnalyses()
+    const detectCountry = async () => {
+      const data = await detectCountryFromIP()
+      setUserCountry(data.country)
+      setUserRegion(data.region)
+      
+      // تحديد العملة حسب الدولة
+      if (data.country === 'YE') {
+        setSelectedCurrency('YER_ADEN')
+      } else if (data.currency) {
+        setSelectedCurrency(data.currency)
+      }
     }
-  }, [user])
+    detectCountry()
+  }, [])
 
-  const loadRemainingAnalyses = async () => {
-    setLoading(true)
-    const remaining = await getRemainingAnalyses()
-    setRemainingAnalyses(remaining)
-    setLoading(false)
+  // تحويل الأسعار عند تغيير العملة
+  useEffect(() => {
+    const newPrices = {}
+    PLANS.forEach(plan => {
+      const monthlyPrice = plan.price_monthly || plan.price
+      const yearlyPrice = plan.price_yearly
+      
+      newPrices[`${plan.id}_monthly`] = convertPrice(monthlyPrice, selectedCurrency)
+      if (yearlyPrice) {
+        newPrices[`${plan.id}_yearly`] = convertPrice(yearlyPrice, selectedCurrency)
+      }
+    })
+    setConvertedPrices(newPrices)
+  }, [selectedCurrency])
+
+  const handleSelectPlan = (plan) => {
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: '/dashboard/plans' } })
+      return
+    }
+    setSelectedPlan(plan)
+    setShowPayment(true)
   }
 
-  const getPlanName = () => {
-    const plans = {
-      1: { name: 'مجاني', icon: <Zap className="w-5 h-5" />, color: 'text-gray-400', bg: 'from-gray-500/20 to-gray-600/20' },
-      2: { name: 'أساسي', icon: <Sparkles className="w-5 h-5" />, color: 'text-blue-400', bg: 'from-blue-500/20 to-cyan-500/20' },
-      3: { name: 'محترف', icon: <Crown className="w-5 h-5" />, color: 'text-yellow-400', bg: 'from-yellow-500/20 to-orange-500/20' },
-      4: { name: 'مؤسسات', icon: <Infinity className="w-5 h-5" />, color: 'text-purple-400', bg: 'from-purple-500/20 to-pink-500/20' }
+  const getPrice = (plan) => {
+    const key = `${plan.id}_${billingCycle}`
+    const converted = convertedPrices[key]
+    
+    if (converted) {
+      return {
+        amount: converted.price,
+        currency: converted.currency,
+        symbol: converted.symbol,
+        region: converted.region
+      }
     }
-    return plans[user?.plan_id || 1]
+    
+    const price = billingCycle === 'yearly' && plan.price_yearly
+      ? plan.price_yearly
+      : plan.price_monthly || plan.price
+      
+    return {
+      amount: price,
+      currency: 'USD',
+      symbol: '$'
+    }
   }
 
-  const plan = getPlanName()
+  const getSavings = (plan) => {
+    if (billingCycle === 'yearly' && plan.price_yearly && plan.price_monthly) {
+      const monthlyTotal = plan.price_monthly * 12
+      const savings = monthlyTotal - plan.price_yearly
+      return Math.round((savings / monthlyTotal) * 100)
+    }
+    return 0
+  }
 
-  const features = [
-    { name: 'المشاريع', max: limits.maxProjects, icon: FolderKanban, color: 'from-blue-500 to-cyan-500' },
-    { name: 'المهارات', max: limits.maxSkills, icon: Code, color: 'from-purple-500 to-pink-500' },
-    { name: 'الشهادات', max: limits.maxCertificates, icon: Award, color: 'from-yellow-500 to-orange-500' },
-    { name: 'الخبرات', max: limits.maxExperience, icon: Briefcase, color: 'from-green-500 to-emerald-500' },
-    { name: 'التعليم', max: limits.maxEducation, icon: GraduationCap, color: 'from-red-500 to-rose-500' },
-  ]
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#030014] flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-[#6366f1]/20 border-t-[#6366f1] rounded-full animate-spin" />
-      </div>
-    )
+  // التحقق إذا كانت الباقة هي الباقة الحالية للمستخدم
+  const isCurrentPlan = (planId) => {
+    return planId === user?.plan_id
   }
 
   return (
     <div className="space-y-6">
-      {/* رأس الصفحة */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-white">حالة الباقة</h1>
-          <p className="text-gray-400 mt-1">تفاصيل باقتك الحالية والحدود المتاحة</p>
-        </div>
-        <div className={`flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r ${plan.bg} border border-white/10`}>
-          {plan.icon}
-          <span className={`font-semibold ${plan.color}`}>{plan.name}</span>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-white">الباقات والاشتراكات</h1>
+        <div className="text-sm text-gray-400">
+          باقتك الحالية: {PLANS.find(p => p.id === user?.plan_id)?.name_ar || 'مجانية'}
         </div>
       </div>
 
-      {/* بطاقة الباقة الحالية */}
-      <div className={`bg-gradient-to-r ${plan.bg} rounded-2xl p-8 border border-white/10`}>
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div>
-            <h2 className="text-2xl font-bold text-white mb-2">باقتك الحالية: {plan.name}</h2>
-            <p className="text-gray-300 leading-relaxed">
-              {user?.plan_id === 1 && '✨ استمتع بالميزات الأساسية مجاناً. قم بترقية باقتك للحصول على ميزات إضافية وتحليلات غير محدودة.'}
-              {user?.plan_id === 2 && '🚀 باقة أساسية مع ميزات إضافية. يمكنك ترقية باقتك للمزيد من التحليلات والميزات المتقدمة.'}
-              {user?.plan_id === 3 && '👑 باقة احترافية مع كل الميزات المتقدمة. استمتع بتحليلات متعددة ونطاق مخصص.'}
-              {user?.plan_id === 4 && '🏢 باقة المؤسسات - كل شيء غير محدود. نطاق مخصص، إزالة العلامة التجارية، ودعم فوري.'}
-            </p>
-          </div>
+      {/* Lifetime Badge */}
+      <div className="mb-4 p-4 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-xl">
+        <p className="text-purple-400 flex items-center gap-2">
+          <Sparkles className="w-5 h-5" />
+          جميع الباقات مدى الحياة! ادفع مرة واحدة واستمتع بالمميزات للأبد
+        </p>
+      </div>
+
+      {/* Country and Currency Bar */}
+      <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-4 border border-white/10 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Globe className="w-5 h-5 text-[#6366f1]" />
+          <span className="text-gray-400">موقعك:</span>
+          <span className="text-white font-medium">
+            {userCountry === 'YE' ? '🇾🇪 اليمن' : 
+             userCountry === 'SA' ? '🇸🇦 السعودية' :
+             userCountry === 'AE' ? '🇦🇪 الإمارات' :
+             userCountry === 'EG' ? '🇪🇬 مصر' : '🌍 أخرى'}
+          </span>
+        </div>
+        
+        <div className="relative">
+          <button
+            onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
+            className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-white/15 transition-all"
+          >
+            <span className="text-white">
+              {selectedCurrency === 'YER_ADEN' ? 'ر.ي' : 
+               selectedCurrency === 'YER_SANA' ? 'ر.ي' :
+               CURRENCIES[selectedCurrency]?.symbol || '$'}
+            </span>
+            <span className="text-gray-300">
+              {selectedCurrency === 'YER_ADEN' ? 'ريال يمني (عدن)' :
+               selectedCurrency === 'YER_SANA' ? 'ريال يمني (صنعاء)' :
+               CURRENCIES[selectedCurrency]?.name || 'USD'}
+            </span>
+          </button>
           
-          {user?.plan_id !== 4 && (
-            <Link
-              to="/plans"
-              className="group flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-105 transition-all whitespace-nowrap"
-            >
-              <Crown className="w-5 h-5" />
-              <span>ترقية الباقة</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </Link>
+          {showCurrencyDropdown && (
+            <div className="absolute top-full left-0 mt-2 w-64 bg-gray-900 border border-white/10 rounded-xl shadow-xl z-50 max-h-96 overflow-y-auto">
+              {/* اليمن - بخيارات متعددة */}
+              <div className="px-3 py-2 text-xs text-gray-500 bg-white/5">🇾🇪 اليمن</div>
+              <button
+                onClick={() => {
+                  setSelectedCurrency('YER_ADEN')
+                  setShowCurrencyDropdown(false)
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-right hover:bg-white/5 transition-all ${
+                  selectedCurrency === 'YER_ADEN' ? 'bg-[#6366f1]/20' : ''
+                }`}
+              >
+                <span className="text-white font-bold">ر.ي</span>
+                <span className="flex-1 text-gray-300">ريال يمني (عدن) - 1620</span>
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedCurrency('YER_SANA')
+                  setShowCurrencyDropdown(false)
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-right hover:bg-white/5 transition-all ${
+                  selectedCurrency === 'YER_SANA' ? 'bg-[#6366f1]/20' : ''
+                }`}
+              >
+                <span className="text-white font-bold">ر.ي</span>
+                <span className="flex-1 text-gray-300">ريال يمني (صنعاء) - 530</span>
+              </button>
+              
+              {/* دول الخليج */}
+              <div className="px-3 py-2 text-xs text-gray-500 bg-white/5 mt-2">🇸🇦 دول الخليج</div>
+              <button
+                onClick={() => {
+                  setSelectedCurrency('SAR')
+                  setShowCurrencyDropdown(false)
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-right hover:bg-white/5 transition-all ${
+                  selectedCurrency === 'SAR' ? 'bg-[#6366f1]/20' : ''
+                }`}
+              >
+                <span className="text-white font-bold">ر.س</span>
+                <span className="flex-1 text-gray-300">ريال سعودي</span>
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedCurrency('AED')
+                  setShowCurrencyDropdown(false)
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-right hover:bg-white/5 transition-all ${
+                  selectedCurrency === 'AED' ? 'bg-[#6366f1]/20' : ''
+                }`}
+              >
+                <span className="text-white font-bold">د.إ</span>
+                <span className="flex-1 text-gray-300">درهم إماراتي</span>
+              </button>
+              
+              {/* دول أخرى */}
+              <div className="px-3 py-2 text-xs text-gray-500 bg-white/5 mt-2">🌍 أخرى</div>
+              <button
+                onClick={() => {
+                  setSelectedCurrency('USD')
+                  setShowCurrencyDropdown(false)
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-right hover:bg-white/5 transition-all ${
+                  selectedCurrency === 'USD' ? 'bg-[#6366f1]/20' : ''
+                }`}
+              >
+                <span className="text-white font-bold">$</span>
+                <span className="flex-1 text-gray-300">دولار أمريكي</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
 
-      {/* تحليلات الذكاء الاصطناعي */}
-      <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-purple-400" />
-          تحليلات الذكاء الاصطناعي
-        </h2>
-        
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4 bg-purple-500/10 rounded-xl border border-purple-500/20">
-          <div>
-            <p className="text-white font-medium">التحليلات المتبقية</p>
-            <p className="text-sm text-gray-400">
-              {limits.aiAnalysisCount === -1 
-                ? 'يمكنك استخدام الذكاء الاصطناعي بعدد غير محدود من المرات'
-                : `يمكنك تحليل ${remainingAnalyses} سيرة ذاتية ${remainingAnalyses === 1 ? 'أخرى' : 'أخرى'}`
-              }
-            </p>
-          </div>
-          <div className="text-4xl font-bold text-purple-400">
-            {limits.aiAnalysisCount === -1 ? '∞' : remainingAnalyses}
-          </div>
-        </div>
-
-        {remainingAnalyses === 0 && user?.plan_id === 1 && (
-          <div className="mt-4 p-4 bg-yellow-500/10 rounded-xl border border-yellow-500/20 flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-yellow-400 font-medium">لقد استنفذت تحليلك المجاني</p>
-              <p className="text-sm text-gray-400 mt-1">
-                قم بترقية باقتك للحصول على المزيد من التحليلات والميزات المتقدمة.
-              </p>
-            </div>
-          </div>
-        )}
+      {/* Billing Toggle */}
+      <div className="flex items-center justify-center gap-4">
+        <button
+          onClick={() => setBillingCycle('monthly')}
+          className={`px-6 py-2 rounded-full transition-all ${
+            billingCycle === 'monthly'
+              ? 'bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white'
+              : 'bg-white/5 text-gray-400 hover:bg-white/10'
+          }`}
+        >
+          شهري
+        </button>
+        <button
+          onClick={() => setBillingCycle('yearly')}
+          className={`px-6 py-2 rounded-full transition-all relative ${
+            billingCycle === 'yearly'
+              ? 'bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white'
+              : 'bg-white/5 text-gray-400 hover:bg-white/10'
+          }`}
+        >
+          سنوي
+          <span className="absolute -top-2 -right-2 px-2 py-0.5 bg-green-500 text-white text-xs rounded-full">
+            وفر 20%
+          </span>
+        </button>
       </div>
 
-      {/* حدود الباقة */}
-      <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-        <h2 className="text-lg font-semibold text-white mb-4">حدود الباقة</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {features.map((feature) => (
-            <div key={feature.name} className="p-4 bg-white/5 rounded-xl border border-white/10">
-              <div className="flex items-center gap-3 mb-3">
-                <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${feature.color} flex items-center justify-center`}>
-                  <feature.icon className="w-5 h-5 text-white" />
+      {/* Plans Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+        {PLANS.map((plan) => {
+          const price = getPrice(plan)
+          const savings = getSavings(plan)
+          const current = isCurrentPlan(plan.id)
+          
+          return (
+            <div
+              key={plan.id}
+              className={`relative bg-white/5 backdrop-blur-xl rounded-2xl border ${
+                plan.isPopular && !current
+                  ? 'border-[#a855f7] shadow-[0_0_30px_rgba(168,85,247,0.3)]'
+                  : current
+                  ? 'border-green-500/50 shadow-[0_0_20px_rgba(34,197,94,0.2)]'
+                  : 'border-white/10'
+              } p-8 hover:scale-105 transition-all duration-300 group`}
+            >
+              {/* Popular Badge */}
+              {plan.isPopular && !current && (
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white px-4 py-1 rounded-full text-sm font-bold whitespace-nowrap">
+                  الأكثر طلباً
                 </div>
-                <h3 className="text-white font-medium">{feature.name}</h3>
+              )}
+
+              {/* Current Plan Badge */}
+              {current && (
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-1 rounded-full text-sm font-bold whitespace-nowrap">
+                  باقتك الحالية
+                </div>
+              )}
+
+              {/* Plan Icon */}
+              <div className="mb-6">
+                {plan.id === 1 && <Zap className="w-12 h-12 text-blue-400" />}
+                {plan.id === 2 && <Sparkles className="w-12 h-12 text-purple-400" />}
+                {plan.id === 3 && <Crown className="w-12 h-12 text-yellow-400" />}
+                {plan.id === 4 && <Infinity className="w-12 h-12 text-green-400" />}
               </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">الحد الأقصى</span>
-                  <span className="text-white font-medium">
-                    {feature.max === -1 ? 'غير محدود' : feature.max}
-                  </span>
-                </div>
-                
-                {feature.max !== -1 && (
-                  <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full bg-gradient-to-r ${feature.color} transition-all`}
-                      style={{ width: '0%' }}
-                    />
-                  </div>
+
+              {/* Plan Name */}
+              <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
+              <p className="text-gray-400 text-sm mb-4">{plan.name_ar}</p>
+
+              {/* Price */}
+              <div className="mb-6">
+                <span className="text-4xl font-bold text-white">
+                  {price.symbol}{price.amount}
+                </span>
+                <span className="text-gray-400 text-sm mr-2">لمدى الحياة</span>
+                {plan.savings && (
+                  <p className="text-xs text-green-400 mt-1">{plan.savings}</p>
+                )}
+                {selectedCurrency !== 'USD' && plan.price > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    ≈ ${plan.price} USD
+                  </p>
                 )}
               </div>
+
+              {/* =========================================== */}
+              {/* المميزات الرئيسية مع عرض الاستخدام - الكود المطلوب */}
+              {/* =========================================== */}
+              <div className="space-y-4 mb-8">
+                {plan.features.map((feature, index) => {
+                  // حساب النسبة المئوية للاستخدام (للمستخدم الحالي)
+                  const isCurrentUserPlan = user?.plan_id === plan.id
+                  
+                  // تحديد المفتاح الصحيح للاستخدام
+                  let usageKey = ''
+                  if (feature.text.includes('المشاريع')) usageKey = 'projects'
+                  else if (feature.text.includes('المهارات')) usageKey = 'skills'
+                  else if (feature.text.includes('الشهادات')) usageKey = 'certificates'
+                  else if (feature.text.includes('الخبرات')) usageKey = 'experience'
+                  else if (feature.text.includes('التعليم')) usageKey = 'education'
+                  else if (feature.text.includes('تحليلات')) usageKey = 'analyses'
+                  
+                  const currentUsage = usage?.[usageKey] || 0
+                  const usagePercent = isCurrentUserPlan && feature.value > 0 && feature.value !== -1
+                    ? Math.min(100, Math.round((currentUsage / feature.value) * 100))
+                    : null
+                  
+                  return (
+                    <div key={index} className="group">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-start gap-2 text-gray-300">
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                            feature.included === false ? 'bg-gray-500/20' : 'bg-green-500/20'
+                          }`}>
+                            <Check className={`w-3.5 h-3.5 ${
+                              feature.included === false ? 'text-gray-500' : 'text-green-400'
+                            }`} />
+                          </div>
+                          <span className="text-sm">{feature.text}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-medium ${
+                            feature.value === 0 ? 'text-gray-500' :
+                            feature.value === -1 ? 'text-purple-400' :
+                            'text-white'
+                          }`}>
+                            {feature.limit}
+                          </span>
+                          {feature.badge && (
+                            <span className="px-2 py-0.5 text-xs bg-blue-500/20 text-blue-400 rounded-full">
+                              {feature.badge}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* شريط التقدم للمستخدم الحالي */}
+                      {isCurrentUserPlan && usagePercent !== null && (
+                        <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full transition-all duration-300 ${
+                              usagePercent > 90 ? 'bg-yellow-500' : 'bg-gradient-to-r ' + plan.color
+                            }`}
+                            style={{ width: `${usagePercent}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Action Button */}
+              {current ? (
+                <button
+                  disabled
+                  className="w-full py-3 bg-white/10 text-gray-400 rounded-xl font-semibold cursor-not-allowed"
+                >
+                  الباقة الحالية
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleSelectPlan(plan)}
+                  className="w-full py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <span>اشتر الآن</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              )}
             </div>
-          ))}
+          )
+        })}
+      </div>
+
+      {/* Contact Admin Button */}
+      <div className="mt-8 p-6 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-2xl border border-green-500/20">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <MessageCircle className="w-8 h-8 text-green-400" />
+            <div>
+              <h3 className="text-white font-semibold">لديك استفسار؟</h3>
+              <p className="text-sm text-gray-400">تواصل معنا مباشرة عبر واتساب</p>
+            </div>
+          </div>
+          <a
+            href="https://wa.me/967771315459"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all flex items-center gap-2"
+          >
+            <MessageCircle className="w-5 h-5" />
+            تواصل مع الدعم
+          </a>
         </div>
       </div>
 
-      {/* ميزات الباقة */}
-      <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-        <h2 className="text-lg font-semibold text-white mb-4">ميزات باقتك</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FeatureItem
-            label="نطاق مخصص (Custom Domain)"
-            available={limits.canCustomDomain}
-            description="اربط نطاقك الخاص بموقعك"
-          />
-          <FeatureItem
-            label="إزالة العلامة التجارية"
-            available={limits.canRemoveBranding}
-            description="إزالة شعار PortfolioAI من موقعك"
-          />
-          <FeatureItem
-            label="تحليلات وإحصائيات"
-            available={limits.canAnalytics}
-            description="مشاهدة إحصائيات الزوار والمشاهدات"
-          />
-          <FeatureItem
-            label="دعم فوري وأولوية"
-            available={user?.plan_id >= 3}
-            description="دعم فني متميز وأولوية في المعالجة"
-          />
-        </div>
-      </div>
-
-      {/* ملاحظة عن الباقة المجانية */}
-      {user?.plan_id === 1 && (
-        <div className="bg-blue-500/10 rounded-xl p-4 border border-blue-500/20">
-          <p className="text-blue-400 text-sm">
-            💡 الباقة المجانية تتيح لك تجربة المنصة. قم بترقية باقتك للاستفادة من جميع الميزات وزيادة حدودك.
-          </p>
-        </div>
+      {/* Payment Modal */}
+      {showPayment && selectedPlan && (
+        <PaymentModal
+          plan={selectedPlan}
+          billingCycle={billingCycle}
+          currency={selectedCurrency}
+          convertedPrice={getPrice(selectedPlan)}
+          userCountry={userCountry}
+          userRegion={userRegion}
+          onClose={() => setShowPayment(false)}
+        />
       )}
     </div>
   )
 }
-
-// مكون عرض الميزة
-const FeatureItem = ({ label, available, description }) => (
-  <div className="flex items-start gap-3 p-4 bg-white/5 rounded-xl border border-white/10">
-    <div className="flex-shrink-0 mt-0.5">
-      {available ? (
-        <CheckCircle className="w-5 h-5 text-green-400" />
-      ) : (
-        <XCircle className="w-5 h-5 text-gray-600" />
-      )}
-    </div>
-    <div>
-      <p className={`font-medium ${available ? 'text-white' : 'text-gray-500'}`}>{label}</p>
-      <p className="text-xs text-gray-500 mt-1">{description}</p>
-    </div>
-  </div>
-)
 
 export default PlanStatus
