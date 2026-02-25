@@ -22,9 +22,9 @@ import Certificates from './pages/dashboard/Certificates'
 import Experience from './pages/dashboard/Experience'
 import Education from './pages/dashboard/Education'
 import Settings from './pages/dashboard/Settings'
-import PlanStatus from './pages/dashboard/PlanStatus'
-import Messages from './pages/dashboard/Messages'
-{/*import Opportunities from './pages/dashboard/Opportunities'*/}
+import PlanStatus from './pages/dashboard/PlanStatus'      // ✅ الباقات
+import Messages from './pages/dashboard/Messages'          // ✅ الرسائل
+// import Opportunities from './pages/dashboard/Opportunities' // (اختياري) لوقت لاحق
 import NotFound from './pages/NotFound'
 
 // Providers
@@ -65,7 +65,7 @@ const AppRoutes = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           
-          {/* AI Builder - للمستخدمين المسجلين */}
+          {/* AI Builder */}
           <Route 
             path="/app/builder" 
             element={
@@ -75,7 +75,7 @@ const AppRoutes = () => {
             } 
           />
           
-          {/* لوحة التحكم - للمستخدمين المسجلين */}
+          {/* لوحة التحكم - جميع المسارات المحمية */}
           <Route 
             path="/dashboard" 
             element={
@@ -91,8 +91,9 @@ const AppRoutes = () => {
             <Route path="experience" element={<Experience />} />
             <Route path="education" element={<Education />} />
             <Route path="settings" element={<Settings />} />
-            <Route path="plan-status" element={<PlanStatus />} />
-            <Route path="messages" element={<Messages />} />
+            <Route path="plan-status" element={<PlanStatus />} />   {/* ✅ مسار الباقات */}
+            <Route path="messages" element={<Messages />} />         {/* ✅ مسار الرسائل */}
+            {/* <Route path="opportunities" element={<Opportunities />} /> */} 
           </Route>
           
           {/* صفحة 404 */}
