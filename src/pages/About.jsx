@@ -11,7 +11,13 @@ import AOS from "aos"
 import "aos/dist/aos.css"
 import { useDeveloper } from '../context/DeveloperContext'
 
-// مكونات مساعدة
+// مكون العلامة المائية
+const Watermark = () => (
+  <div className="fixed inset-0 pointer-events-none select-none flex items-center justify-center opacity-[0.03] text-8xl font-bold text-white rotate-[-30deg] scale-150 uppercase tracking-wider">
+    Portfolio Website
+  </div>
+)
+
 const Header = memo(() => (
   <div className="text-center lg:mb-8 mb-2 px-[5%]">
     <div className="inline-block relative group">
@@ -81,14 +87,12 @@ const AboutPage = ({ developer: propDeveloper }) => {
   const developer = propDeveloper || context.publicDeveloper
   const { getProfileImage, getProjects, getCertificates, getSkills, getExperience } = context
 
-  // حساب الإحصائيات
   const stats = useMemo(() => {
     const projects = getProjects()
     const certificates = getCertificates()
     const skills = getSkills()
     const experience = getExperience()
     
-    // حساب سنوات الخبرة
     let totalYears = 0
     experience?.forEach(exp => {
       if (exp.start_date) {
@@ -113,15 +117,15 @@ const AboutPage = ({ developer: propDeveloper }) => {
 
   return (
     <div
-      className="h-auto pb-[10%] text-white overflow-hidden px-[5%] sm:px-[5%] lg:px-[10%] mt-10 sm:mt-0"
+      className="h-auto pb-[10%] text-white overflow-hidden px-[5%] sm:px-[5%] lg:px-[10%] mt-10 sm:mt-0 relative"
       id="About"
     >
+      <Watermark />
       <Header />
 
       <div className="w-full mx-auto pt-8 sm:pt-12 relative">
         <div className="flex flex-col-reverse lg:grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           
-          {/* النص التعريفي */}
           <div className="space-y-6 text-center lg:text-left">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold">
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#6366f1] to-[#a855f7]">
@@ -150,11 +154,9 @@ const AboutPage = ({ developer: propDeveloper }) => {
             </div>
           </div>
 
-          {/* الصورة الشخصية */}
           <ProfileImage image={getProfileImage()} />
         </div>
 
-        {/* بطاقات الإحصائيات */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-16">
           <StatCard
             icon={Code}
@@ -190,15 +192,6 @@ const AboutPage = ({ developer: propDeveloper }) => {
           />
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes spin-slower {
-          to { transform: rotate(360deg); }
-        }
-        .animate-spin-slower {
-          animation: spin-slower 8s linear infinite;
-        }
-      `}</style>
     </div>
   )
 }
