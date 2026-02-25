@@ -1,4 +1,8 @@
 // src/utils/constants.js
+
+// ===========================================
+// الباقات
+// ===========================================
 export const PLANS = [
   {
     id: 1,
@@ -95,7 +99,9 @@ export const PLANS = [
   }
 ];
 
-// الحدود لكل باقة (للاستخدام في التحقق)
+// ===========================================
+// حدود الباقات (للاستخدام في التحقق)
+// ===========================================
 export const PLAN_LIMITS = {
   1: { // مجاني
     maxProjects: 1,
@@ -104,7 +110,7 @@ export const PLAN_LIMITS = {
     maxExperience: 1,
     maxEducation: 1,
     maxAiAnalyses: 1,
-    storageLimit: 50, // ميجابايت
+    storageLimit: 50,
     hasAdvancedStats: false,
     hasReports: false,
     hasPrioritySupport: false,
@@ -137,7 +143,7 @@ export const PLAN_LIMITS = {
     hasRemoveBranding: false
   },
   4: { // مؤسسات
-    maxProjects: -1, // غير محدود
+    maxProjects: -1,
     maxSkills: -1,
     maxCertificates: -1,
     maxExperience: -1,
@@ -149,14 +155,8 @@ export const PLAN_LIMITS = {
     hasPrioritySupport: true,
     hasRemoveBranding: true
   }
-};  UPDATE_SUCCESS: 'تم التحديث بنجاح',
-  UPDATE_ERROR: 'حدث خطأ أثناء التحديث',
-  DELETE_SUCCESS: 'تم الحذف بنجاح',
-  DELETE_ERROR: 'حدث خطأ أثناء الحذف',
-  UPLOAD_SUCCESS: 'تم رفع الملف بنجاح',
-  UPLOAD_ERROR: 'حدث خطأ أثناء رفع الملف',
-  LIMIT_REACHED: 'لقد وصلت للحد الأقصى المسموح به'
-}
+};
+
 // ===========================================
 // رسائل النجاح والخطأ
 // ===========================================
