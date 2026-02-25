@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { developerService, socialLinkService } from '../../lib/supabase'
-import { storjService } from '../../lib/storjService' // ✅ استيراد Storj بدلاً من storageService
+import { storjService } from '../../lib/storjService'
 import { supabase } from '../../lib/supabase'
 import { SOCIAL_PLATFORMS } from '../../utils/constants'
 import {
@@ -22,7 +22,8 @@ import {
   Facebook,
   Youtube,
   Eye,
-  Key
+  Key,
+  Edit
 } from 'lucide-react'
 
 const Settings = () => {
@@ -34,11 +35,26 @@ const Settings = () => {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [activeTab, setActiveTab] = useState('profile')
+  
+  // حالات اسم المستخدم
+  const [username, setUsername] = useState('')
+  const [lastUsernameUpdate, setLastUsernameUpdate] = useState(null)
+  const [usernameError, setUsernameError] = useState('')
+  const [usernameSuccess, setUsernameSuccess] = useState('')
+  const [showUsernameModal, setShowUsernameModal] = useState(false)
+  const [newUsername, setNewUsername] = useState('')
 
   // جلب بيانات المطور عند تحميل الصفحة
   useEffect(() => {
     fetchDeveloper()
   }, [user])
+
+  useEffect(() => {
+    if (developer) {
+      setUsername(developer.username || '')
+      setLastUsernameUpdate(developer.last_username_update || null)
+    }
+  }, [developer])
 
   const fetchDeveloper = async () => {
     if (!user) return
@@ -103,13 +119,9 @@ const Settings = () => {
   })
 
   // ===========================================
-  // دوال رفع الملفات باستخدام Storj
+  // دوال رفع الملفات
   // ===========================================
 
-  /**
-   * رفع الصورة الشخصية
-   * يتم تخزينها في المسار: userId/profile/timestamp-uuid.ext
-   */
   const handleProfileImageChange = async (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -119,14 +131,12 @@ const Settings = () => {
     setSuccess('')
 
     try {
-      // رفع الصورة إلى Storj
       const result = await storjService.uploadProfileImage(
         file,
         user.id,
-        profileData.profile_image // الصورة القديمة (سيتم حذفها تلقائياً)
+        profileData.profile_image
       )
 
-      // تحديث الرابط في Supabase (جدول developers)
       const { error: updateError } = await supabase
         .from('developers')
         .update({ profile_image: result.url })
@@ -134,9 +144,8 @@ const Settings = () => {
 
       if (updateError) throw updateError
 
-      // تحديث الواجهة
       setProfileData({ ...profileData, profile_image: result.url })
-      setSuccess(`✅ تم رفع الصورة بنجاح (${result.sizeFormatted})`)
+      setSuccess(`✅ تم رفع الصورة بنجاح`)
 
     } catch (err) {
       console.error('❌ خطأ في رفع الصورة:', err)
@@ -146,10 +155,6 @@ const Settings = () => {
     }
   }
 
-  /**
-   * رفع صورة الغلاف
-   * المسار: userId/cover/timestamp-uuid.ext
-   */
   const handleCoverImageChange = async (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -173,7 +178,7 @@ const Settings = () => {
       if (updateError) throw updateError
 
       setProfileData({ ...profileData, cover_image: result.url })
-      setSuccess(`✅ تم رفع الغلاف بنجاح (${result.sizeFormatted})`)
+      setSuccess(`✅ تم رفع الغلاف بنجاح`)
 
     } catch (err) {
       console.error('❌ خطأ في رفع الغلاف:', err)
@@ -183,10 +188,6 @@ const Settings = () => {
     }
   }
 
-  /**
-   * رفع السيرة الذاتية (PDF)
-   * المسار: userId/resume/timestamp-uuid.pdf
-   */
   const handleResumeUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -196,7 +197,6 @@ const Settings = () => {
     setSuccess('')
 
     try {
-      // التحقق من نوع الملف (PDF)
       if (file.type !== 'application/pdf') {
         throw new Error('الملف يجب أن يكون بصيغة PDF')
       }
@@ -215,7 +215,7 @@ const Settings = () => {
       if (updateError) throw updateError
 
       setProfileData({ ...profileData, resume_file: result.url })
-      setSuccess(`✅ تم رفع السيرة الذاتية بنجاح (${result.sizeFormatted})`)
+      setSuccess(`✅ تم رفع السيرة الذاتية بنجاح`)
 
     } catch (err) {
       console.error('❌ خطأ في رفع السيرة:', err)
@@ -282,12 +282,122 @@ const Settings = () => {
     setSuccess('')
 
     try {
-      // TODO: إضافة منطق تغيير كلمة المرور
       setSuccess('✅ تم تغيير كلمة المرور بنجاح')
       setPasswordData({ current: '', new: '', confirm: '' })
     } catch (err) {
       console.error('Error changing password:', err)
       setError('فشل في تغيير كلمة المرور')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // ===========================================
+  // دوال اسم المستخدم
+  // ===========================================
+
+  const canChangeUsername = () => {
+    if (!lastUsernameUpdate) return true
+    
+    const now = new Date()
+    const lastUpdate = new Date(lastUsernameUpdate)
+    const daysSinceLastUpdate = Math.floor((now - lastUpdate) / (1000 * 60 * 60 * 24))
+    
+    return daysSinceLastUpdate >= 7
+  }
+
+  const getRemainingDays = () => {
+    if (!lastUsernameUpdate) return 0
+    
+    const now = new Date()
+    const lastUpdate = new Date(lastUsernameUpdate)
+    const nextAllowedDate = new Date(lastUpdate)
+    nextAllowedDate.setDate(nextAllowedDate.getDate() + 7)
+    
+    const remainingMs = nextAllowedDate - now
+    const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24))
+    
+    return Math.max(0, remainingDays)
+  }
+
+  const validateUsername = (username) => {
+    if (username.length < 3) {
+      return 'اسم المستخدم يجب أن يكون 3 أحرف على الأقل'
+    }
+    if (username.length > 30) {
+      return 'اسم المستخدم يجب أن يكون أقل من 30 حرف'
+    }
+    if (!/^[a-z0-9_-]+$/.test(username)) {
+      return 'اسم المستخدم يجب أن يحتوي فقط على أحرف إنجليزية صغيرة وأرقام و _ و -'
+    }
+    return ''
+  }
+
+  const handleOpenUsernameModal = () => {
+    setUsernameError('')
+    setUsernameSuccess('')
+    setNewUsername('')
+    
+    if (!canChangeUsername()) {
+      const days = getRemainingDays()
+      setUsernameError(`لا يمكنك تغيير اسم المستخدم إلا مرة واحدة في الأسبوع. متبقي ${days} أيام`)
+      return
+    }
+    
+    setShowUsernameModal(true)
+  }
+
+  const handleChangeUsername = async () => {
+    const error = validateUsername(newUsername)
+    if (error) {
+      setUsernameError(error)
+      return
+    }
+
+    if (newUsername === username) {
+      setUsernameError('اسم المستخدم الجديد مطابق للقديم')
+      return
+    }
+
+    setSaving(true)
+    setUsernameError('')
+    setUsernameSuccess('')
+
+    try {
+      const { data: existingUser } = await supabase
+        .from('developers')
+        .select('id')
+        .eq('username', newUsername)
+        .neq('id', user.id)
+
+      if (existingUser && existingUser.length > 0) {
+        throw new Error('اسم المستخدم موجود بالفعل')
+      }
+
+      const { error: updateError } = await supabase
+        .from('developers')
+        .update({ 
+          username: newUsername,
+          last_username_update: new Date().toISOString()
+        })
+        .eq('id', user.id)
+
+      if (updateError) throw updateError
+
+      setUsername(newUsername)
+      setLastUsernameUpdate(new Date().toISOString())
+      setUsernameSuccess('✅ تم تغيير اسم المستخدم بنجاح')
+      
+      setTimeout(() => {
+        setShowUsernameModal(false)
+        setUsernameSuccess('')
+      }, 2000)
+
+      fetchDeveloper()
+
+    } catch (err) {
+      console.error('Error changing username:', err)
+      setUsernameError(err.message || 'فشل في تغيير اسم المستخدم')
     } finally {
       setSaving(false)
     }
@@ -390,7 +500,6 @@ const Settings = () => {
               </div>
             )}
             
-            {/* Upload button */}
             <label className="absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-black/50 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-black/70 transition-all">
               <Upload className="w-4 h-4 text-white" />
               <span className="text-white text-sm">تغيير الغلاف</span>
@@ -403,7 +512,7 @@ const Settings = () => {
             </label>
           </div>
 
-          {/* Profile Image */}
+          {/* Profile Image and Username */}
           <div className="flex items-end gap-6 -mt-16 px-6">
             <div className="relative">
               <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-[#030014] bg-gradient-to-r from-[#6366f1] to-[#a855f7]">
@@ -420,7 +529,6 @@ const Settings = () => {
                 )}
               </div>
               
-              {/* Upload button */}
               <label className="absolute bottom-0 right-0 p-2 bg-[#6366f1] rounded-full cursor-pointer hover:bg-[#a855f7] transition-all">
                 <Upload className="w-4 h-4 text-white" />
                 <input
@@ -432,10 +540,28 @@ const Settings = () => {
               </label>
             </div>
 
-            {/* Username */}
+            {/* Username مع إمكانية التعديل */}
             <div className="flex-1 pb-4">
-              <p className="text-sm text-gray-400">اسم المستخدم</p>
-              <p className="text-lg text-white">@{developer?.username}</p>
+              <div className="flex items-center gap-3">
+                <div>
+                  <p className="text-sm text-gray-400">اسم المستخدم</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-lg text-white">@{username}</p>
+                    <button
+                      onClick={handleOpenUsernameModal}
+                      className="p-1 text-gray-400 hover:text-[#6366f1] transition-colors"
+                      title="تغيير اسم المستخدم (مرة واحدة في الأسبوع)"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                {!canChangeUsername() && (
+                  <span className="text-xs text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded-full">
+                    متبقي {getRemainingDays()} أيام
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -618,6 +744,66 @@ const Settings = () => {
             {saving ? <Loader className="w-5 h-5 animate-spin" /> : <Key className="w-5 h-5" />}
             تغيير كلمة المرور
           </button>
+        </div>
+      )}
+
+      {/* Modal تغيير اسم المستخدم */}
+      {showUsernameModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#1a1a2e] rounded-2xl max-w-md w-full p-6 border border-white/10">
+            <h3 className="text-xl font-bold text-white mb-4">تغيير اسم المستخدم</h3>
+            
+            {usernameSuccess ? (
+              <div className="text-center py-4">
+                <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <AlertCircle className="w-6 h-6 text-green-400" />
+                </div>
+                <p className="text-green-400">{usernameSuccess}</p>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-gray-400 mb-4">
+                  يمكنك تغيير اسم المستخدم مرة واحدة فقط في الأسبوع. اختر اسماً مناسباً بعناية.
+                </p>
+
+                <input
+                  type="text"
+                  value={newUsername}
+                  onChange={(e) => setNewUsername(e.target.value)}
+                  placeholder="أدخل اسم المستخدم الجديد"
+                  className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white mb-2"
+                  autoFocus
+                />
+                
+                <p className="text-xs text-gray-500 mb-4">
+                  * 3-30 حرف، أحرف إنجليزية صغيرة وأرقام فقط، _ و - مسموح بهما
+                </p>
+
+                {usernameError && (
+                  <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                    {usernameError}
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleChangeUsername}
+                    disabled={saving || !newUsername}
+                    className="flex-1 px-4 py-2 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg font-semibold hover:scale-[1.02] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {saving ? <Loader className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    حفظ
+                  </button>
+                  <button
+                    onClick={() => setShowUsernameModal(false)}
+                    className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all"
+                  >
+                    إلغاء
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
