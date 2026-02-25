@@ -7,8 +7,11 @@ import Swal from "sweetalert2"
 import AOS from "aos"
 import "aos/dist/aos.css"
 
-const ContactPage = () => {
-  const { developer, getSocialLinks } = useDeveloper()
+const ContactPage = ({ developer: propDeveloper }) => {
+  const context = useDeveloper()
+  const developer = propDeveloper || context.publicDeveloper
+  const { getSocialLinks } = context
+  
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -40,8 +43,6 @@ const ContactPage = () => {
     })
 
     try {
-      // في الإنتاج، استخدم API حقيقي لإرسال البريد
-      // هنا نستخدم FormSubmit كمثال
       const form = e.target
       await form.submit()
 
@@ -104,7 +105,7 @@ const ContactPage = () => {
             </div>
 
             <form 
-              action="https://formsubmit.co/YOUR_EMAIL_HERE" // استبدل ببريدك
+              action="https://formsubmit.co/YOUR_EMAIL_HERE"
               method="POST"
               onSubmit={handleSubmit}
               className="space-y-6"
