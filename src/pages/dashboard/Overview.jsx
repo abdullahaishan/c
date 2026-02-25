@@ -36,7 +36,7 @@ const Overview = () => {
     canUseFeature, 
     isFree,
     getRemainingAnalyses 
-  } = usePlan()  // ✅ تعريف واحد فقط
+  } = usePlan()
   
   const [stats, setStats] = useState(null)
   const [contentStats, setContentStats] = useState(null)
@@ -45,36 +45,30 @@ const Overview = () => {
   const [remainingAnalyses, setRemainingAnalyses] = useState(0)
   const [loading, setLoading] = useState(true)
   const [selectedPeriod, setSelectedPeriod] = useState('week')
-  
+
   useEffect(() => {
     if (user) {
       fetchAllStats()
     }
   }, [user])
-  
 
   const fetchAllStats = async () => {
     setLoading(true)
     try {
-      // 1. الإحصائيات الأساسية (متاحة للجميع)
       const basicStats = await statsService.getDeveloperStats(user.id)
       setStats(basicStats)
 
-      // 2. إحصائيات المحتوى (متاحة للجميع)
       const content = await statsService.getContentStats(user.id)
       setContentStats(content)
 
-      // 3. التحليلات المتبقية (متاحة للجميع)
       const remaining = await getRemainingAnalyses()
       setRemainingAnalyses(remaining)
 
-      // 4. إحصائيات الزوار المتقدمة (للمستخدمين المدفوعين)
       if (canUseFeature('analytics')) {
         const advanced = await statsService.getAdvancedVisitorStats(user.id)
         setVisitorStats(advanced)
       }
 
-      // 5. تحليلات الذكاء الاصطناعي (للمستخدمين مع AI)
       if (planId >= 3) {
         const ai = await statsService.getAIAnalysisStats(user.id)
         setAiStats(ai)
@@ -87,7 +81,6 @@ const Overview = () => {
     }
   }
 
-  // حساب نسبة الإنجاز الكلية
   const calculateOverallProgress = () => {
     if (!contentStats || !limits) return 0
     
@@ -103,7 +96,6 @@ const Overview = () => {
     return Math.min(100, Math.round((totalCurrent / totalMax) * 100))
   }
 
-  // الحصول على التحية حسب الوقت
   const getGreeting = () => {
     const hour = new Date().getHours()
     if (hour < 12) return 'صباح الخير'
@@ -164,88 +156,67 @@ const Overview = () => {
         </div>
       </div>
 
-// أضف هذا القسم تحت Welcome Banner
-<div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-  <UsageCard
-    label="المشاريع"
-    current={usage?.projects || 0}
-    max={limits.maxProjects}
-    color="from-blue-500 to-cyan-500"
-  />
-  <UsageCard
-    label="المهارات"
-    current={usage?.skills || 0}
-    max={limits.maxSkills}
-    color="from-purple-500 to-pink-500"
-  />
-  <UsageCard
-    label="الشهادات"
-    current={usage?.certificates || 0}
-    max={limits.maxCertificates}
-    color="from-yellow-500 to-orange-500"
-  />
-  <UsageCard
-    label="الخبرات"
-    current={usage?.experience || 0}
-    max={limits.maxExperience}
-    color="from-green-500 to-emerald-500"
-  />
-  <UsageCard
-    label="التعليم"
-    current={usage?.education || 0}
-    max={limits.maxEducation}
-    color="from-red-500 to-rose-500"
-  />
-</div>
+      {/* بطاقات الاستخدام */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <UsageCard
+          label="المشاريع"
+          current={usage?.projects || 0}
+          max={limits?.maxProjects || 1}
+          color="from-blue-500 to-cyan-500"
+        />
+        <UsageCard
+          label="المهارات"
+          current={usage?.skills || 0}
+          max={limits?.maxSkills || 2}
+          color="from-purple-500 to-pink-500"
+        />
+        <UsageCard
+          label="الشهادات"
+          current={usage?.certificates || 0}
+          max={limits?.maxCertificates || 1}
+          color="from-yellow-500 to-orange-500"
+        />
+        <UsageCard
+          label="الخبرات"
+          current={usage?.experience || 0}
+          max={limits?.maxExperience || 1}
+          color="from-green-500 to-emerald-500"
+        />
+        <UsageCard
+          label="التعليم"
+          current={usage?.education || 0}
+          max={limits?.maxEducation || 1}
+          color="from-red-500 to-rose-500"
+        />
+      </div>
 
-// مكون بطاقة الاستخدام
-const UsageCard = ({ label, current, max, color }) => {
-  const percentage = max === -1 ? 0 : Math.min(100, (current / max) * 100)
-  
-  return (
-    <div className="bg-white/5 backdrop-blur-xl rounded-xl p-4 border border-white/10">
-      <p className="text-sm text-gray-400 mb-2">{label}</p>
-      <p className="text-xl font-bold text-white mb-2">
-        {current} / {max === -1 ? '∞' : max}
-      </p>
-      {max !== -1 && (
-        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-          <div 
-            className={`h-full bg-gradient-to-r ${color} transition-all duration-300`}
-            style={{ width: `${percentage}%` }}
-          />
-        </div>
-      )}
-    </div>
-  )
-    }
       {/* البطاقات الرئيسية */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           icon={Eye}
           label="المشاهدات"
-          value={stats?.views.toLocaleString() || '0'}
+          value={stats?.views?.toLocaleString() || '0'}
           trend={stats?.weeklyTrend || 0}
           color="from-blue-500 to-cyan-500"
         />
         <StatCard
           icon={ThumbsUp}
           label="الإعجابات"
-          value={stats?.likes.toLocaleString() || '0'}
+          value={stats?.likes?.toLocaleString() || '0'}
           color="from-purple-500 to-pink-500"
         />
         <StatCard
           icon={MessageSquare}
           label="الرسائل"
-          value={stats?.messages.toLocaleString() || '0'}
+          value={stats?.messages?.toLocaleString() || '0'}
           badge={stats?.unreadMessages > 0 ? `${stats.unreadMessages} جديد` : null}
           color="from-yellow-500 to-orange-500"
         />
         <StatCard
           icon={Users}
           label="الزوار"
-          value={stats?.visitors.toLocaleString() || '0'}
-          subValue={canUseFeature('analytics') ? null : '🔒 متاح في الباقات المدفوعة'}
+          value={stats?.visitors?.toLocaleString() || '0'}
+          subValue={!canUseFeature('analytics') ? '🔒 متاح في الباقات المدفوعة' : null}
           color="from-green-500 to-emerald-500"
         />
       </div>
@@ -255,40 +226,40 @@ const UsageCard = ({ label, current, max, color }) => {
         <ContentMiniCard
           icon={FolderKanban}
           label="المشاريع"
-          count={contentStats?.counts.projects || 0}
-          max={limits?.maxProjects || 3}
+          count={contentStats?.counts?.projects || 0}
+          max={limits?.maxProjects || 1}
           color="from-blue-500 to-cyan-500"
           link="/dashboard/projects"
         />
         <ContentMiniCard
           icon={Code}
           label="المهارات"
-          count={contentStats?.counts.skills || 0}
-          max={limits?.maxSkills || 10}
+          count={contentStats?.counts?.skills || 0}
+          max={limits?.maxSkills || 2}
           color="from-purple-500 to-pink-500"
           link="/dashboard/skills"
         />
         <ContentMiniCard
           icon={Award}
           label="الشهادات"
-          count={contentStats?.counts.certificates || 0}
-          max={limits?.maxCertificates || 3}
+          count={contentStats?.counts?.certificates || 0}
+          max={limits?.maxCertificates || 1}
           color="from-yellow-500 to-orange-500"
           link="/dashboard/certificates"
         />
         <ContentMiniCard
           icon={Briefcase}
           label="الخبرات"
-          count={contentStats?.counts.experience || 0}
-          max={limits?.maxExperience || 5}
+          count={contentStats?.counts?.experience || 0}
+          max={limits?.maxExperience || 1}
           color="from-green-500 to-emerald-500"
           link="/dashboard/experience"
         />
         <ContentMiniCard
           icon={GraduationCap}
           label="التعليم"
-          count={contentStats?.counts.education || 0}
-          max={limits?.maxEducation || 5}
+          count={contentStats?.counts?.education || 0}
+          max={limits?.maxEducation || 1}
           color="from-red-500 to-rose-500"
           link="/dashboard/education"
         />
@@ -296,9 +267,8 @@ const UsageCard = ({ label, current, max, color }) => {
 
       {/* قسمين رئيسيين */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* تحليلات الذكاء الاصطناعي - العمود الأيمن */}
+        {/* تحليلات الذكاء الاصطناعي */}
         <div className="lg:col-span-1 space-y-6">
-          {/* تحليلات AI */}
           {planId >= 3 && aiStats && (
             <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
               <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
@@ -363,11 +333,10 @@ const UsageCard = ({ label, current, max, color }) => {
           )}
         </div>
 
-        {/* إحصائيات الزوار - العمود الأيسر */}
+        {/* إحصائيات الزوار */}
         <div className="lg:col-span-2 space-y-6">
           {canUseFeature('analytics') && visitorStats ? (
             <>
-              {/* تحليلات متقدمة للزوار */}
               <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg font-semibold text-white">تحليلات الزوار</h3>
@@ -398,28 +367,27 @@ const UsageCard = ({ label, current, max, color }) => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div className="text-center">
                     <Globe className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                    <p className="text-xl text-white">{visitorStats.countries.length}</p>
+                    <p className="text-xl text-white">{visitorStats.countries?.length || 0}</p>
                     <p className="text-xs text-gray-400">دولة</p>
                   </div>
                   <div className="text-center">
                     <Smartphone className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                    <p className="text-xl text-white">{visitorStats.devices.mobile}</p>
+                    <p className="text-xl text-white">{visitorStats.devices?.mobile || 0}</p>
                     <p className="text-xs text-gray-400">جوال</p>
                   </div>
                   <div className="text-center">
                     <Monitor className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                    <p className="text-xl text-white">{visitorStats.devices.desktop}</p>
+                    <p className="text-xl text-white">{visitorStats.devices?.desktop || 0}</p>
                     <p className="text-xs text-gray-400">كمبيوتر</p>
                   </div>
                   <div className="text-center">
                     <Target className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                    <p className="text-xl text-white">{visitorStats.referrers.length}</p>
+                    <p className="text-xl text-white">{visitorStats.referrers?.length || 0}</p>
                     <p className="text-xs text-gray-400">مصدر</p>
                   </div>
                 </div>
 
-                {/* أفضل الدول */}
-                {visitorStats.countries.length > 0 && (
+                {visitorStats.countries?.length > 0 && (
                   <div>
                     <h4 className="text-sm font-medium text-gray-400 mb-3">أفضل الدول</h4>
                     <div className="space-y-2">
@@ -440,11 +408,10 @@ const UsageCard = ({ label, current, max, color }) => {
                 )}
               </div>
 
-              {/* المصادر */}
               <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
                 <h3 className="text-lg font-semibold text-white mb-4">مصادر الزيارات</h3>
                 <div className="space-y-3">
-                  {visitorStats.referrers.map(([source, count], i) => (
+                  {visitorStats.referrers?.map(([source, count], i) => (
                     <div key={i} className="flex items-center justify-between">
                       <span className="text-sm text-gray-300">{source}</span>
                       <div className="flex items-center gap-3">
@@ -462,7 +429,6 @@ const UsageCard = ({ label, current, max, color }) => {
               </div>
             </>
           ) : (
-            // رسالة الترقية للمستخدمين المجانيين
             <div className="bg-gradient-to-r from-[#6366f1]/10 to-[#a855f7]/10 rounded-2xl p-8 border border-[#6366f1]/20 text-center">
               <TrendingUp className="w-12 h-12 text-[#6366f1] mx-auto mb-4" />
               <h3 className="text-xl text-white mb-2">إحصائيات متقدمة</h3>
@@ -480,7 +446,7 @@ const UsageCard = ({ label, current, max, color }) => {
         </div>
       </div>
 
-      {/* Banner للمجانيين - يظهر في الأسفل */}
+      {/* Banner للمجانيين */}
       {isFree && (
         <div className="bg-gradient-to-r from-[#6366f1]/10 to-[#a855f7]/10 rounded-2xl p-4 border border-[#6366f1]/20">
           <div className="flex items-center justify-between flex-wrap gap-4">
@@ -497,6 +463,32 @@ const UsageCard = ({ label, current, max, color }) => {
               عرض الباقات
             </Link>
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ===========================================
+// المكونات المساعدة (في نهاية الملف)
+// ===========================================
+
+// مكون بطاقة الاستخدام
+const UsageCard = ({ label, current, max, color }) => {
+  const percentage = max === -1 ? 0 : Math.min(100, (current / max) * 100)
+  
+  return (
+    <div className="bg-white/5 backdrop-blur-xl rounded-xl p-4 border border-white/10">
+      <p className="text-sm text-gray-400 mb-2">{label}</p>
+      <p className="text-xl font-bold text-white mb-2">
+        {current} / {max === -1 ? '∞' : max}
+      </p>
+      {max !== -1 && (
+        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div 
+            className={`h-full bg-gradient-to-r ${color} transition-all duration-300`}
+            style={{ width: `${percentage}%` }}
+          />
         </div>
       )}
     </div>
