@@ -207,7 +207,7 @@ const ContactPage = ({ developer: propDeveloper }) => {
 
           {/* قسم التعليقات */}
           <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-3 py-3 md:p-10 md:py-8 shadow-2xl">
-            <Komentar />
+            <Komentar developerId={developer?.id} />
           </div>
         </div>
       </div>
