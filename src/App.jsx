@@ -23,9 +23,8 @@ import Experience from './pages/dashboard/Experience'
 import Education from './pages/dashboard/Education'
 import Settings from './pages/dashboard/Settings'
 import PlanStatus from './pages/dashboard/PlanStatus'
-// في قائمة المسارات المحمية داخل DashboardLayout
-<Route path="messages" element={<Messages />} />
-// صفحة 404
+import Messages from './pages/dashboard/Messages'
+import Opportunities from './pages/dashboard/Opportunities'
 import NotFound from './pages/NotFound'
 
 // Providers
@@ -93,6 +92,7 @@ const AppRoutes = () => {
             <Route path="education" element={<Education />} />
             <Route path="settings" element={<Settings />} />
             <Route path="plan-status" element={<PlanStatus />} />
+            <Route path="messages" element={<Messages />} />
           </Route>
           
           {/* صفحة 404 */}
