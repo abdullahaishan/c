@@ -25,6 +25,7 @@ const Projects = () => {
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
 
   // نموذج مشروع جديد
@@ -66,14 +67,17 @@ const Projects = () => {
     
     setUploading(true)
     try {
-      const imageUrl = await storageService.uploadImage(
+      // استخدام دالة رفع صور المشاريع المخصصة
+      const imageUrl = await storageService.uploadProjectImage(
         file,
-        `projects/${user.id}`
+        user.id,
+        editingId || 'new',
+        null
       )
       return imageUrl
     } catch (err) {
       console.error('Error uploading image:', err)
-      setError('فشل في رفع الصورة')
+      setError('فشل في رفع الصورة: ' + err.message)
       return null
     } finally {
       setUploading(false)
@@ -88,6 +92,7 @@ const Projects = () => {
 
     setSaving(true)
     setError('')
+    setSuccess('')
 
     try {
       let imageUrl = null
@@ -99,11 +104,12 @@ const Projects = () => {
         title: newProject.title,
         description: newProject.description,
         technologies: newProject.technologies,
-        github_url: newProject.github_url,
-        live_url: newProject.live_url,
+        github_url: newProject.github_url || null,
+        live_url: newProject.live_url || null,
         features: newProject.features,
         image: imageUrl,
-        display_order: projects.length
+        display_order: projects.length,
+        developer_id: user.id  // ✅ مهم: ربط المشروع بالمطور
       }
 
       const created = await projectService.create(user.id, projectData)
@@ -121,9 +127,13 @@ const Projects = () => {
       })
       setTechInput('')
       setFeatureInput('')
+      setSuccess('✅ تم إضافة المشروع بنجاح')
+      
+      // إخفاء رسالة النجاح بعد 3 ثوان
+      setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('Error adding project:', err)
-      setError('فشل في إضافة المشروع')
+      setError(err.message || 'فشل في إضافة المشروع')
     } finally {
       setSaving(false)
     }
@@ -131,13 +141,18 @@ const Projects = () => {
 
   const handleUpdateProject = async (id, updates) => {
     setSaving(true)
+    setError('')
+    setSuccess('')
+    
     try {
       const updated = await projectService.update(id, updates)
       setProjects(projects.map(p => p.id === id ? updated : p))
       setEditingId(null)
+      setSuccess('✅ تم تحديث المشروع بنجاح')
+      setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('Error updating project:', err)
-      setError('فشل في تحديث المشروع')
+      setError('فشل في تحديث المشروع: ' + err.message)
     } finally {
       setSaving(false)
     }
@@ -149,9 +164,11 @@ const Projects = () => {
     try {
       await projectService.delete(id)
       setProjects(projects.filter(p => p.id !== id))
+      setSuccess('✅ تم حذف المشروع بنجاح')
+      setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
       console.error('Error deleting project:', err)
-      setError('فشل في حذف المشروع')
+      setError('فشل في حذف المشروع: ' + err.message)
     }
   }
 
@@ -246,7 +263,15 @@ const Projects = () => {
         </div>
       )}
 
-      {/* Add new project form - يظهر دائماً */}
+      {/* Success message */}
+      {success && (
+        <div className="flex items-center gap-2 p-4 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <p>{success}</p>
+        </div>
+      )}
+
+      {/* Add new project form */}
       <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
         <h2 className="text-lg font-semibold text-white mb-4">إضافة مشروع جديد</h2>
         
@@ -278,6 +303,7 @@ const Projects = () => {
                     accept="image/*"
                     onChange={(e) => setNewProject({ ...newProject, image: e.target.files[0] })}
                     className="hidden"
+                    disabled={uploading}
                   />
                 </label>
               )}
@@ -459,10 +485,10 @@ const ProjectCard = ({
   const [featureInput, setFeatureInput] = useState('')
 
   const addTechnology = () => {
-    if (techInput.trim() && !editData.technologies.includes(techInput.trim())) {
+    if (techInput.trim() && !editData.technologies?.includes(techInput.trim())) {
       setEditData({
         ...editData,
-        technologies: [...editData.technologies, techInput.trim()]
+        technologies: [...(editData.technologies || []), techInput.trim()]
       })
       setTechInput('')
     }
@@ -471,15 +497,15 @@ const ProjectCard = ({
   const removeTechnology = (tech) => {
     setEditData({
       ...editData,
-      technologies: editData.technologies.filter(t => t !== tech)
+      technologies: (editData.technologies || []).filter(t => t !== tech)
     })
   }
 
   const addFeature = () => {
-    if (featureInput.trim() && !editData.features.includes(featureInput.trim())) {
+    if (featureInput.trim() && !editData.features?.includes(featureInput.trim())) {
       setEditData({
         ...editData,
-        features: [...editData.features, featureInput.trim()]
+        features: [...(editData.features || []), featureInput.trim()]
       })
       setFeatureInput('')
     }
@@ -488,7 +514,7 @@ const ProjectCard = ({
   const removeFeature = (feature) => {
     setEditData({
       ...editData,
-      features: editData.features.filter(f => f !== feature)
+      features: (editData.features || []).filter(f => f !== feature)
     })
   }
 
@@ -498,13 +524,13 @@ const ProjectCard = ({
         <div className="space-y-4">
           <input
             type="text"
-            value={editData.title}
+            value={editData.title || ''}
             onChange={(e) => setEditData({ ...editData, title: e.target.value })}
             className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
             placeholder="عنوان المشروع"
           />
           <textarea
-            value={editData.description}
+            value={editData.description || ''}
             onChange={(e) => setEditData({ ...editData, description: e.target.value })}
             rows="3"
             className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
@@ -530,7 +556,7 @@ const ProjectCard = ({
               </button>
             </div>
             <div className="flex flex-wrap gap-2 mt-2">
-              {editData.technologies?.map((tech) => (
+              {(editData.technologies || []).map((tech) => (
                 <span key={tech} className="flex items-center gap-1 px-2 py-1 bg-[#6366f1]/20 text-[#6366f1] rounded-lg text-xs">
                   {tech}
                   <button onClick={() => removeTechnology(tech)}>
@@ -545,18 +571,48 @@ const ProjectCard = ({
           <div className="grid grid-cols-2 gap-4">
             <input
               type="url"
-              value={editData.github_url}
+              value={editData.github_url || ''}
               onChange={(e) => setEditData({ ...editData, github_url: e.target.value })}
               className="p-3 bg-white/10 border border-white/20 rounded-lg text-white"
               placeholder="رابط GitHub"
             />
             <input
               type="url"
-              value={editData.live_url}
+              value={editData.live_url || ''}
               onChange={(e) => setEditData({ ...editData, live_url: e.target.value })}
               className="p-3 bg-white/10 border border-white/20 rounded-lg text-white"
               placeholder="رابط المشروع"
             />
+          </div>
+
+          {/* Features */}
+          <div>
+            <label className="text-sm text-gray-400">الميزات</label>
+            <div className="flex gap-2 mt-2">
+              <input
+                value={featureInput}
+                onChange={(e) => setFeatureInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && addFeature()}
+                className="flex-1 p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                placeholder="أضف ميزة"
+              />
+              <button
+                onClick={addFeature}
+                className="px-3 py-2 bg-[#6366f1] text-white rounded-lg text-sm"
+              >
+                إضافة
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {(editData.features || []).map((feature) => (
+                <span key={feature} className="flex items-center gap-1 px-2 py-1 bg-purple-500/20 text-purple-400 rounded-lg text-xs">
+                  {feature}
+                  <button onClick={() => removeFeature(feature)}>
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
           </div>
 
           {/* Action buttons */}
@@ -648,6 +704,25 @@ const ProjectCard = ({
                   {tech}
                 </span>
               ))}
+            </div>
+          )}
+
+          {/* Features */}
+          {project.features?.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {project.features.slice(0, 3).map((feature) => (
+                <span
+                  key={feature}
+                  className="px-2 py-1 bg-purple-500/10 text-purple-400 rounded-lg text-xs"
+                >
+                  {feature}
+                </span>
+              ))}
+              {project.features.length > 3 && (
+                <span className="px-2 py-1 bg-white/5 text-gray-400 rounded-lg text-xs">
+                  +{project.features.length - 3}
+                </span>
+              )}
             </div>
           )}
 
