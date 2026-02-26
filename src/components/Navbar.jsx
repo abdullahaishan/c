@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { Menu, X, Home, Briefcase, User, Mail } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Menu, X, Home, Briefcase, User, Mail, Award, Code } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useDeveloper } from "../context/DeveloperContext";
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const [activeSection, setActiveSection] = useState("Home");
     const navigate = useNavigate();
+    const { isFreePlan } = useDeveloper();
     
     const navItems = [
         { href: "#Home", label: "Home", icon: Home },
         { href: "#About", label: "About", icon: User },
-        { href: "#Portofolio", label: "Portfolio", icon: Briefcase },
+        { href: "#Portfolio", label: "Portfolio", icon: Briefcase },
+        { href: "#WhyMe", label: "Why Me", icon: Award },
+        { href: "#Skills", label: "Skills", icon: Code },
         { href: "#Contact", label: "Contact", icon: Mail },
     ];
 
@@ -19,7 +23,6 @@ const Navbar = () => {
         const handleScroll = () => {
             setScrolled(window.scrollY > 20);
             
-            // تحديث القسم النشط عند التمرير
             const sections = navItems.map(item => {
                 const section = document.querySelector(item.href);
                 if (section) {
@@ -70,7 +73,7 @@ const Navbar = () => {
     };
 
     const handleLogoClick = () => {
-        navigate('/');
+        navigate('/u/abdullah_aishan');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -86,7 +89,7 @@ const Navbar = () => {
         >
             <div className="mx-auto px-4 sm:px-6 lg:px-[10%]">
                 <div className="flex items-center justify-between h-16">
-                    {/* Logo - Portfolio-v5 */}
+                    {/* Logo */}
                     <div className="flex-shrink-0 cursor-pointer group" onClick={handleLogoClick}>
                         <div className="relative">
                             <div className="absolute -inset-1 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-lg blur opacity-0 group-hover:opacity-70 transition duration-300"></div>
@@ -96,7 +99,7 @@ const Navbar = () => {
                         </div>
                     </div>
     
-                    {/* Desktop Navigation - أزرار التنقل */}
+                    {/* Desktop Navigation */}
                     <div className="hidden md:block">
                         <div className="ml-8 flex items-center space-x-2">
                             {navItems.map((item) => (
@@ -129,6 +132,13 @@ const Navbar = () => {
                                     </div>
                                 </a>
                             ))}
+                            
+                            {/* علامة الباقة المجانية */}
+                            {isFreePlan && (
+                                <div className="ml-4 px-3 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded-full">
+                                    <span className="text-xs text-yellow-400">Free Plan</span>
+                                </div>
+                            )}
                         </div>
                     </div>
     
@@ -186,6 +196,13 @@ const Navbar = () => {
                                 </span>
                             </a>
                         ))}
+                        
+                        {/* علامة الباقة المجانية في الموبايل */}
+                        {isFreePlan && (
+                            <div className="mt-4 px-4 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-center">
+                                <span className="text-sm text-yellow-400">Free Plan - بعض الميزات محدودة</span>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
