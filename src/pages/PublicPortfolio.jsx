@@ -19,30 +19,35 @@ const PublicPortfolio = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    loadDeveloper();
+    let mounted = true;
+    
+    const loadData = async () => {
+      try {
+        console.log('📥 جلب بيانات:', username);
+        const data = await developerService.getByUsername(username);
+        
+        if (!mounted) return;
+        
+        if (!data) {
+          setError('المطور غير موجود');
+        } else {
+          console.log('✅ تم التحميل:', data);
+          setDeveloper(data);
+        }
+      } catch (err) {
+        console.error('❌ خطأ:', err);
+        setError('فشل في تحميل البورتفليو');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+
+    return () => { mounted = false; };
   }, [username]);
 
-  const loadDeveloper = async () => {
-    try {
-      setLoading(true);
-      console.log('📥 جلب بيانات:', username);
-      const data = await developerService.getByUsername(username);
-      
-      if (!data) {
-        setError('المطور غير موجود');
-      } else {
-        console.log('✅ تم التحميل:', data);
-        setDeveloper(data);
-      }
-    } catch (err) {
-      console.error('❌ خطأ:', err);
-      setError('فشل في تحميل البورتفليو');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // صفحة التحميل
+  // ✅ صفحة التحميل - بسيطة ونظيفة
   if (loading) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center">
@@ -54,7 +59,7 @@ const PublicPortfolio = () => {
     );
   }
 
-  // صفحة الخطأ
+  // ✅ صفحة الخطأ
   if (error || !developer) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center">
@@ -67,7 +72,7 @@ const PublicPortfolio = () => {
     );
   }
 
-  // صفحة النجاح
+  // ✅ صفحة النجاح
   return (
     <>
       <AnimatedBackground />
