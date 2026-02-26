@@ -13,8 +13,8 @@ export const useDeveloper = () => {
   return context
 }
 
-export const DeveloperProvider = ({ children, username }) => {  const { username } = useParams()
-  const [developer, setDeveloper] = useState(null)
+export const DeveloperProvider = ({ children, username }) => {
+      const [developer, setDeveloper] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
