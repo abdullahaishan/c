@@ -1,98 +1,96 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Code, Sparkles, Rocket, Award, Users } from 'lucide-react';
+import { useParams } from 'react-router-dom';
+import { developerService } from '../lib/supabase';
+import Home from './Home';
+import AboutPage from './About';
+import Skills from './Skills';
+import Portfolio from './Portfolio';
+import WhyMe from './WhyMe';
+import ContactPage from './Contact';
+import AnimatedBackground from '../components/AnimatedBackground';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
+import LoadingPortfolio from '../components/LoadingPortfolio';
+import { AlertCircle } from 'lucide-react';
 
-const LoadingPortfolio = ({ username }) => {
-  const [progress, setProgress] = useState(0);
-  const [messageIndex, setMessageIndex] = useState(0);
-
-  // رسائل قصيرة وجذابة
-  const messages = [
-    { text: "اكتشف مهارات احترافية", icon: <Code className="w-5 h-5" /> },
-    { text: "مشاريع مميزة", icon: <Rocket className="w-5 h-5" /> },
-    { text: "شهادات معتمدة", icon: <Award className="w-5 h-5" /> },
-    { text: "تواصل مع مطورين", icon: <Users className="w-5 h-5" /> },
-    { text: "تصميم متجاوب", icon: <Sparkles className="w-5 h-5" /> },
-  ];
+const PublicPortfolio = () => {
+  const { username } = useParams();
+  const [developer, setDeveloper] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    // ✅ تقدم سريع إلى 100% (2 ثانية)
-    const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          return 100;
-        }
-        return prev + 2;
-      });
-    }, 40);
-
-    // تغيير الرسالة كل ثانية
-    const msgInterval = setInterval(() => {
-      setMessageIndex(prev => (prev + 1) % messages.length);
-    }, 1000);
-
-    return () => {
-      clearInterval(interval);
-      clearInterval(msgInterval);
-    };
-  }, []);
-
-  return (
-    <div className="fixed inset-0 bg-[#030014] z-50 flex items-center justify-center overflow-hidden">
-      {/* خلفية ناعمة */}
-      <div className="absolute inset-0">
-        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-purple-900/10 via-transparent to-blue-900/10" />
-      </div>
-
-      <div className="relative z-10 text-center px-4 max-w-md">
-        {/* Logo متحرك */}
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="w-20 h-20 mx-auto mb-6 rounded-full border-2 border-dashed border-purple-500/30 flex items-center justify-center"
-        >
-          <div className="w-16 h-16 rounded-full bg-gradient-to-r from-[#6366f1] to-[#a855f7] flex items-center justify-center">
-            <Code className="w-8 h-8 text-white" />
-          </div>
-        </motion.div>
-
-        {/* اسم المستخدم */}
-        <h2 className="text-2xl font-bold text-white mb-2">@{username}</h2>
+    let mounted = true;
+    
+    const loadData = async () => {
+      try {
+        console.log('📥 جلب بيانات:', username);
+        const data = await developerService.getByUsername(username);
         
-        {/* رسالة متغيرة مع أيقونة */}
-        <motion.div
-          key={messageIndex}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          className="flex items-center justify-center gap-2 text-gray-300 mb-6"
-        >
-          {messages[messageIndex].icon}
-          <span>{messages[messageIndex].text}</span>
-        </motion.div>
+        if (!mounted) return;
+        
+        if (!data) {
+          setError('المطور غير موجود');
+        } else {
+          console.log('✅ تم التحميل:', data);
+          setDeveloper(data);
+        }
+      } catch (err) {
+        console.error('❌ خطأ:', err);
+        setError('فشل في تحميل البورتفليو');
+      } finally {
+        // ✅ هذا السطر مهم جداً - يخفي التحميل
+        setLoading(false);
+      }
+    };
 
-        {/* شريط التقدم */}
-        <div className="space-y-2 mb-4">
-          <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-            />
+    loadData();
+
+    return () => { mounted = false; };
+  }, [username]);
+
+  // ✅ صفحة التحميل
+  if (loading) {
+    return <LoadingPortfolio username={username} />;
+  }
+
+  // ✅ صفحة الخطأ
+  if (error || !developer) {
+    return (
+      <div className="min-h-screen bg-[#030014] flex items-center justify-center p-4">
+        <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 max-w-md w-full text-center border border-white/10">
+          <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-10 h-10 text-red-400" />
           </div>
-          <p className="text-xs text-gray-500">{progress}%</p>
-        </div>
-
-        {/* إحصائيات صغيرة */}
-        <div className="flex justify-center gap-4 text-xs text-gray-500">
-          <span>✨ 1000+</span>
-          <span>🚀 500+</span>
-          <span>💎 24/7</span>
+          <h2 className="text-2xl font-bold text-white mb-2">المطور غير موجود</h2>
+          <p className="text-gray-400 mb-6">{error || 'لا يوجد مطور بهذا الاسم'}</p>
+          <a
+            href="/"
+            className="inline-block px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg hover:scale-105 transition-all"
+          >
+            العودة للرئيسية
+          </a>
         </div>
       </div>
-    </div>
+    );
+  }
+
+  // ✅ صفحة النجاح
+  return (
+    <>
+      <AnimatedBackground />
+      <Navbar />
+      <main className="relative z-10">
+        <Home developer={developer} />
+        <AboutPage developer={developer} />
+        <Skills developer={developer} />
+        <Portfolio developer={developer} />
+        {developer?.plan_id === 1 && <WhyMe developer={developer} />}
+        <ContactPage developer={developer} />
+      </main>
+      <Footer />
+    </>
   );
 };
 
-export default LoadingPortfolio;
+export default PublicPortfolio;
