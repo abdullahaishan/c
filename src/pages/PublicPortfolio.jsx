@@ -6,6 +6,7 @@ import AboutPage from './About';
 import Skills from './Skills';
 import Portfolio from './Portfolio';
 import WhyMe from './WhyMe';
+import ContactPage from './Contact';  // ✅ أضف هذا الاستيراد
 import AnimatedBackground from '../components/AnimatedBackground';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -150,6 +151,7 @@ const PublicPortfolio = () => {
         <Skills developer={developer} />
         <Portfolio developer={developer} />
         {developer?.plan_id === 1 && <WhyMe developer={developer} />}
+        <ContactPage developer={developer} />  {/* ✅ أضف هذا السطر */}
       </main>
       <Footer />
     </>
