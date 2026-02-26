@@ -1,6 +1,5 @@
-// src/context/DeveloperContext.jsx
 import React, { createContext, useState, useContext, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useLocation } from 'react-router-dom'
 import { developerService } from '../lib/supabase'
 
 const DeveloperContext = createContext()
@@ -13,51 +12,63 @@ export const useDeveloper = () => {
   return context
 }
 
-export const DeveloperProvider = ({ children, username }) => {
+export const DeveloperProvider = ({ children }) => {
+  // نحصل على username من المسار (يتطلب أن يكون داخل Router)
+  const { username } = useParams()
+  const location = useLocation()
   const [developer, setDeveloper] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  const isPublicPage = window.location.pathname.startsWith('/u/')
+  // نعتبر أن الصفحة عامة إذا المسار يبدأ بـ /u/
+  const isPublicPage = location.pathname.startsWith('/u/')
 
   useEffect(() => {
-    if (!isPublicPage || !username) return
-
-    let mounted = true
+    // إذا لم تكن صفحة عامة فلا نفعل شيئًا
+    if (!isPublicPage) return
+    if (!username) return
 
     const loadDeveloper = async () => {
       try {
         setLoading(true)
         setError(null)
-
         console.log('📥 جلب بيانات المطور:', username)
+        
         const data = await developerService.getByUsername(username)
         console.log('📦 بيانات المطور:', data)
-
-        if (!mounted) return
-
-        setDeveloper(data)
-
-        // زيادة المشاهدات بشكل غير متزامن (لا ننتظرها)
-        if (data?.id) {
-          developerService.incrementViews(data.id)
+        
+        if (!data) {
+          setDeveloper(null)
+          setError('Developer not found')
+        } else {
+          setDeveloper(data)
+          setError(null)
+          // تسجيل زيارة (غير حرج لو فشل)
+          try {
+            await developerService.trackVisit(data.id, {
+              visitor_ip: null,
+              visitor_country: null,
+              visitor_city: null
+            })
+          } catch (e) {
+            console.warn('trackVisit failed', e)
+          }
         }
       } catch (err) {
         console.error('❌ خطأ في جلب المطور:', err)
-        if (!mounted) return
-        setError('Developer not found')
         setDeveloper(null)
+        setError(err.message || 'Failed to load developer')
       } finally {
-        if (mounted) setLoading(false)
+        setLoading(false)
       }
     }
 
     loadDeveloper()
-
-    return () => { mounted = false }
   }, [username, isPublicPage])
 
-  // دوال المساعدة (تستخدم نفس الأسماء لتوافق ملفات العرض)
+  // ===========================================
+  // دوال مساعدة للوصول للبيانات بسهولة
+  // ===========================================
   const getProjects = () => developer?.projects || []
   const getSkills = () => developer?.skills || []
   const getCertificates = () => developer?.certificates || []
@@ -70,21 +81,28 @@ export const DeveloperProvider = ({ children, username }) => {
     })
     return links
   }
-
   const getProfileImage = () => developer?.profile_image || '/Coding.gif'
+  const getPlanId = () => developer?.plan_id || 1
+  const isFreePlan = () => getPlanId() === 1
+  const isPaidPlan = () => getPlanId() > 1
 
-  const getTotalExperienceYears = () => {
-    let totalYears = 0
-    (developer?.experience || []).forEach(exp => {
-      if (exp.start_date) {
-        const start = new Date(exp.start_date)
-        const end = exp.is_current ? new Date() : (exp.end_date ? new Date(exp.end_date) : new Date())
-        const years = (end - start) / (1000 * 60 * 60 * 24 * 365)
-        totalYears += years
-      }
-    })
-    return Math.round(totalYears * 10) / 10 || 0
-  }
+  const getStats = () => ({
+    projects: getProjects().length,
+    skills: getSkills().length,
+    certificates: getCertificates().length,
+    experience: (() => {
+      let total = 0
+      (getExperience() || []).forEach(exp => {
+        if (exp.start_date) {
+          const start = new Date(exp.start_date)
+          const end = exp.is_current ? new Date() : new Date(exp.end_date || Date.now())
+          total += (end - start) / (1000 * 60 * 60 * 24 * 365)
+        }
+      })
+      return Math.round(total * 10) / 10
+    })(),
+    education: getEducation().length
+  })
 
   const value = {
     developer,
@@ -98,7 +116,10 @@ export const DeveloperProvider = ({ children, username }) => {
     getEducation,
     getSocialLinks,
     getProfileImage,
-    getTotalExperienceYears
+    getPlanId,
+    isFreePlan,
+    isPaidPlan,
+    getStats
   }
 
   return (
