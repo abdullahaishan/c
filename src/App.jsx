@@ -30,7 +30,7 @@ import Messages from './pages/dashboard/Messages'
 import NotFound from './pages/NotFound'
 
 // صفحات المشروع
-import ProjectDetail from './pages/ProjectDetail'
+import ProjectDetail from './components/ProjectDetail'
 
 // Providers
 import { DeveloperProvider } from './context/DeveloperContext'
