@@ -5,7 +5,7 @@ import {
   AlertCircle, CheckCircle, XCircle, Database, Link as LinkIcon,
   Image, FileText, Loader
 } from 'lucide-react';
-import { loadingTracker } from '../lib/loadingTracker';
+import { loadingTracker } from '/loadingTracker';
 import { developerService } from '../lib/supabase';
 
 const LoadingPortfolio = ({ username, onComplete, onError }) => {
