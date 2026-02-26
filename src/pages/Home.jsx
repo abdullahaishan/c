@@ -6,20 +6,21 @@ import {
   ExternalLink,
   Instagram,
   Sparkles,
+  Download
 } from "lucide-react";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import { useDeveloper } from '../context/DeveloperContext';
+import AnimatedBackground from '../components/AnimatedBackground';
 
-// مكون النص المتحرك (يأخذ المهارات من قاعدة البيانات)
+// مكون النص المتحرك (من المهارات)
 const AnimatedText = memo(({ skills }) => {
   const [text, setText] = useState("");
   const [isTyping, setIsTyping] = useState(true);
   const [wordIndex, setWordIndex] = useState(0);
   const [charIndex, setCharIndex] = useState(0);
 
-  // استخدام المهارات الرئيسية أولاً، ثم كل المهارات
-  const words = skills.length > 0 ? skills : ["Frontend Developer", "React Enthusiast", "UI/UX Designer"];
+  const words = skills.length > 0 ? skills : ["MySQL", "Laravel", "Flutter", "React"];
 
   useEffect(() => {
     const TYPING_SPEED = 100;
@@ -51,128 +52,103 @@ const AnimatedText = memo(({ skills }) => {
 
   return (
     <div className="h-8 flex items-center">
-      <span className="text-xl md:text-2xl bg-gradient-to-r from-gray-100 to-gray-300 bg-clip-text text-transparent font-light">
-        {text}
+      <span className="text-xl md:text-2xl text-gray-300 font-light">
+        I'm a <span className="text-[#a855f7] font-semibold">{text}</span>
       </span>
-      <span className="w-[3px] h-6 bg-gradient-to-t from-[#6366f1] to-[#a855f7] ml-1 animate-blink"></span>
+      <span className="w-[3px] h-6 bg-[#a855f7] ml-1 animate-blink"></span>
     </div>
   );
 });
-
-// شريط الحالة العلوي
-const StatusBadge = memo(({ name }) => (
-  <div className="inline-block animate-float lg:mx-0" data-aos="zoom-in" data-aos-delay="400">
-    <div className="relative group">
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-full blur opacity-30 group-hover:opacity-50 transition duration-1000"></div>
-      <div className="relative px-3 sm:px-4 py-2 rounded-full bg-black/40 backdrop-blur-xl border border-white/10">
-        <span className="bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-transparent bg-clip-text sm:text-sm text-[0.7rem] font-medium flex items-center">
-          <Sparkles className="sm:w-4 sm:h-4 w-3 h-3 mr-2 text-blue-400" />
-          {name}
-        </span>
-      </div>
-    </div>
-  </div>
-));
-
-// العنوان الرئيسي
-const MainTitle = memo(({ title }) => {
-  const words = title?.split(' ') || ['Frontend', 'Developer'];
-  const firstWord = words[0] || 'Frontend';
-  const secondWord = words.slice(1).join(' ') || 'Developer';
-  
-  return (
-    <div className="space-y-2" data-aos="fade-up" data-aos-delay="600">
-      <h1 className="text-5xl sm:text-6xl md:text-6xl lg:text-6xl xl:text-7xl font-bold tracking-tight">
-        <span className="relative inline-block">
-          <span className="absolute -inset-2 bg-gradient-to-r from-[#6366f1] to-[#a855f7] blur-2xl opacity-20"></span>
-          <span className="relative bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent">
-            {firstWord}
-          </span>
-        </span>
-        <br />
-        <span className="relative inline-block mt-2">
-          <span className="absolute -inset-2 bg-gradient-to-r from-[#6366f1] to-[#a855f7] blur-2xl opacity-20"></span>
-          <span className="relative bg-gradient-to-r from-[#6366f1] to-[#a855f7] bg-clip-text text-transparent">
-            {secondWord}
-          </span>
-        </span>
-      </h1>
-    </div>
-  );
-});
-
-// المهارات السريعة
-const TechStack = memo(({ tech, color = 'from-blue-500 to-cyan-500' }) => (
-  <div className={`px-4 py-2 hidden sm:block rounded-full bg-gradient-to-r ${color} bg-opacity-10 text-sm text-white hover:scale-105 transition-all cursor-default shadow-lg`}>
-    {tech}
-  </div>
-));
-
-// أزرار CTA
-const CTAButton = memo(({ href, text, icon: Icon }) => (
-  <a href={href}>
-    <button className="group relative w-[160px]">
-      <div className="absolute -inset-0.5 bg-gradient-to-r from-[#4f52c9] to-[#8644c5] rounded-xl opacity-50 blur-md group-hover:opacity-90 transition-all duration-700"></div>
-      <div className="relative h-11 bg-[#030014] backdrop-blur-xl rounded-lg border border-white/10 leading-none overflow-hidden">
-        <div className="absolute inset-0 scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-500 bg-gradient-to-r from-[#4f52c9]/20 to-[#8644c5]/20"></div>
-        <span className="absolute inset-0 flex items-center justify-center gap-2 text-sm group-hover:gap-3 transition-all duration-300">
-          <span className="bg-gradient-to-r from-gray-200 to-white bg-clip-text text-transparent font-medium z-10">
-            {text}
-          </span>
-          <Icon
-            className={`w-4 h-4 text-gray-200 ${
-              text === "Contact"
-                ? "group-hover:translate-x-1"
-                : "group-hover:rotate-45"
-            } transform transition-all duration-300 z-10`}
-          />
-        </span>
-      </div>
-    </button>
-  </a>
-));
 
 // روابط التواصل
-const SocialLink = memo(({ icon: Icon, link }) => (
-  <a href={link} target="_blank" rel="noopener noreferrer">
-    <button className="group relative p-3">
-      <div className="absolute inset-0 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-xl blur opacity-20 group-hover:opacity-40 transition duration-300"></div>
-      <div className="relative rounded-xl bg-black/50 backdrop-blur-xl p-2 flex items-center justify-center border border-white/10 group-hover:border-white/20 transition-all duration-300">
-        <Icon className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
-      </div>
-    </button>
-  </a>
-));
+const SocialLinks = memo(({ links }) => {
+  const icons = [
+    { icon: Github, platform: 'github' },
+    { icon: Linkedin, platform: 'linkedin' },
+    { icon: Instagram, platform: 'instagram' },
+    { icon: Mail, platform: 'email' }
+  ];
 
-// المكون الرئيسي
+  return (
+    <div className="flex gap-3 flex-wrap justify-center lg:justify-start">
+      {icons.map(({ icon: Icon, platform }) => {
+        const link = links[platform];
+        if (!link) return null;
+        return (
+          <a
+            key={platform}
+            href={link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center hover:bg-[#6366f1] transition-all hover:scale-110"
+          >
+            <Icon className="w-5 h-5 text-gray-400 hover:text-white" />
+          </a>
+        );
+      })}
+    </div>
+  );
+});
+
+// مكون الصورة مع دعم الصورة الافتراضية والتصغير
+const ProfileImage = memo(({ image }) => {
+  const [imageError, setImageError] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // إذا فشل تحميل الصورة، استخدم الصورة الافتراضية المتحركة
+  const imageSource = imageError ? '/Coding.gif' : image;
+
+  return (
+    <div className="relative group">
+      {/* glow effect - أخف على الموبايل */}
+      <div className={`absolute inset-0 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-full blur-3xl transition-all duration-700 ${
+        isMobile ? 'opacity-10' : 'opacity-20 group-hover:opacity-30'
+      }`}></div>
+      
+      {/* الصورة - تصغير على الموبايل */}
+      <img
+        src={imageSource}
+        alt="Profile"
+        onError={() => setImageError(true)}
+        className={`relative object-cover rounded-full border-4 border-white/10 transition-all duration-700 ${
+          isMobile 
+            ? 'w-48 h-48' // أصغر على الموبايل
+            : 'w-80 h-80 md:w-96 md:h-96 group-hover:scale-105'
+        }`}
+      />
+      
+      {/* إشعار الصورة الافتراضية (اختياري) */}
+      {imageError && (
+        <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-gray-500 whitespace-nowrap">
+          Default animation
+        </div>
+      )}
+    </div>
+  );
+});
+
 const Home = ({ developer: propDeveloper }) => {
   const context = useDeveloper();
   const developer = propDeveloper || context.publicDeveloper;
-  const { getMainSkills, getSkills, getSocialLinks, getProfileImage, isFreePlan, getAdminSocialLinks } = context;
+  const { getMainSkills, getSkills, getSocialLinks, getProfileImage } = context;
   
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isHovering, setIsHovering] = useState(false);
 
-  // جلب المهارات الرئيسية للنص المتحرك
+  // جلب المهارات الرئيسية
   const mainSkills = getMainSkills().map(s => s.name);
   const allSkills = getSkills();
-  
-  // المهارات السريعة (أول 4 مع ألوانها)
-  const quickSkills = allSkills.slice(0, 4);
 
-  // روابط التواصل - إذا كانت الباقة مجانية، استخدم روابط الأدمن
-  let socialLinks;
-  if (isFreePlan()) {
-    socialLinks = getAdminSocialLinks();
-  } else {
-    socialLinks = getSocialLinks();
-  }
-
-  const socialLinksArray = [
-    { icon: Github, link: socialLinks.github || "#", show: socialLinks.github },
-    { icon: Linkedin, link: socialLinks.linkedin || "#", show: socialLinks.linkedin },
-    { icon: Instagram, link: socialLinks.instagram || "#", show: socialLinks.instagram },
-  ].filter(item => item.show);
+  // روابط التواصل
+  const socialLinks = getSocialLinks();
 
   useEffect(() => {
     AOS.init({ once: true, offset: 10 });
@@ -181,74 +157,59 @@ const Home = ({ developer: propDeveloper }) => {
 
   return (
     <div className="relative min-h-screen bg-[#030014] overflow-hidden" id="Home">
+      <AnimatedBackground />
+      
       <div className={`relative z-10 transition-all duration-1000 ${isLoaded ? "opacity-100" : "opacity-0"}`}>
-        <div className="container mx-auto px-[5%] min-h-screen">
-          <div className="flex flex-col lg:flex-row items-center justify-center h-screen md:justify-between gap-12">
+        <div className="container mx-auto px-[5%] min-h-screen flex items-center">
+          <div className="flex flex-col-reverse lg:flex-row items-center justify-center gap-8 lg:gap-12 w-full">
             
-            {/* القسم الأيسر */}
-            <div className="w-full lg:w-1/2 space-y-6 sm:space-y-8 text-left lg:text-left order-1">
-              <StatusBadge name={developer?.full_name || "Ready to Innovate"} />
-              <MainTitle title={developer?.title} />
+            {/* القسم الأيسر - النصوص */}
+            <div className="w-full lg:w-1/2 space-y-6 text-center lg:text-left order-2 lg:order-1">
+              {/* الاسم */}
+              <div data-aos="fade-right" data-aos-delay="200">
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white">
+                  Abdullah Zabin
+                </h1>
+                <h2 className="text-xl md:text-2xl lg:text-3xl text-gray-300 mt-1">
+                  Ali Aishan
+                </h2>
+              </div>
 
-              {/* النص المتحرك - من المهارات الرئيسية */}
-              <AnimatedText skills={mainSkills} />
+              {/* النص المتحرك */}
+              <div data-aos="fade-right" data-aos-delay="400">
+                <AnimatedText skills={mainSkills} />
+              </div>
 
-              {/* النص التعريفي */}
-              <p className="text-base md:text-lg text-gray-400 max-w-xl leading-relaxed font-light">
-                {developer?.bio || "Passionate developer creating innovative web solutions."}
+              {/* الوصف */}
+              <p className="text-sm md:text-base text-gray-400 leading-relaxed max-w-xl mx-auto lg:mx-0" data-aos="fade-right" data-aos-delay="600">
+                Passionate about technology since 2008, I started programming professionally in 2015.
+                I specialize in cross-platform Flutter development with strong experience integrating
+                backends (PHP, Firebase, MySQL). I focus on building smart, reliable solutions for
+                healthcare and service systems.
               </p>
 
-              {/* المهارات السريعة مع الألوان */}
-              <div className="flex flex-wrap gap-3 justify-start">
-                {quickSkills.map((skill, index) => (
-                  <TechStack 
-                    key={index} 
-                    tech={skill.name} 
-                    color={skill.color || 'from-blue-500 to-cyan-500'}
-                  />
-                ))}
+              {/* زر Download CV */}
+              <div data-aos="fade-right" data-aos-delay="800" className="flex justify-center lg:justify-start">
+                <a
+                  href={developer?.resume_file || "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 md:px-6 md:py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-105 transition-all text-sm md:text-base"
+                >
+                  <Download className="w-4 h-4 md:w-5 md:h-5" />
+                  Download CV
+                </a>
               </div>
 
-              {/* الأزرار */}
-              <div className="flex flex-row gap-3 w-full justify-start">
-                <CTAButton href="#Portfolio" text="Projects" icon={ExternalLink} />
-                <CTAButton href="#Contact" text="Contact" icon={Mail} />
+              {/* روابط التواصل */}
+              <div data-aos="fade-right" data-aos-delay="1000">
+                <SocialLinks links={socialLinks} />
               </div>
-
-              {/* روابط التواصل - حسب الباقة */}
-              {socialLinksArray.length > 0 && (
-                <div className="hidden sm:flex gap-4 justify-start">
-                  {socialLinksArray.map((social, index) => (
-                    <SocialLink key={index} icon={social.icon} link={social.link} />
-                  ))}
-                </div>
-              )}
             </div>
 
-            {/* القسم الأيمن - الصورة المتحركة */}
-            <div
-              className="w-full lg:w-1/2 h-auto relative flex items-center justify-center order-2"
-              onMouseEnter={() => setIsHovering(true)}
-              onMouseLeave={() => setIsHovering(false)}
-              data-aos="fade-left"
-              data-aos-delay="600"
-            >
-              <div className="relative w-full max-w-[500px]">
-                {/* خلفية متوهجة */}
-                <div className={`absolute inset-0 bg-gradient-to-r from-[#6366f1]/20 to-[#a855f7]/20 rounded-full blur-3xl transition-all duration-700 ${
-                  isHovering ? 'opacity-60 scale-110' : 'opacity-30 scale-100'
-                }`} />
-                
-                {/* الصورة */}
-                <img
-                  src={getProfileImage()}
-                  alt="Profile animation"
-                  className={`relative w-full h-auto object-contain z-10 transition-all duration-700 ${
-                    isHovering ? 'scale-110 rotate-3' : 'scale-100 rotate-0'
-                  }`}
-                  style={{ imageRendering: 'high-quality' }}
-                />
-              </div>
+            {/* القسم الأيمن - الصورة */}
+            <div className="w-full lg:w-1/2 flex items-center justify-center order-1 lg:order-2 mb-8 lg:mb-0" data-aos="fade-left" data-aos-delay="400">
+              <ProfileImage image={getProfileImage()} />
             </div>
           </div>
         </div>
