@@ -232,7 +232,7 @@ export const developerService = {
     
     if (error) console.error('Error tracking visit:', error)
   }
-}};
+};
 // ===========================================
 // خدمات الرسائل (Messages)
 // ===========================================
