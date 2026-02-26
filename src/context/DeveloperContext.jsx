@@ -18,34 +18,7 @@ export const DeveloperProvider = ({ children, username }) => {  const { username
 
   const isPublicPage = window.location.pathname.startsWith('/u/')
 
-  useEffect(() => {
-    if (!isPublicPage || !username) return
-
-    const loadDeveloper = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        console.log('📥 جلب بيانات المطور:', username)
-        
-        // ✅ استخدام developerService مباشرة
-        const data = await developerService.getByUsername(username)
-        console.log('📦 بيانات المطور:', data)
-        
-        setDeveloper(data)
-        
-        if (data) {
-          await developerService.incrementViews(data.id)
-        }
-      } catch (err) {
-        console.error('❌ خطأ في جلب المطور:', err)
-        setError('Developer not found')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadDeveloper()
-  }, [username, isPublicPage])
+  
 
   // ===========================================
   // دوال المشاريع
