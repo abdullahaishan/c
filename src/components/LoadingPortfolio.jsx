@@ -1,64 +1,120 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Code, Sparkles, User, Briefcase, Award, Clock, AlertCircle } from 'lucide-react';
+import { 
+  Code, Sparkles, User, Briefcase, Award, Clock, 
+  AlertCircle, CheckCircle, XCircle, Database, Link as LinkIcon,
+  Image, FileText, Github, Linkedin, Globe
+} from 'lucide-react';
 
-const LoadingPortfolio = ({ username, timeout = 8000, onRetry }) => {
+const LoadingPortfolio = ({ username, onComplete, onError }) => {
   const [progress, setProgress] = useState(0);
-  const [stage, setStage] = useState('جاري الاتصال...');
-  const [showTimeout, setShowTimeout] = useState(false);
-  const [dots, setDots] = useState('');
+  const [currentStage, setCurrentStage] = useState('Connecting...');
+  const [loadedTables, setLoadedTables] = useState({});
+  const [failedTables, setFailedTables] = useState({});
+  const [error, setError] = useState(null);
+  const [startTime] = useState(Date.now());
 
-  // مراحل التحميل
-  const stages = [
-    { text: 'جاري الاتصال بالخادم...', icon: <Clock className="w-5 h-5" /> },
-    { text: 'جلب بيانات المطور...', icon: <User className="w-5 h-5" /> },
-    { text: 'تحميل المهارات...', icon: <Code className="w-5 h-5" /> },
-    { text: 'تحميل المشاريع...', icon: <Briefcase className="w-5 h-5" /> },
-    { text: 'تحميل الشهادات...', icon: <Award className="w-5 h-5" /> },
-    { text: 'تجهيز البورتفليو...', icon: <Sparkles className="w-5 h-5" /> },
+  // Tables to load
+  const tables = [
+    { id: 'developers', name: 'Developer Profile', icon: User, weight: 20 },
+    { id: 'skills', name: 'Skills', icon: Code, weight: 15 },
+    { id: 'projects', name: 'Projects', icon: Briefcase, weight: 20 },
+    { id: 'certificates', name: 'Certificates', icon: Award, weight: 15 },
+    { id: 'experience', name: 'Experience', icon: Clock, weight: 15 },
+    { id: 'social_links', name: 'Social Links', icon: LinkIcon, weight: 10 },
+    { id: 'profile_image', name: 'Profile Image', icon: Image, weight: 5 },
   ];
 
   useEffect(() => {
-    // محاكاة تقدم التحميل
-    const progressInterval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 95) return prev;
-        return prev + 1;
-      });
-    }, 80);
+    let mounted = true;
+    const loaded = {};
+    const failed = {};
 
-    // تغيير مرحلة التحميل
-    const stageInterval = setInterval(() => {
-      setStage(prev => {
-        const currentIndex = stages.findIndex(s => s.text === prev);
-        const nextIndex = (currentIndex + 1) % stages.length;
-        return stages[nextIndex].text;
-      });
-    }, 1500);
+    const checkTable = async (table) => {
+      try {
+        // Simulate real loading (replace with actual Supabase queries)
+        await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
+        
+        if (mounted) {
+          loaded[table.id] = true;
+          setLoadedTables(prev => ({ ...prev, [table.id]: true }));
+          setCurrentStage(`Loaded ${table.name}`);
+          
+          // Update progress
+          const newProgress = Object.keys(loaded).reduce((sum, key) => {
+            const t = tables.find(t => t.id === key);
+            return sum + (t?.weight || 0);
+          }, 0);
+          setProgress(newProgress);
+        }
+      } catch (err) {
+        if (mounted) {
+          failed[table.id] = true;
+          setFailedTables(prev => ({ ...prev, [table.id]: true }));
+          console.error(`❌ Failed to load ${table.name}:`, err);
+        }
+      }
+    };
 
-    // تأثير النقاط المتحركة
-    const dotsInterval = setInterval(() => {
-      setDots(prev => prev.length >= 3 ? '' : prev + '.');
-    }, 400);
+    // Start loading all tables in parallel
+    tables.forEach(table => checkTable(table));
 
-    // مؤقت للتحقق من التأخير
-    const timeoutTimer = setTimeout(() => {
-      setShowTimeout(true);
-    }, timeout);
+    // Monitor progress every 100ms
+    const interval = setInterval(() => {
+      if (!mounted) return;
+
+      const loadedCount = Object.keys(loaded).length;
+      const failedCount = Object.keys(failed).length;
+      const totalTables = tables.length;
+
+      // If all tables are processed (success or fail)
+      if (loadedCount + failedCount === totalTables) {
+        clearInterval(interval);
+        
+        const elapsedTime = (Date.now() - startTime) / 1000;
+        console.log(`✅ Loading completed in ${elapsedTime.toFixed(1)} seconds`);
+        console.log(`📊 Success: ${loadedCount}, Failed: ${failedCount}`);
+
+        if (mounted) {
+          setProgress(100);
+          setCurrentStage('Loading Complete');
+          
+          // If there are failed tables, send warning
+          if (failedCount > 0) {
+            onError?.({
+              message: `Failed to load ${failedCount} items`,
+              failed: failed
+            });
+          }
+          
+          // Continue with available data
+          setTimeout(() => onComplete?.(loaded, failed), 500);
+        }
+      }
+    }, 100);
+
+    // Safety timeout (30 seconds)
+    const safetyTimeout = setTimeout(() => {
+      if (mounted && loadedCount + failedCount < totalTables) {
+        clearInterval(interval);
+        setError('Loading took too long');
+        onError?.({ message: 'Loading took too long. Please check your connection.', timeout: true });
+      }
+    }, 30000);
 
     return () => {
-      clearInterval(progressInterval);
-      clearInterval(stageInterval);
-      clearInterval(dotsInterval);
-      clearTimeout(timeoutTimer);
+      mounted = false;
+      clearInterval(interval);
+      clearTimeout(safetyTimeout);
     };
-  }, [timeout]);
+  }, [username]);
 
-  const currentStage = stages.find(s => s.text === stage) || stages[0];
+  // Calculate elapsed time
+  const elapsedSeconds = ((Date.now() - startTime) / 1000).toFixed(1);
 
   return (
     <div className="fixed inset-0 bg-[#030014] z-50 flex items-center justify-center overflow-hidden">
-      {/* خلفية متحركة */}
+      {/* Animated Background */}
       <div className="absolute inset-0">
         <motion.div
           animate={{
@@ -79,9 +135,9 @@ const LoadingPortfolio = ({ username, timeout = 8000, onRetry }) => {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f10_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f10_1px,transparent_1px)] bg-[size:48px_48px]" />
       </div>
 
-      {/* المحتوى الرئيسي */}
+      {/* Main Content */}
       <div className="relative z-10 w-full max-w-md mx-auto px-4">
-        {/* الشعار */}
+        {/* Logo */}
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -96,33 +152,33 @@ const LoadingPortfolio = ({ username, timeout = 8000, onRetry }) => {
           </div>
         </motion.div>
 
-        {/* بطاقة التحميل */}
+        {/* Loading Card */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
           className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10"
         >
-          {/* المرحلة الحالية */}
+          {/* Current Stage */}
           <div className="flex items-center gap-4 mb-6">
             <div className="p-3 bg-gradient-to-r from-[#6366f1]/20 to-[#a855f7]/20 rounded-xl">
-              {currentStage.icon}
+              {tables.find(t => t.name === currentStage.replace('Loaded ', ''))?.icon || <Clock className="w-5 h-5 text-white" />}
             </div>
             <div className="flex-1">
               <p className="text-white font-medium">
-                {stage}
-                <span className="text-[#a855f7]">{dots}</span>
+                {currentStage}
+                <span className="text-[#a855f7] animate-pulse">...</span>
               </p>
               <p className="text-xs text-gray-400 mt-1">
-                قد يستغرق التحميل بضع ثوان
+                Time: {elapsedSeconds}s
               </p>
             </div>
           </div>
 
-          {/* شريط التقدم */}
+          {/* Progress Bar */}
           <div className="space-y-2 mb-6">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-400">تقدم التحميل</span>
+              <span className="text-gray-400">Loading Progress</span>
               <span className="text-[#a855f7] font-semibold">{progress}%</span>
             </div>
             <div className="h-2 bg-white/10 rounded-full overflow-hidden">
@@ -135,42 +191,57 @@ const LoadingPortfolio = ({ username, timeout = 8000, onRetry }) => {
             </div>
           </div>
 
-          {/* رسالة التأخير - تظهر بعد 8 ثواني */}
+          {/* Tables Status */}
+          <div className="space-y-2 mb-4">
+            {tables.map((table) => (
+              <div key={table.id} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <table.icon className="w-4 h-4 text-gray-400" />
+                  <span className="text-gray-300">{table.name}</span>
+                </div>
+                <div>
+                  {loadedTables[table.id] && (
+                    <CheckCircle className="w-4 h-4 text-green-400" />
+                  )}
+                  {failedTables[table.id] && (
+                    <XCircle className="w-4 h-4 text-red-400" />
+                  )}
+                  {!loadedTables[table.id] && !failedTables[table.id] && (
+                    <div className="w-4 h-4 border-2 border-t-transparent border-[#6366f1] rounded-full animate-spin" />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Error Message */}
           <AnimatePresence>
-            {showTimeout && (
+            {error && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl"
+                className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl"
               >
                 <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                  <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-yellow-400 text-sm font-medium mb-2">
-                      يستغرق التحميل وقتاً أطول من المعتاد
+                    <p className="text-red-400 text-sm font-medium mb-2">
+                      {error}
                     </p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={onRetry}
-                        className="text-xs px-3 py-1.5 bg-yellow-500/20 text-yellow-400 rounded-lg hover:bg-yellow-500/30 transition-all"
-                      >
-                        إعادة المحاولة
-                      </button>
-                      <button
-                        onClick={() => window.location.reload()}
-                        className="text-xs px-3 py-1.5 bg-white/5 text-gray-300 rounded-lg hover:bg-white/10 transition-all"
-                      >
-                        تحديث الصفحة
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => window.location.reload()}
+                      className="text-xs px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-all"
+                    >
+                      Refresh Page
+                    </button>
                   </div>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* نصائح سريعة */}
+          {/* Loading Tips */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.7 }}
@@ -178,28 +249,36 @@ const LoadingPortfolio = ({ username, timeout = 8000, onRetry }) => {
             className="mt-6 text-center"
           >
             <p className="text-xs text-gray-500">
-              {progress < 30 && '✨ جاري تجهيز بيانات المطور...'}
-              {progress >= 30 && progress < 60 && '🚀 يتم تحميل المشاريع والمهارات...'}
-              {progress >= 60 && progress < 90 && '💎 نقوم بتنسيق البورتفليو...'}
-              {progress >= 90 && '🎯 على وشك الانتهاء...'}
+              {progress < 30 && '✨ Preparing developer data...'}
+              {progress >= 30 && progress < 60 && '🚀 Loading projects and skills...'}
+              {progress >= 60 && progress < 90 && '💎 Formatting portfolio...'}
+              {progress >= 90 && '🎯 Almost there...'}
             </p>
           </motion.div>
         </motion.div>
 
-        {/* شريط التحميل السفلي */}
+        {/* Bottom Progress Indicators */}
         <div className="mt-4 text-center">
           <div className="flex justify-center gap-2">
-            {stages.map((s, i) => (
-              <div
+            {tables.map((table, i) => (
+              <motion.div
                 key={i}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: i * 0.1 }}
                 className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  stages.findIndex(st => st.text === stage) === i
-                    ? 'bg-[#a855f7] w-4'
+                  loadedTables[table.id]
+                    ? 'bg-green-400'
+                    : failedTables[table.id]
+                    ? 'bg-red-400'
                     : 'bg-white/20'
                 }`}
               />
             ))}
           </div>
+          <p className="text-xs text-gray-600 mt-2">
+            {Object.keys(loadedTables).length} of {tables.length} items loaded
+          </p>
         </div>
       </div>
     </div>
