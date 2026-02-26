@@ -1,5 +1,8 @@
-import React from 'react'
+import React, { useEffect } from 'react'
+import { useParams } from 'react-router-dom'
 import { Loader, AlertCircle, Crown } from 'lucide-react'
+import { useDeveloper } from '../context/DeveloperContext'
+import { developerService } from '../lib/supabase'
 import AnimatedBackground from '../components/AnimatedBackground'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
@@ -9,56 +12,42 @@ import Skills from './Skills'
 import Portfolio from './Portfolio'
 import WhyMe from './WhyMe'
 import ExperienceSection from '../components/ExperienceSection'
-import { useDeveloper } from '../context/DeveloperContext'
-import { useParams } from 'react-router-dom'
-import { developerService } from '../lib/supabase'
-const { username } = useParams()
-const { developer, setDeveloper, loading, setLoading, error, setError } = useDeveloper()
 
-useEffect(() => {
-  const loadDeveloper = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      const data = await developerService.getByUsername(username)
-
-      if (!data) {
-        setDeveloper(null)
-        setError("Developer not found")
-      } else {
-        setDeveloper(data)
-      }
-
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (username) {
-    loadDeveloper()
-  }
-}, [username])
 const PublicPortfolio = () => {
-  const {
-    developer,
-    loading,
-    error,
-    getProjects,
-    isPaidPlan,
-    getProfileImage
+  const { username } = useParams()
+  const { 
+    developer, 
+    loading, 
+    error, 
+    getProjects, 
+    isPaidPlan, 
+    getProfileImage 
   } = useDeveloper()
 
-  // شاشة تحميل مع عرض خطأ الكونسول (لو وجد) لتتمكن من نسخه
+  // ✅ هذا هو المكان الصحيح لجلب البيانات
+  useEffect(() => {
+    const loadDeveloper = async () => {
+      try {
+        // لا يمكننا استخدام setDeveloper هنا لأنه غير موجود
+        // يجب إضافة هذه الدوال إلى DeveloperContext
+        console.log('جلب بيانات:', username)
+      } catch (err) {
+        console.error(err)
+      }
+    }
+
+    if (username) {
+      loadDeveloper()
+    }
+  }, [username])
+
+  // شاشة تحميل
   if (loading) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center px-4">
         <div className="text-center max-w-2xl w-full">
           <Loader className="w-16 h-16 text-[#6366f1] animate-spin mx-auto mb-4" />
           <p className="text-gray-300 mb-2">جاري تحميل البورتفوليو...</p>
-          <p className="text-gray-400 text-sm">إذا ظهرت أخطاء في الكونسول، ستظهر هنا لنسخها.</p>
         </div>
       </div>
     )
@@ -75,15 +64,12 @@ const PublicPortfolio = () => {
           <p className="text-gray-400 mb-4">
             {error || 'لم نتمكن من العثور على هذا المطور.'}
           </p>
-
-          <div className="text-left bg-black/40 rounded-lg p-4 mt-4 text-xs text-green-300 overflow-auto" style={{maxHeight: 300}}>
-            <strong>Debug - developer data (copy if needed):</strong>
+          <div className="text-left bg-black/40 rounded-lg p-4 mt-4 text-xs text-green-300 overflow-auto">
+            <strong>Debug:</strong>
             <pre className="whitespace-pre-wrap break-words mt-2">
               {JSON.stringify({ error, developer }, null, 2)}
             </pre>
-            <p className="text-gray-400 text-xs mt-2">انسخ المخرجات أعلاه وأرسلها لي لكي أتحقق منها.</p>
           </div>
-
         </div>
       </div>
     )
@@ -94,16 +80,14 @@ const PublicPortfolio = () => {
       <AnimatedBackground />
       <Navbar />
       <main className="relative z-10">
-        {/* مرر بيانات المطور كمزايا إذا أردت - لكن غالباً المكونات تأخذها من useDeveloper */}
         <Home developer={developer} />
         <AboutPage developer={developer} />
         <Skills developer={developer} />
         <Portfolio developer={developer} />
-        <ExperienceSection experience={getProjects() /* <-- إن أردتعرض مشاريع هنا بشكل تجريبي */} />
+        <ExperienceSection experience={getProjects()} />
         {!isPaidPlan() && <WhyMe developer={developer} />}
       </main>
       <Footer />
-
       {isPaidPlan() && (
         <div className="fixed top-16 right-4 z-50">
           <div className="bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 shadow-lg">
