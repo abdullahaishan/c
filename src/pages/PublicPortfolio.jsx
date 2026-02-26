@@ -30,7 +30,6 @@ const PublicPortfolio = () => {
         if (!mounted) return;
         
         if (!data) {
-          // ✅ فقط هنا يظهر الخطأ - عندما لا يوجد مطور
           setError('المطور غير موجود');
         } else {
           console.log('✅ تم التحميل:', data);
@@ -38,7 +37,6 @@ const PublicPortfolio = () => {
         }
       } catch (err) {
         console.error('❌ خطأ:', err);
-        // ✅ فقط أخطاء حقيقية في الاتصال
         setError('فشل في تحميل البورتفليو');
       } finally {
         setLoading(false);
@@ -50,14 +48,12 @@ const PublicPortfolio = () => {
     return () => { mounted = false; };
   }, [username]);
 
-  // ✅ صفحة التحميل - تظهر ثم تختفي تلقائياً
+  // ✅ صفحة التحميل الاحترافية
   if (loading) {
     return <LoadingPortfolio username={username} />;
   }
 
-  // ✅ صفحة الخطأ - تظهر فقط إذا:
-  // 1. المطور غير موجود في قاعدة البيانات
-  // 2. أو حدث خطأ في الاتصال
+  // ✅ صفحة الخطأ
   if (error || !developer) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center p-4">
@@ -66,9 +62,7 @@ const PublicPortfolio = () => {
             <AlertCircle className="w-10 h-10 text-red-400" />
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">المطور غير موجود</h2>
-          <p className="text-gray-400 mb-6">
-            {error || 'لا يوجد مطور بهذا الاسم'}
-          </p>
+          <p className="text-gray-400 mb-6">{error || 'لا يوجد مطور بهذا الاسم'}</p>
           <a
             href="/"
             className="inline-block px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg hover:scale-105 transition-all"
@@ -80,7 +74,7 @@ const PublicPortfolio = () => {
     );
   }
 
-  // ✅ صفحة النجاح - تظهر فقط إذا وجد المطور
+  // ✅ صفحة النجاح
   return (
     <>
       <AnimatedBackground />
