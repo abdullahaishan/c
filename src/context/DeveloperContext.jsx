@@ -16,10 +16,12 @@ export const DeveloperProvider = ({ children }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
+  // ✅ إضافة دوال التحكم
+  const setDeveloperData = (data) => setDeveloper(data)
+  const setLoadingState = (state) => setLoading(state)
+  const setErrorState = (err) => setError(err)
 
-  // ===========================================
-  // دوال مساعدة للوصول للبيانات بسهولة
-  // ===========================================
+  // دوال مساعدة
   const getProjects = () => developer?.projects || []
   const getSkills = () => developer?.skills || []
   const getCertificates = () => developer?.certificates || []
@@ -59,7 +61,9 @@ export const DeveloperProvider = ({ children }) => {
     developer,
     loading,
     error,
-    isPublicPage,
+    setDeveloper: setDeveloperData,
+    setLoading: setLoadingState,
+    setError: setErrorState,
     getProjects,
     getSkills,
     getCertificates,
