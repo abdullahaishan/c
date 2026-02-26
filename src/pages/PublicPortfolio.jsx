@@ -1,3 +1,4 @@
+import ExperienceSection from '../components/ExperienceSection'
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { developerService } from '../lib/supabase';
