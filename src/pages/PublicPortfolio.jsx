@@ -90,7 +90,7 @@ const PublicPortfolio = () => {
         <AboutPage developer={developer} />
         <Skills developer={developer} />
         <Portfolio developer={developer} />
-        
+        <ExperienceSection />
         {/* WhyMe يظهر فقط للباقة المجانية */}
         {!isPaidPlan() && <WhyMe developer={developer} />}
       </main>
