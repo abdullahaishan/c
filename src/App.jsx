@@ -32,19 +32,10 @@ import NotFound from './pages/NotFound'
 // صفحات المشروع
 import ProjectDetail from './components/ProjectDetail'
 
-// Provider
-import { DeveloperProvider } from './context/DeveloperContext'
+// Providers
+import { DeveloperProvider } from './context/DeveloperContext' // <<-- وضعنا الـ Provider داخل الـ Router الآن
 import { useAuth } from './hooks/useAuth'
-import { useParams } from "react-router-dom"
-const PublicPortfolioWrapper = () => {
-  const { username } = useParams()
 
-  return (
-    <DeveloperProvider username={username}>
-      <PublicPortfolio />
-    </DeveloperProvider>
-  )
-}
 const AppRoutes = () => {
   const [showWelcome, setShowWelcome] = useState(true)
   const { user, loading } = useAuth()
@@ -67,8 +58,7 @@ const AppRoutes = () => {
 
       {!showWelcome && (
         <Routes>
-
-          {/* الصفحة الرئيسية */}
+          {/* الصفحة الرئيسية - توجيه ذكي */}
           <Route 
             path="/" 
             element={
@@ -76,17 +66,14 @@ const AppRoutes = () => {
             } 
           />
           
-          {/* المصادقة */}
+          {/* مسارات المصادقة */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-
-          {/* ⭐ الصفحة العامة للمطور — نلفها فقط بالـ Provider */}
-          <Route 
-  path="/u/:username" 
-  element={<PublicPortfolioWrapper />} 
-/>
           
-          {/* تفاصيل مشروع */}
+          {/* الصفحة العامة للمطور */}
+          <Route path="/u/:username" element={<PublicPortfolio />} />
+          
+          {/* صفحة تفاصيل المشروع */}
           <Route path="/project/:id" element={<ProjectDetail />} />
           
           {/* AI Builder */}
@@ -119,6 +106,7 @@ const AppRoutes = () => {
             <Route path="messages" element={<Messages />} />
           </Route>
           
+          {/* صفحة 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       )}
@@ -128,8 +116,11 @@ const AppRoutes = () => {
 
 function App() {
   return (
+    // === المهم: BrowserRouter أولاً، ثم Provider (حتى useParams تعمل داخل الـ Provider) ===
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <AppRoutes />
+      <DeveloperProvider>
+        <AppRoutes />
+      </DeveloperProvider>
     </BrowserRouter>
   )
 }
