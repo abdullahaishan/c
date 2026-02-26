@@ -2,7 +2,6 @@ import React from 'react';
 import { Heart, Github, Linkedin, Twitter, Instagram, Facebook, Youtube, Mail } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDeveloper } from '../context/DeveloperContext';
-
 const Footer = () => {
   const navigate = useNavigate();
   const currentYear = new Date().getFullYear();
