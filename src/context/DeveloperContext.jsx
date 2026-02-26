@@ -1,5 +1,4 @@
 import React, { createContext, useState, useContext, useEffect } from 'react'
-import { useParams, useLocation } from 'react-router-dom'
 import { developerService } from '../lib/supabase'
 
 const DeveloperContext = createContext()
@@ -13,58 +12,10 @@ export const useDeveloper = () => {
 }
 
 export const DeveloperProvider = ({ children }) => {
-  // نحصل على username من المسار (يتطلب أن يكون داخل Router)
-  const { username } = useParams()
-  const location = useLocation()
   const [developer, setDeveloper] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  // نعتبر أن الصفحة عامة إذا المسار يبدأ بـ /u/
-  const isPublicPage = location.pathname.startsWith('/u/')
-
-  useEffect(() => {
-    // إذا لم تكن صفحة عامة فلا نفعل شيئًا
-    if (!isPublicPage) return
-    if (!username) return
-
-    const loadDeveloper = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        console.log('📥 جلب بيانات المطور:', username)
-        
-        const data = await developerService.getByUsername(username)
-        console.log('📦 بيانات المطور:', data)
-        
-        if (!data) {
-          setDeveloper(null)
-          setError('Developer not found')
-        } else {
-          setDeveloper(data)
-          setError(null)
-          // تسجيل زيارة (غير حرج لو فشل)
-          try {
-            await developerService.trackVisit(data.id, {
-              visitor_ip: null,
-              visitor_country: null,
-              visitor_city: null
-            })
-          } catch (e) {
-            console.warn('trackVisit failed', e)
-          }
-        }
-      } catch (err) {
-        console.error('❌ خطأ في جلب المطور:', err)
-        setDeveloper(null)
-        setError(err.message || 'Failed to load developer')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadDeveloper()
-  }, [username, isPublicPage])
 
   // ===========================================
   // دوال مساعدة للوصول للبيانات بسهولة
