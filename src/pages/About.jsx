@@ -1,4 +1,4 @@
-import React, { useEffect, memo, useMemo } from "react";
+import React, { useEffect, memo, useMemo, useState } from "react";
 import {
   FileText,
   Code,
@@ -6,306 +6,417 @@ import {
   Globe,
   ArrowUpRight,
   Sparkles,
-  UserCheck,
+  Users,
+  ChevronLeft,
+  ChevronRight,
+  User,
+  Star
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import { useDeveloper } from '../context/DeveloperContext';
+import { supabase } from '../lib/supabase';
 
-// Memoized Components
-const Header = memo(() => (
-  <div className="text-center lg:mb-8 mb-2 px-[5%]">
-    <div className="inline-block relative group">
-      <h2
-        className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
-        data-aos="zoom-in-up"
-        data-aos-duration="600"
-      >
-        About Me
-      </h2>
-    </div>
-    <p
-      className="mt-2 text-gray-400 max-w-2xl mx-auto text-base sm:text-lg flex items-center justify-center gap-2"
-      data-aos="zoom-in-up"
-      data-aos-duration="800"
-    >
-      <Sparkles className="w-5 h-5 text-purple-400" />
-      Transforming ideas into digital experiences
-      <Sparkles className="w-5 h-5 text-purple-400" />
-    </p>
-  </div>
-));
-
-const ProfileImage = memo(({ image }) => (
-  <div className="flex justify-end items-center sm:p-12 sm:py-0 sm:pb-0 p-0 py-2 pb-2">
-    <div className="relative group" data-aos="fade-up" data-aos-duration="1000">
-      {/* Optimized gradient backgrounds with reduced complexity for mobile */}
-      <div className="absolute -inset-6 opacity-[25%] z-0 hidden sm:block">
-        <div className="absolute inset-0 bg-gradient-to-r from-violet-600 via-indigo-500 to-purple-600 rounded-full blur-2xl animate-spin-slower" />
-        <div className="absolute inset-0 bg-gradient-to-l from-fuchsia-500 via-rose-500 to-pink-600 rounded-full blur-2xl animate-pulse-slow opacity-50" />
-        <div className="absolute inset-0 bg-gradient-to-t from-blue-600 via-cyan-500 to-teal-400 rounded-full blur-2xl animate-float opacity-50" />
-      </div>
-      <div className="relative">
-        <div className="w-72 h-72 sm:w-80 sm:h-80 rounded-full overflow-hidden shadow-[0_0_40px_rgba(120,119,198,0.3)] transform transition-all duration-700 group-hover:scale-105">
-          <div className="absolute inset-0 border-4 border-white/20 rounded-full z-20 transition-all duration-700 group-hover:border-white/40 group-hover:scale-105" />
-
-          {/* Optimized overlay effects - disabled on mobile */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/40 z-10 transition-opacity duration-700 group-hover:opacity-0 hidden sm:block" />
-          <div className="absolute inset-0 bg-gradient-to-t from-purple-500/20 via-transparent to-blue-500/20 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-700 hidden sm:block" />
-
-          <img
-            src={image}
-            alt="Profile"
-            className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110 group-hover:rotate-2"
-            loading="lazy"
-          />
-
-          {/* Advanced hover effects - desktop only */}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 z-20 hidden sm:block">
-            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-            <div className="absolute inset-0 bg-gradient-to-bl from-transparent via-white/10 to-transparent transform translate-y-full group-hover:-translate-y-full transition-transform duration-1000 delay-100" />
-            <div className="absolute inset-0 rounded-full border-8 border-white/10 scale-0 group-hover:scale-100 transition-transform duration-700 animate-pulse-slow" />
+// مكون بطاقة المطور المقترح
+const DeveloperCard = memo(({ developer }) => {
+  const [imageError, setImageError] = useState(false);
+  
+  return (
+    <Link to={`/u/${developer.username}`} className="block group">
+      <div className="bg-white/5 rounded-2xl p-4 border border-white/10 hover:border-[#6366f1]/50 transition-all duration-300 hover:scale-105">
+        <div className="flex flex-col items-center text-center">
+          {/* الصورة الشخصية */}
+          <div className="relative mb-3">
+            <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[#6366f1]/30 group-hover:border-[#a855f7] transition-all">
+              {!imageError && developer.profile_image ? (
+                <img
+                  src={developer.profile_image}
+                  alt={developer.full_name}
+                  className="w-full h-full object-cover"
+                  onError={() => setImageError(true)}
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7] flex items-center justify-center">
+                  <User className="w-8 h-8 text-white" />
+                </div>
+              )}
+            </div>
+            {/* أيقونة المهارات المشتركة */}
+            {developer.matchScore > 70 && (
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-[#030014]">
+                <Star className="w-3 h-3 text-white fill-white" />
+              </div>
+            )}
           </div>
+          
+          {/* الاسم */}
+          <h4 className="text-white font-semibold mb-1 line-clamp-1">
+            {developer.full_name || developer.username}
+          </h4>
+          
+          {/* اسم المستخدم */}
+          <p className="text-xs text-gray-400 mb-2">@{developer.username}</p>
+          
+          {/* المسمى الوظيفي */}
+          {developer.title && (
+            <p className="text-xs text-gray-300 mb-3 line-clamp-1">{developer.title}</p>
+          )}
+          
+          {/* نسبة التوافق (إذا وجدت) */}
+          {developer.matchScore && (
+            <div className="w-full mt-2">
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="text-gray-400">توافق</span>
+                <span className="text-[#a855f7]">{developer.matchScore}%</span>
+              </div>
+              <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
+                  style={{ width: `${developer.matchScore}%` }}
+                />
+              </div>
+            </div>
+          )}
+          
+          {/* زر العرض */}
+          <button className="mt-3 w-full py-2 text-xs bg-white/5 rounded-lg text-gray-300 hover:bg-white/10 transition-all">
+            عرض البورتفليو
+          </button>
         </div>
       </div>
-    </div>
-  </div>
-));
+    </Link>
+  );
+});
 
-const StatCard = memo(
-  ({ icon: Icon, color, value, label, description, animation }) => (
-    <div
-      data-aos={animation}
-      data-aos-duration={1300}
-      className="relative group"
-    >
-      <div className="relative z-10 bg-gray-900/50 backdrop-blur-lg rounded-2xl p-6 border border-white/10 overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl h-full flex flex-col justify-between">
-        <div
-          className={`absolute -z-10 inset-0 bg-gradient-to-br ${color} opacity-10 group-hover:opacity-20 transition-opacity duration-300`}
-        ></div>
+// مكون شريط المطورين الأفقي
+const DevelopersSlider = memo(({ developers, title }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const itemsPerView = window.innerWidth < 768 ? 2 : 4;
+  const maxIndex = Math.max(0, developers.length - itemsPerView);
 
-        <div className="flex items-center justify-between mb-4">
-          <div className="w-16 h-16 rounded-full flex items-center justify-center bg-white/10 transition-transform group-hover:rotate-6">
-            <Icon className="w-8 h-8 text-white" />
-          </div>
-          <span
-            className="text-4xl font-bold text-white"
-            data-aos="fade-up-left"
-            data-aos-duration="1500"
-            data-aos-anchor-placement="top-bottom"
+  const nextSlide = () => {
+    setCurrentIndex(prev => Math.min(prev + 1, maxIndex));
+  };
+
+  const prevSlide = () => {
+    setCurrentIndex(prev => Math.max(prev - 1, 0));
+  };
+
+  if (developers.length === 0) return null;
+
+  return (
+    <div className="mt-12">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+          <Users className="w-5 h-5 text-[#6366f1]" />
+          {title}
+        </h3>
+        
+        {/* أزرار التنقل */}
+        <div className="flex gap-2">
+          <button
+            onClick={prevSlide}
+            disabled={currentIndex === 0}
+            className={`p-2 rounded-lg transition-all ${
+              currentIndex === 0
+                ? 'bg-white/5 text-gray-600 cursor-not-allowed'
+                : 'bg-white/10 text-gray-400 hover:text-white hover:bg-white/20'
+            }`}
           >
-            {value}
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <button
+            onClick={nextSlide}
+            disabled={currentIndex >= maxIndex}
+            className={`p-2 rounded-lg transition-all ${
+              currentIndex >= maxIndex
+                ? 'bg-white/5 text-gray-600 cursor-not-allowed'
+                : 'bg-white/10 text-gray-400 hover:text-white hover:bg-white/20'
+            }`}
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* شريط المطورين */}
+      <div className="relative overflow-hidden">
+        <div
+          className="flex gap-4 transition-transform duration-500 ease-in-out"
+          style={{ transform: `translateX(-${currentIndex * (100 / itemsPerView)}%)` }}
+        >
+          {developers.map((dev) => (
+            <div
+              key={dev.id}
+              className="flex-shrink-0"
+              style={{ width: `calc(${100 / itemsPerView}% - 12px)` }}
+            >
+              <DeveloperCard developer={dev} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* نقاط التصفح للموبايل */}
+      <div className="flex justify-center gap-1 mt-4 md:hidden">
+        {Array.from({ length: maxIndex + 1 }).map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrentIndex(i)}
+            className={`w-2 h-2 rounded-full transition-all ${
+              i === currentIndex
+                ? 'w-4 bg-[#a855f7]'
+                : 'bg-white/20 hover:bg-white/40'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+});
+
+// مكون بطاقة المهارة
+const SkillCard = memo(({ skill }) => {
+  return (
+    <div className="bg-white/5 rounded-xl p-4 border border-white/10 hover:border-[#6366f1]/50 transition-all group">
+      <div className="flex items-center gap-3 mb-3">
+        <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${skill.color || 'from-blue-500 to-cyan-500'} flex items-center justify-center`}>
+          <span className="text-white font-bold text-lg">
+            {skill.name.charAt(0)}
           </span>
         </div>
-
         <div>
-          <p
-            className="text-sm uppercase tracking-wider text-gray-300 mb-2"
-            data-aos="fade-up"
-            data-aos-duration="800"
-            data-aos-anchor-placement="top-bottom"
-          >
-            {label}
-          </p>
-          <div className="flex items-center justify-between">
-            <p
-              className="text-xs text-gray-400"
-              data-aos="fade-up"
-              data-aos-duration="1000"
-              data-aos-anchor-placement="top-bottom"
-            >
-              {description}
-            </p>
-            <ArrowUpRight className="w-4 h-4 text-white/50 group-hover:text-white transition-colors" />
-          </div>
+          <h4 className="text-white font-semibold">{skill.name}</h4>
+          <p className="text-xs text-gray-400">{skill.category}</p>
         </div>
       </div>
-    </div>
-  )
-);
 
+      {skill.description && (
+        <p className="text-sm text-gray-300 mb-3 line-clamp-2">
+          {skill.description}
+        </p>
+      )}
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-gray-400">نسبة الإتقان</span>
+          <span className="text-white">{skill.proficiency}%</span>
+        </div>
+        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div
+            className={`h-full bg-gradient-to-r ${skill.color || 'from-blue-500 to-cyan-500'}`}
+            style={{ width: `${skill.proficiency}%` }}
+          />
+        </div>
+      </div>
+
+      {skill.years_of_experience > 0 && (
+        <div className="mt-3 text-xs text-gray-400">
+          {skill.years_of_experience} سنة خبرة
+        </div>
+      )}
+    </div>
+  );
+});
+
+// المكون الرئيسي
 const AboutPage = ({ developer: propDeveloper }) => {
   const context = useDeveloper();
   const developer = propDeveloper || context.publicDeveloper;
-  const { getProfileImage, getProjects, getCertificates, getExperience } = context;
+  const {
+    getProfileImage,
+    getProjects,
+    getCertificates,
+    getSkills,
+    getExperience,
+    getTotalExperienceYears,
+    isFreePlan
+  } = context;
 
-  // Memoized calculations
+  const [similarDevelopers, setSimilarDevelopers] = useState([]);
+  const [loadingDevelopers, setLoadingDevelopers] = useState(false);
+
+  // حساب الإحصائيات
   const stats = useMemo(() => {
     const projects = getProjects();
     const certificates = getCertificates();
-    const experience = getExperience();
-
-    // حساب سنوات الخبرة
-    let totalYears = 0;
-    experience?.forEach(exp => {
-      if (exp.start_date) {
-        const start = new Date(exp.start_date);
-        const end = exp.is_current ? new Date() : new Date(exp.end_date);
-        const years = (end - start) / (1000 * 60 * 60 * 24 * 365);
-        totalYears += years;
-      }
-    });
+    const skills = getSkills();
+    const totalYears = getTotalExperienceYears();
 
     return {
       projects: projects?.length || 0,
       certificates: certificates?.length || 0,
-      experience: Math.round(totalYears * 10) / 10 || 0
+      skills: skills?.length || 0,
+      experience: totalYears || 0
     };
   }, [developer]);
 
-  // Optimized AOS initialization
+  // جلب مطورين مشابهين (للباقة المجانية)
   useEffect(() => {
-    const initAOS = () => {
-      AOS.init({
-        once: false,
-      });
+    if (!isFreePlan() || !developer) return;
+
+    const fetchSimilarDevelopers = async () => {
+      setLoadingDevelopers(true);
+      try {
+        // جلب مطورين عشوائيين أو بناءً على نفس المهارات
+        const { data, error } = await supabase
+          .from('developers')
+          .select(`
+            id,
+            username,
+            full_name,
+            title,
+            profile_image,
+            skills!inner(name, proficiency)
+          `)
+          .neq('id', developer.id)
+          .eq('is_active', true)
+          .limit(8);
+
+        if (error) throw error;
+
+        // حساب نسبة التوافق مع المطور الحالي
+        const currentSkills = getSkills().map(s => s.name);
+        const developersWithMatch = data?.map(dev => {
+          const devSkills = dev.skills?.map(s => s.name) || [];
+          const commonSkills = devSkills.filter(s => currentSkills.includes(s));
+          const matchScore = currentSkills.length > 0
+            ? Math.round((commonSkills.length / currentSkills.length) * 100)
+            : 50;
+
+          return {
+            ...dev,
+            matchScore: Math.min(matchScore, 100)
+          };
+        }).sort((a, b) => b.matchScore - a.matchScore);
+
+        setSimilarDevelopers(developersWithMatch || []);
+      } catch (error) {
+        console.error('Error fetching similar developers:', error);
+      } finally {
+        setLoadingDevelopers(false);
+      }
     };
 
-    initAOS();
+    fetchSimilarDevelopers();
+  }, [developer, isFreePlan]);
 
-    let resizeTimer;
-    const handleResize = () => {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(initAOS, 250);
-    };
+  // الحصول على المهارات مع الألوان
+  const skills = getSkills();
 
-    window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      clearTimeout(resizeTimer);
-    };
+  useEffect(() => {
+    AOS.init({ once: false });
   }, []);
 
-  // Memoized stats data
-  const statsData = useMemo(
-    () => [
-      {
-        icon: Code,
-        color: "from-[#6366f1] to-[#a855f7]",
-        value: stats.projects,
-        label: "Total Projects",
-        description: "Innovative web solutions crafted",
-        animation: "fade-right",
-      },
-      {
-        icon: Award,
-        color: "from-[#a855f7] to-[#6366f1]",
-        value: stats.certificates,
-        label: "Certificates",
-        description: "Professional skills validated",
-        animation: "fade-up",
-      },
-      {
-        icon: Globe,
-        color: "from-[#6366f1] to-[#a855f7]",
-        value: stats.experience,
-        label: "Years of Experience",
-        description: "Continuous learning journey",
-        animation: "fade-left",
-      },
-    ],
-    [stats]
-  );
-
   return (
-    <div
-      className="h-auto pb-[10%] text-white overflow-hidden px-[5%] sm:px-[5%] lg:px-[10%] mt-10 sm-mt-0"
-      id="About"
-    >
-      <Header />
+    <div className="relative min-h-screen bg-[#030014] overflow-hidden" id="About">
+      <div className="container mx-auto px-[5%] py-20">
+        {/* الهيدر */}
+        <div className="text-center mb-12" data-aos="fade-up">
+          <h2 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6366f1] to-[#a855f7] mb-4">
+            About Me
+          </h2>
+          <p className="text-gray-400 max-w-2xl mx-auto">
+            Transforming ideas into digital experiences
+          </p>
+        </div>
 
-      <div className="w-full mx-auto pt-8 sm:pt-12 relative">
-        <div className="flex flex-col-reverse lg:grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-          <div className="space-y-6 text-center lg:text-left">
-            <h2
-              className="text-3xl sm:text-4xl lg:text-5xl font-bold"
-              data-aos="fade-right"
-              data-aos-duration="1000"
-            >
+        {/* القسم التعريفي */}
+        <div className="grid lg:grid-cols-2 gap-12 items-center mb-16">
+          <div className="space-y-6" data-aos="fade-right">
+            <h3 className="text-3xl font-bold text-white">
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#6366f1] to-[#a855f7]">
                 Hello, I'm
               </span>
-              <span
-                className="block mt-2 text-gray-200"
-                data-aos="fade-right"
-                data-aos-duration="1300"
-              >
+              <span className="block mt-2">
                 {developer?.full_name || "Developer Name"}
               </span>
-            </h2>
+            </h3>
 
-            <p
-              className="text-base sm:text-lg lg:text-xl text-gray-400 leading-relaxed text-justify pb-4 sm:pb-0"
-              data-aos="fade-right"
-              data-aos-duration="1500"
-            >
+            <p className="text-gray-300 leading-relaxed">
               {developer?.bio || "Passionate developer with expertise in creating innovative web solutions. Committed to delivering high-quality work and continuously learning new technologies."}
             </p>
 
-            <div className="flex flex-col lg:flex-row items-center lg:items-start gap-4 lg:gap-4 lg:px-0 w-full">
+            <div className="flex flex-wrap gap-4">
               <a
                 href={developer?.resume_file || "#"}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full lg:w-auto"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-105 transition-all"
               >
-                <button
-                  data-aos="fade-up"
-                  data-aos-duration="800"
-                  className="w-full lg:w-auto sm:px-6 py-2 sm:py-3 rounded-lg bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white font-medium transition-all duration-300 hover:scale-105 flex items-center justify-center lg:justify-start gap-2 shadow-lg hover:shadow-xl animate-bounce-slow"
-                >
-                  <FileText className="w-4 h-4 sm:w-5 sm:h-5" /> Download CV
-                </button>
+                <FileText className="w-5 h-5" />
+                Download CV
               </a>
-              <a href="#Portofolio" className="w-full lg:w-auto">
-                <button
-                  data-aos="fade-up"
-                  data-aos-duration="1000"
-                  className="w-full lg:w-auto sm:px-6 py-2 sm:py-3 rounded-lg border border-[#a855f7]/50 text-[#a855f7] font-medium transition-all duration-300 hover:scale-105 flex items-center justify-center lg:justify-start gap-2 hover:bg-[#a855f7]/10 animate-bounce-slow delay-200"
-                >
-                  <Code className="w-4 h-4 sm:w-5 sm:h-5" /> View Projects
-                </button>
-              </a>
+            </div>
+
+            {/* إحصائيات سريعة */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-[#a855f7]">{stats.projects}</div>
+                <div className="text-xs text-gray-400">مشاريع</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-[#a855f7]">{stats.certificates}</div>
+                <div className="text-xs text-gray-400">شهادات</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-[#a855f7]">{stats.skills}</div>
+                <div className="text-xs text-gray-400">مهارات</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-[#a855f7]">{stats.experience}</div>
+                <div className="text-xs text-gray-400">سنوات خبرة</div>
+              </div>
             </div>
           </div>
 
-          <ProfileImage image={getProfileImage()} />
+          {/* الصورة الشخصية */}
+          <div className="relative" data-aos="fade-left">
+            <div className="relative w-72 h-72 mx-auto">
+              <div className="absolute inset-0 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-full blur-3xl opacity-30"></div>
+              <img
+                src={getProfileImage()}
+                alt="Profile"
+                className="relative w-full h-full object-cover rounded-full border-4 border-white/10"
+              />
+            </div>
+          </div>
         </div>
 
-        <a href="#Portofolio">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16 cursor-pointer">
-            {statsData.map((stat) => (
-              <StatCard key={stat.label} {...stat} />
-            ))}
+        {/* قسم المهارات - بطاقات جميلة */}
+        {skills.length > 0 && (
+          <div className="mb-16">
+            <h3 className="text-2xl font-bold text-white mb-8 text-center" data-aos="fade-up">
+              المهارات التقنية
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {skills.map((skill, index) => (
+                <div key={skill.id} data-aos="fade-up" data-aos-delay={index * 100}>
+                  <SkillCard skill={skill} />
+                </div>
+              ))}
+            </div>
           </div>
-        </a>
-      </div>
+        )}
 
-      <style jsx>{`
-        @keyframes float {
-          0%,
-          100% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-20px);
-          }
-        }
-        @keyframes spin-slower {
-          to {
-            transform: rotate(360deg);
-          }
-        }
-        .animate-bounce-slow {
-          animation: bounce 3s infinite;
-        }
-        .animate-pulse-slow {
-          animation: pulse 3s infinite;
-        }
-        .animate-spin-slower {
-          animation: spin-slower 8s linear infinite;
-        }
-      `}</style>
+        {/* مطورين مقترحين - فقط للباقة المجانية */}
+        {isFreePlan() && similarDevelopers.length > 0 && (
+          <DevelopersSlider
+            developers={similarDevelopers}
+            title="مطورين قد يهمونك"
+          />
+        )}
+
+        {/* إشعار الباقة المجانية */}
+        {isFreePlan() && (
+          <div className="mt-8 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-center">
+            <p className="text-yellow-400 text-sm">
+              ✨ أنت تستخدم الباقة المجانية - يتم عرض مطورين مقترحين بناءً على مهاراتك
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
