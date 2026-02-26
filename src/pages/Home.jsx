@@ -1,13 +1,5 @@
 import React, { useState, useEffect, memo } from "react";
 import {
-  Github,
-  Linkedin,
-  Mail,
-  ExternalLink,
-  Instagram,
-  Facebook,
-  Youtube,
-  Twitter,
   Download
 } from "lucide-react";
 import AOS from "aos";
@@ -86,34 +78,24 @@ const ProfileImage = memo(({ image }) => {
 
   return (
     <div className="relative group">
-      {/* glow effect */}
       <div className={`absolute inset-0 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-full blur-3xl transition-all duration-700 ${
         isMobile ? 'opacity-10' : 'opacity-20 group-hover:opacity-30'
       }`}></div>
       
-      {/* الصورة */}
       <img
         src={imageSource}
         alt="Profile"
         onError={() => setImageError(true)}
         className={`relative object-cover rounded-full border-4 border-white/10 transition-all duration-700 ${
           isMobile 
-            ? 'w-40 h-40 sm:w-48 sm:h-48'  // أصغر على الموبايل
+            ? 'w-40 h-40 sm:w-48 sm:h-48'
             : 'w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 group-hover:scale-105'
         }`}
       />
-      
-      {/* إشعار الصورة الافتراضية */}
-      {imageError && (
-        <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-gray-500 whitespace-nowrap">
-          Default animation
-        </div>
-      )}
     </div>
   );
 });
 
-// المكون الرئيسي
 const Home = ({ developer: propDeveloper }) => {
   const context = useDeveloper();
   const developer = propDeveloper || context.publicDeveloper;
@@ -128,8 +110,8 @@ const Home = ({ developer: propDeveloper }) => {
   const [isLoaded, setIsLoaded] = useState(false);
 
   const mainSkills = getMainSkills();
-  const socialLinks = getSocialLinks();      // روابط المطور
-  const adminLinks = getAdminSocialLinks();  // روابط الأدمن
+  const socialLinks = getSocialLinks();
+  const adminLinks = getAdminSocialLinks();
   const isFree = isFreePlan();
 
   useEffect(() => {
@@ -145,16 +127,16 @@ const Home = ({ developer: propDeveloper }) => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 min-h-screen flex items-center">
           <div className="flex flex-col-reverse lg:flex-row items-center justify-center gap-6 sm:gap-8 lg:gap-12 w-full py-8 lg:py-0">
             
-            {/* القسم الأيسر - النصوص */}
+            {/* القسم الأيسر */}
             <div className="w-full lg:w-1/2 space-y-4 sm:space-y-5 lg:space-y-6 text-center lg:text-left order-2 lg:order-1">
               
-              {/* الاسم - أحجام متجاوبة */}
+              {/* الاسم */}
               <div data-aos="fade-right" data-aos-delay="200">
                 <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white">
-                  Abdullah Zabin
+                  {developer?.full_name?.split(' ')[0] || 'Abdullah'} 
                 </h1>
                 <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-gray-300 mt-1">
-                  Ali Aishan
+                  {developer?.full_name?.split(' ').slice(1).join(' ') || 'Zabin Ali Aishan'}
                 </h2>
               </div>
 
@@ -163,14 +145,12 @@ const Home = ({ developer: propDeveloper }) => {
                 <AnimatedText skills={mainSkills} />
               </div>
 
-              {/* الوصف - أحجام متجاوبة */}
+              {/* الوصف */}
               <p className="text-xs sm:text-sm md:text-base text-gray-400 leading-relaxed max-w-xl mx-auto lg:mx-0" data-aos="fade-right" data-aos-delay="600">
-                Passionate about technology since 2008, I started programming professionally in 2015.
-                I specialize in cross-platform Flutter development with strong experience integrating
-                backends (PHP, Firebase, MySQL).
+                {developer?.bio || "Passionate about technology since 2008, I started programming professionally in 2015."}
               </p>
 
-              {/* أزرار المشاريع والتواصل - متجاوبة */}
+              {/* أزرار المشاريع والتواصل */}
               <div className="flex gap-2 sm:gap-3 justify-center lg:justify-start" data-aos="fade-right" data-aos-delay="800">
                 <a
                   href="#Portfolio"
@@ -186,13 +166,13 @@ const Home = ({ developer: propDeveloper }) => {
                 </a>
               </div>
 
-              {/* ⭐ روابط التواصل - تظهر حسب الباقة */}
+              {/* روابط التواصل - مع دعم الروابط الغير موجودة */}
               <div data-aos="fade-right" data-aos-delay="1000">
                 <SocialLinks 
-                  links={socialLinks}          // روابط المطور
-                  isPaid={!isFree}              // هل الباقة مدفوعة؟
-                  isFreePlan={isFree}           // هل الباقة مجانية؟
-                  adminLinks={adminLinks}       // روابط الأدمن (للمجاني)
+                  links={socialLinks}
+                  isPaid={!isFree}
+                  isFreePlan={isFree}
+                  adminLinks={adminLinks}
                 />
               </div>
             </div>
