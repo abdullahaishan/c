@@ -3,10 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Code, Sparkles, User, Briefcase, Award, Clock, 
   AlertCircle, CheckCircle, XCircle, Database, Link as LinkIcon,
-  Image, FileText, Loader
+  Image, Loader
 } from 'lucide-react';
-import { loadingTracker } from './LoadingTracker';
-import { developerService } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 
 const LoadingPortfolio = ({ username, onComplete, onError }) => {
   const [progress, setProgress] = useState(0);
@@ -16,79 +15,214 @@ const LoadingPortfolio = ({ username, onComplete, onError }) => {
   const [error, setError] = useState(null);
   const [startTime] = useState(Date.now());
   const [developerId, setDeveloperId] = useState(null);
+  const [results, setResults] = useState({});
 
-  // Tables configuration
+  // Tables configuration with real database queries
   const tables = [
-    { id: 'developers', name: 'Developer Profile', icon: User, weight: 15 },
-    { id: 'skills', name: 'Skills', icon: Code, weight: 20 },
-    { id: 'projects', name: 'Projects', icon: Briefcase, weight: 20 },
-    { id: 'certificates', name: 'Certificates', icon: Award, weight: 15 },
-    { id: 'experience', name: 'Experience', icon: Clock, weight: 15 },
-    { id: 'education', name: 'Education', icon: Database, weight: 10 },
-    { id: 'social_links', name: 'Social Links', icon: LinkIcon, weight: 5 },
+    { 
+      id: 'developers', 
+      name: 'Developer Profile', 
+      icon: User, 
+      query: 'developers',
+      weight: 15,
+      depends: false 
+    },
+    { 
+      id: 'skills', 
+      name: 'Skills', 
+      icon: Code, 
+      query: 'skills',
+      weight: 20,
+      depends: true 
+    },
+    { 
+      id: 'projects', 
+      name: 'Projects', 
+      icon: Briefcase, 
+      query: 'projects',
+      weight: 20,
+      depends: true 
+    },
+    { 
+      id: 'certificates', 
+      name: 'Certificates', 
+      icon: Award, 
+      query: 'certificates',
+      weight: 15,
+      depends: true 
+    },
+    { 
+      id: 'experience', 
+      name: 'Experience', 
+      icon: Clock, 
+      query: 'experience',
+      weight: 15,
+      depends: true 
+    },
+    { 
+      id: 'social_links', 
+      name: 'Social Links', 
+      icon: LinkIcon, 
+      query: 'social_links',
+      weight: 10,
+      depends: true 
+    },
+    { 
+      id: 'profile_image', 
+      name: 'Profile Image', 
+      icon: Image, 
+      query: null,
+      weight: 5,
+      depends: true 
+    },
   ];
 
   useEffect(() => {
     let mounted = true;
+    const loadedData = {};
 
-    const startLoading = async () => {
+    const loadDeveloper = async () => {
       try {
-        // 1. أولاً: جلب الـ developer ID
-        setCurrentStage('Finding developer...');
-        const developer = await developerService.getByUsername(username);
+        // ✅ الخطوة 1: تحميل بيانات المطور (حقيقي)
+        setCurrentStage('Fetching developer profile...');
+        
+        const { data: developer, error: devError } = await supabase
+          .from('developers')
+          .select('*')
+          .eq('username', username)
+          .maybeSingle();
+
+        if (devError) throw devError;
         
         if (!developer) {
-          throw new Error('Developer not found');
+          throw new Error(`Developer "${username}" not found`);
         }
 
-        setDeveloperId(developer.id);
-        setLoadedTables(prev => ({ ...prev, developers: true }));
-
-        // 2. تحميل كل الجداول بالتوازي
-        setCurrentStage('Loading portfolio data...');
+        // حفظ ID المطور لاستخدامه في الجداول الأخرى
+        const devId = developer.id;
+        setDeveloperId(devId);
+        loadedData.developers = developer;
         
-        const results = await loadingTracker.loadAll(developer.id, (progress) => {
-          if (!mounted) return;
-          
-          // تحديث الحالة لكل جدول
-          const { completed, total, currentTable, result } = progress;
-          
-          if (result.success) {
-            setLoadedTables(prev => ({ ...prev, [currentTable]: true }));
-          } else {
-            setFailedTables(prev => ({ ...prev, [currentTable]: true }));
-          }
-          
-          // تحديث شريط التقدم
-          const newProgress = (completed / total) * 100;
-          setProgress(newProgress);
-          
-          // تحديث المرحلة الحالية
-          setCurrentStage(`Loading ${currentTable}...`);
-        });
+        if (mounted) {
+          setLoadedTables(prev => ({ ...prev, developers: true }));
+          setProgress(15);
+          setCurrentStage('Developer loaded ✓');
+        }
 
-        // 3. اكتمل التحميل
+        return devId;
+      } catch (err) {
+        throw err;
+      }
+    };
+
+    const loadTable = async (table, devId) => {
+      if (!mounted) return;
+
+      setCurrentStage(`Loading ${table.name}...`);
+      
+      try {
+        const startTime = Date.now();
+        
+        // ✅ طلب حقيقي لـ Supabase
+        const { data, error, count } = await supabase
+          .from(table.query)
+          .select('*', { count: 'exact' })
+          .eq('developer_id', devId);
+
+        const loadTime = ((Date.now() - startTime) / 1000).toFixed(2);
+
+        if (error) throw error;
+
+        console.log(`✅ ${table.name}: ${data?.length || 0} items (${loadTime}s)`);
+
+        // حفظ النتائج
+        loadedData[table.id] = data || [];
+
+        if (mounted) {
+          setLoadedTables(prev => ({ ...prev, [table.id]: true }));
+          setCurrentStage(`${table.name} loaded ✓`);
+        }
+
+        return { success: true, count: data?.length || 0 };
+      } catch (err) {
+        console.error(`❌ Failed to load ${table.name}:`, err.message);
+        
+        if (mounted) {
+          setFailedTables(prev => ({ ...prev, [table.id]: true }));
+        }
+        
+        return { success: false, error: err.message };
+      }
+    };
+
+    const loadProfileImage = async (imageUrl) => {
+      if (!imageUrl) {
+        if (mounted) {
+          setLoadedTables(prev => ({ ...prev, profile_image: true }));
+        }
+        return { success: true, url: '/Coding.gif' };
+      }
+
+      try {
+        // التحقق من وجود الصورة
+        const response = await fetch(imageUrl, { method: 'HEAD' });
+        if (!response.ok) throw new Error('Image not found');
+        
+        if (mounted) {
+          setLoadedTables(prev => ({ ...prev, profile_image: true }));
+        }
+        
+        return { success: true, url: imageUrl };
+      } catch (err) {
+        console.log('Using default image');
+        if (mounted) {
+          setLoadedTables(prev => ({ ...prev, profile_image: true }));
+        }
+        return { success: true, url: '/Coding.gif' };
+      }
+    };
+
+    const loadAllData = async () => {
+      try {
+        // ✅ 1. تحميل المطور أولاً
+        const devId = await loadDeveloper();
+        if (!devId) return;
+
+        // ✅ 2. تحميل كل الجداول بالتوازي
+        const dependentTables = tables.filter(t => t.depends && t.query);
+        
+        const promises = dependentTables.map(table => loadTable(table, devId));
+        
+        // تنفيذ كل الطلبات بالتوازي
+        await Promise.all(promises);
+
+        // ✅ 3. تحميل الصورة الشخصية
+        const developer = loadedData.developers;
+        await loadProfileImage(developer?.profile_image);
+
+        // ✅ 4. اكتمل التحميل
         if (mounted) {
           setProgress(100);
           setCurrentStage('Complete!');
           
-          console.log('📊 Loading Summary:', results.summary);
+          // تجميع كل النتائج
+          const finalData = {
+            ...loadedData.developers,
+            skills: loadedData.skills || [],
+            projects: loadedData.projects || [],
+            certificates: loadedData.certificates || [],
+            experience: loadedData.experience || [],
+            social_links: loadedData.social_links || [],
+          };
+
+          const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
+          console.log(`✅ Portfolio loaded in ${totalTime}s`);
           
-          // إذا كان هناك جداول فشلت
-          if (results.summary.failed > 0) {
-            onError?.({
-              message: `Failed to load ${results.summary.failed} sections`,
-              failed: results.summary.failedTables,
-              results: results.results
-            });
-          }
-          
-          // نكمل مع البيانات المتوفرة
-          setTimeout(() => onComplete?.(results.results), 500);
+          setTimeout(() => onComplete?.(finalData), 500);
         }
 
       } catch (err) {
-        console.error('❌ Loading error:', err);
+        console.error('❌ Fatal loading error:', err);
         if (mounted) {
           setError(err.message);
           onError?.({ message: err.message, fatal: true });
@@ -96,15 +230,15 @@ const LoadingPortfolio = ({ username, onComplete, onError }) => {
       }
     };
 
-    startLoading();
+    loadAllData();
 
-    // Safety timeout (30 seconds)
+    // Safety timeout (15 seconds)
     const safetyTimeout = setTimeout(() => {
       if (mounted && progress < 100) {
-        setError('Loading took too long');
+        setError('Loading timeout - please check your connection');
         onError?.({ message: 'Loading timeout', timeout: true });
       }
-    }, 30000);
+    }, 15000);
 
     return () => {
       mounted = false;
@@ -114,17 +248,44 @@ const LoadingPortfolio = ({ username, onComplete, onError }) => {
 
   const elapsedSeconds = ((Date.now() - startTime) / 1000).toFixed(1);
 
+  // Error state
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-[#030014] z-50 flex items-center justify-center p-4">
+        <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 max-w-md w-full border border-white/10">
+          <div className="text-center">
+            <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-white mb-2">Loading Failed</h2>
+            <p className="text-gray-400 mb-6">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg hover:scale-105 transition-all"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-[#030014] z-50 flex items-center justify-center overflow-hidden">
-      {/* Background Animation */}
+      {/* Animated Background */}
       <div className="absolute inset-0">
         <motion.div
-          animate={{ x: [0, 100, -50, 0], y: [0, -50, 50, 0] }}
+          animate={{
+            x: [0, 100, -50, 0],
+            y: [0, -50, 50, 0],
+          }}
           transition={{ duration: 20, repeat: Infinity }}
           className="absolute top-20 left-20 w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20"
         />
         <motion.div
-          animate={{ x: [0, -80, 40, 0], y: [0, 60, -30, 0] }}
+          animate={{
+            x: [0, -80, 40, 0],
+            y: [0, 60, -30, 0],
+          }}
           transition={{ duration: 18, repeat: Infinity }}
           className="absolute top-40 right-20 w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-[128px] opacity-20"
         />
@@ -137,6 +298,7 @@ const LoadingPortfolio = ({ username, onComplete, onError }) => {
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.5 }}
           className="text-center mb-8"
         >
           <div className="relative inline-block">
@@ -151,12 +313,13 @@ const LoadingPortfolio = ({ username, onComplete, onError }) => {
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
           className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10"
         >
           {/* Current Stage */}
           <div className="flex items-center gap-4 mb-6">
             <div className="p-3 bg-gradient-to-r from-[#6366f1]/20 to-[#a855f7]/20 rounded-xl">
-              {currentStage.includes('Loading') ? (
+              {progress < 100 ? (
                 <Loader className="w-5 h-5 text-white animate-spin" />
               ) : (
                 <CheckCircle className="w-5 h-5 text-green-400" />
@@ -167,17 +330,13 @@ const LoadingPortfolio = ({ username, onComplete, onError }) => {
                 {currentStage}
               </p>
               <p className="text-xs text-gray-400 mt-1">
-                Time: {elapsedSeconds}s
+                Time: {elapsedSeconds}s • {progress}% complete
               </p>
             </div>
           </div>
 
           {/* Progress Bar */}
           <div className="space-y-2 mb-6">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Overall Progress</span>
-              <span className="text-[#a855f7] font-semibold">{progress}%</span>
-            </div>
             <div className="h-2 bg-white/10 rounded-full overflow-hidden">
               <motion.div
                 className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
@@ -220,44 +379,19 @@ const LoadingPortfolio = ({ username, onComplete, onError }) => {
             ))}
           </div>
 
-          {/* Error Display */}
-          <AnimatePresence>
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl"
-              >
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-red-400 text-sm font-medium mb-2">
-                      {error}
-                    </p>
-                    <button
-                      onClick={() => window.location.reload()}
-                      className="text-xs px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-all"
-                    >
-                      Retry
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Tips */}
+          {/* Loading Tips */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.7 }}
+            transition={{ delay: 1 }}
             className="mt-6 text-center"
           >
             <p className="text-xs text-gray-500">
-              {progress < 30 && '🔍 Fetching developer data...'}
-              {progress >= 30 && progress < 60 && '📦 Loading projects and skills...'}
+              {progress < 30 && '🔍 Fetching developer data from database...'}
+              {progress >= 30 && progress < 60 && '📦 Loading projects and skills from Supabase...'}
               {progress >= 60 && progress < 90 && '✨ Preparing your portfolio...'}
-              {progress >= 90 && '🎯 Almost ready...'}
+              {progress >= 90 && progress < 100 && '🎯 Almost ready...'}
+              {progress === 100 && '✅ Portfolio loaded successfully!'}
             </p>
           </motion.div>
         </motion.div>
