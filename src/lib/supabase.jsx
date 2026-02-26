@@ -137,6 +137,84 @@ export const developerService = {
       }
 
       if (!data) throw new Error('Developer not found')
+هنالك خطاء 
+2026-02-26T23:19:43.011483586Z Run `npm audit` for details.
+2026-02-26T23:19:43.099268674Z ==> Running build command 'npm install --legacy-peer-deps && npm run build'...
+2026-02-26T23:19:44.348647793Z 
+2026-02-26T23:19:44.348670274Z up to date, audited 648 packages in 1s
+2026-02-26T23:19:44.348681464Z 
+2026-02-26T23:19:44.348704275Z 184 packages are looking for funding
+2026-02-26T23:19:44.348735095Z   run `npm fund` for details
+2026-02-26T23:19:44.397851757Z 
+2026-02-26T23:19:44.397884448Z 20 vulnerabilities (5 low, 9 moderate, 6 high)
+2026-02-26T23:19:44.397888288Z 
+2026-02-26T23:19:44.397892758Z To address issues that do not require attention, run:
+2026-02-26T23:19:44.397896998Z   npm audit fix
+2026-02-26T23:19:44.397899068Z 
+2026-02-26T23:19:44.397901238Z To address all issues (including breaking changes), run:
+2026-02-26T23:19:44.397903808Z   npm audit fix --force
+2026-02-26T23:19:44.397919859Z 
+2026-02-26T23:19:44.397922669Z Run `npm audit` for details.
+2026-02-26T23:19:44.538061583Z 
+2026-02-26T23:19:44.538080713Z > portofolio-v5@0.0.0 build
+2026-02-26T23:19:44.538084383Z > vite build
+2026-02-26T23:19:44.538087343Z 
+2026-02-26T23:19:44.728625725Z vite v5.4.10 building for production...
+2026-02-26T23:19:44.780050663Z transforming...
+2026-02-26T23:19:45.034940328Z Browserslist: browsers data (caniuse-lite) is 16 months old. Please run:
+2026-02-26T23:19:45.034959628Z   npx update-browserslist-db@latest
+2026-02-26T23:19:45.034964138Z   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+2026-02-26T23:19:45.64435986Z 
+2026-02-26T23:19:45.644389511Z /grid.svg referenced in /grid.svg didn't resolve at build time, it will remain unchanged to be resolved at runtime
+2026-02-26T23:19:46.541005258Z [plugin:vite:esbuild] [plugin vite:esbuild] src/lib/supabase.jsx: Duplicate key "incrementViews" in object literal
+2026-02-26T23:19:46.541034488Z 125|  
+2026-02-26T23:19:46.541038359Z 126|    // زيادة عدد المشاهدات
+2026-02-26T23:19:46.541041328Z 127|    async incrementViews(id) {
+2026-02-26T23:19:46.541044108Z    |          ^
+2026-02-26T23:19:46.541048179Z 128|      const { error } = await supabase.rpc('increment_views', {
+2026-02-26T23:19:46.541051819Z 129|        developer_id: id
+2026-02-26T23:19:46.541054359Z 
+2026-02-26T23:19:51.561001661Z ✓ 2964 modules transformed.
+2026-02-26T23:19:52.069799932Z rendering chunks...
+2026-02-26T23:19:52.084295449Z computing gzip size...
+2026-02-26T23:19:52.115873824Z dist/index.html                     2.82 kB │ gzip:   0.86 kB
+2026-02-26T23:19:52.115969886Z dist/assets/index-B9ULKg8N.css     98.94 kB │ gzip:  13.67 kB
+2026-02-26T23:19:52.116134189Z dist/assets/index-DrQzXaUj.js   1,232.13 kB │ gzip: 347.76 kB
+2026-02-26T23:19:52.11615726Z 
+2026-02-26T23:19:52.11616128Z (!) Some chunks are larger than 500 kB after minification. Consider:
+2026-02-26T23:19:52.11616356Z - Using dynamic import() to code-split the application
+2026-02-26T23:19:52.11616608Z - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+2026-02-26T23:19:52.11616832Z - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+2026-02-26T23:19:52.116475196Z ✓ built in 7.36s
+2026-02-26T23:19:53.778261989Z ==> Uploading build...
+2026-02-26T23:19:54.124778698Z ==> Your site is live 🎉
+
+وهذا الدالة 
+export const developerService = {
+  async getByUsername(username) {
+    try {
+      // استعلام واحد يجلب المطور + العلاقات
+      const { data, error } = await supabase
+        .from('developers')
+        .select(`
+          *,
+          projects:projects(*),
+          skills:skills(*),
+          experience:experience(*),
+          education:education(*),
+          certificates:certificates(*),
+          social_links:social_links(*)
+        `)
+        .eq('username', username)
+        .eq('is_active', true)
+        .single()
+
+      if (error) {
+        console.error('developerService.getByUsername error:', error)
+        throw error
+      }
+
+      if (!data) throw new Error('Developer not found')
 
       // تحضيرات: تأكد أن الحقول المصفوفية ليست undefined
       data.projects = data.projects || []
@@ -174,14 +252,14 @@ export const developerService = {
     }
   },
 
-  // زيادة عدد المشاهدات (نسخة واحدة فقط - احتفظ بهذه)
+  // زيادة عدد الزيارات (fire-and-forget لتقليل التأخير)
   async incrementViews(id) {
-    // fire-and-forget - لا ننتظر النتيجة
+    // لا ننتظر النتيجة هنا (لا نستخدم await) لكي لا نبطئ العرض
     supabase.rpc('increment_views', { developer_id: id })
       .then(({ error }) => {
-        if (error) console.error('incrementViews error:', error)
+        if (error) console.error('incrementViews rpc error', error)
       })
-      .catch(e => console.error('incrementViews catch:', e))
+      .catch(e => console.error('incrementViews catch', e))
   },
 
   // جلب مطور بواسطة ID
@@ -221,6 +299,9 @@ export const developerService = {
     return data
   },
 
+  // زيادة عدد المشاهدات
+  
+
   // تسجيل زيارة
   async trackVisit(developerId, visitorData) {
     const { error } = await supabase
@@ -232,7 +313,7 @@ export const developerService = {
     
     if (error) console.error('Error tracking visit:', error)
   }
-};
+},
 // ===========================================
 // خدمات الرسائل (Messages)
 // ===========================================
