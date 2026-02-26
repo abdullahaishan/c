@@ -10,7 +10,6 @@ import AnimatedBackground from '../components/AnimatedBackground';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Loader, AlertCircle, User } from 'lucide-react';
-
 const PublicPortfolio = () => {
   const { username } = useParams();
   const [developer, setDeveloper] = useState(null);
