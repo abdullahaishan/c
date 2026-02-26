@@ -18,7 +18,6 @@ const PublicPortfolio = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { isFreePlan, isPaidPlan } = useDeveloper();
-
   useEffect(() => {
     fetchDeveloperData();
   }, [username]);
