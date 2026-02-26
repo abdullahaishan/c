@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { developerService } from '../lib/supabase';
+import { useDeveloper } from '../context/DeveloperContext';
 import Home from './Home';
 import AboutPage from './About';
 import Skills from './Skills';
@@ -9,13 +10,14 @@ import WhyMe from './WhyMe';
 import AnimatedBackground from '../components/AnimatedBackground';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { Loader, AlertCircle } from 'lucide-react';
+import { Loader, AlertCircle, Crown } from 'lucide-react';
 
 const PublicPortfolio = () => {
   const { username } = useParams();
   const [developer, setDeveloper] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { isFreePlan, isPaidPlan } = useDeveloper();
 
   useEffect(() => {
     fetchDeveloperData();
@@ -87,9 +89,21 @@ const PublicPortfolio = () => {
         <AboutPage developer={developer} />
         <Skills developer={developer} />
         <Portfolio developer={developer} />
-        <WhyMe developer={developer} />
+        
+        {/* ⭐ WhyMe يظهر فقط للباقة المجانية */}
+        {isFreePlan() && <WhyMe developer={developer} />}
       </main>
       <Footer />
+      
+      {/* ⭐ شريط علوي للباقة المدفوعة */}
+      {isPaidPlan() && (
+        <div className="fixed top-16 right-4 z-50">
+          <div className="bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-lg">
+            <Crown className="w-3 h-3 sm:w-4 sm:h-4" />
+            Premium Plan
+          </div>
+        </div>
+      )}
     </>
   );
 };
