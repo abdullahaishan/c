@@ -27,17 +27,19 @@ export const DeveloperProvider = ({ children }) => {
       try {
         setLoading(true)
         setError(null)
-        console.log('Loading developer:', username)
+        console.log('📥 جلب بيانات المطور:', username)
         
+        // ✅ استخدام developerService مباشرة
         const data = await developerService.getByUsername(username)
-        console.log('Developer data:', data)
+        console.log('📦 بيانات المطور:', data)
+        
         setDeveloper(data)
         
         if (data) {
           await developerService.incrementViews(data.id)
         }
       } catch (err) {
-        console.error('Error loading developer:', err)
+        console.error('❌ خطأ في جلب المطور:', err)
         setError('Developer not found')
       } finally {
         setLoading(false)
@@ -72,7 +74,11 @@ export const DeveloperProvider = ({ children }) => {
       name: s.name,
       level: s.proficiency || 0,
       category: s.category || 'Other',
-      is_main: s.is_main || false
+      is_main: s.is_main || false,
+      color: s.color || 'from-blue-500 to-cyan-500',
+      description: s.description || '',
+      years_of_experience: s.years_of_experience || 0,
+      icon: s.icon || ''
     }))
   }
   
@@ -105,7 +111,7 @@ export const DeveloperProvider = ({ children }) => {
   const getEducation = () => developer?.education || []
   
   // ===========================================
-  // ⭐ دوال روابط التواصل (الأهم)
+  // ⭐ دوال روابط التواصل - الأهم
   // ===========================================
   const getSocialLinks = () => {
     const links = {}
@@ -119,14 +125,20 @@ export const DeveloperProvider = ({ children }) => {
   const getAdminSocialLinks = () => {
     return {
       github: 'https://github.com/abdullahaishan',
-      linkedin: 'https://linkedin.com/in/abdullah-aishan',
-      instagram: 'https://instagram.com/abdullah_aishan',
+      linkedin: 'https://linkedin.com/in/abdullah.aishan.2025',
+      instagram: 'https://instagram.com/aishan.2025',
       twitter: 'https://twitter.com/abdullah_aishan',
-      facebook: 'https://facebook.com/abdullah.aishan',
+      facebook: 'https://facebook.com/abdullah.aishan.2025',
       youtube: 'https://youtube.com/@abdullah_aishan',
       email: 'mailto:eng.abdullah.z.aishan@gmail.com',
-      website: 'https://portfolio-v5.com'
+      website: 'https://portfolio-v5.com/u/abdullah_aishan'
     }
+  }
+
+  // ✅ دالة للتحقق من وجود رابط معين
+  const hasSocialLink = (platform) => {
+    const links = getSocialLinks()
+    return !!links[platform]
   }
 
   // ===========================================
@@ -187,9 +199,10 @@ export const DeveloperProvider = ({ children }) => {
     // دوال التعليم
     getEducation,
     
-    // ⭐ دوال التواصل
+    // ⭐ دوال التواصل (الأهم)
     getSocialLinks,
     getAdminSocialLinks,
+    hasSocialLink,
     
     // الصورة
     getProfileImage,
