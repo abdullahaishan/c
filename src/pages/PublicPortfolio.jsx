@@ -1,52 +1,26 @@
-import ExperienceSection from '../components/ExperienceSection'
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { developerService } from '../lib/supabase';
+import React from 'react';
 import { useDeveloper } from '../context/DeveloperContext';
 import Home from './Home';
 import AboutPage from './About';
 import Skills from './Skills';
 import Portfolio from './Portfolio';
 import WhyMe from './WhyMe';
+import ExperienceSection from '../components/ExperienceSection';
 import AnimatedBackground from '../components/AnimatedBackground';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Loader, AlertCircle, Crown } from 'lucide-react';
 
 const PublicPortfolio = () => {
-  const { username } = useParams();
-  const [developer, setDeveloper] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const { isPaidPlan } = useDeveloper();
 
-  useEffect(() => {
-    fetchDeveloperData();
-  }, [username]);
+  const {
+    developer,
+    publicLoading,
+    publicError,
+    isPaidPlan
+  } = useDeveloper();
 
-  const fetchDeveloperData = async () => {
-    setLoading(true);
-    try {
-      const data = await developerService.getByUsername(username);
-      
-      if (!data) {
-        setError('Developer not found');
-      } else {
-        setDeveloper(data);
-        await developerService.trackVisit(data.id, {
-          visitor_ip: 'visitor_ip',
-          visitor_country: 'country',
-        });
-      }
-    } catch (err) {
-      console.error('Error fetching developer:', err);
-      setError('Failed to load portfolio');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
+  if (publicLoading) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center">
         <div className="text-center">
@@ -57,7 +31,7 @@ const PublicPortfolio = () => {
     );
   }
 
-  if (error || !developer) {
+  if (publicError || !developer) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center px-4">
         <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 max-w-md w-full text-center border border-white/10">
@@ -65,7 +39,7 @@ const PublicPortfolio = () => {
             <AlertCircle className="w-10 h-10 text-red-400" />
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">
-            {error || 'Developer not found'}
+            {publicError || 'Developer not found'}
           </h1>
           <p className="text-gray-400 mb-6">
             Sorry, we couldn't find a portfolio for this user
@@ -85,17 +59,25 @@ const PublicPortfolio = () => {
     <>
       <AnimatedBackground />
       <Navbar />
+
       <main className="relative z-10">
+
         <Home developer={developer} />
         <AboutPage developer={developer} />
+
         <Skills developer={developer} />
         <Portfolio developer={developer} />
+
+        {/* قسم الخبرات الجديد */}
         <ExperienceSection />
+
         {/* WhyMe يظهر فقط للباقة المجانية */}
         {!isPaidPlan() && <WhyMe developer={developer} />}
+
       </main>
+
       <Footer />
-      
+
       {/* شريط علوي للباقة المدفوعة */}
       {isPaidPlan() && (
         <div className="fixed top-16 right-4 z-50">
