@@ -35,7 +35,16 @@ import ProjectDetail from './components/ProjectDetail'
 // Provider
 import { DeveloperProvider } from './context/DeveloperContext'
 import { useAuth } from './hooks/useAuth'
+import { useParams } from "react-router-dom"
+const PublicPortfolioWrapper = () => {
+  const { username } = useParams()
 
+  return (
+    <DeveloperProvider username={username}>
+      <PublicPortfolio />
+    </DeveloperProvider>
+  )
+}
 const AppRoutes = () => {
   const [showWelcome, setShowWelcome] = useState(true)
   const { user, loading } = useAuth()
@@ -73,13 +82,9 @@ const AppRoutes = () => {
 
           {/* ⭐ الصفحة العامة للمطور — نلفها فقط بالـ Provider */}
           <Route 
-            path="/u/:username" 
-            element={
-              <DeveloperProvider>
-                <PublicPortfolio />
-              </DeveloperProvider>
-            } 
-          />
+  path="/u/:username" 
+  element={<PublicPortfolioWrapper />} 
+/>
           
           {/* تفاصيل مشروع */}
           <Route path="/project/:id" element={<ProjectDetail />} />
