@@ -3,9 +3,14 @@ import { useParams } from 'react-router-dom';
 import { developerService } from '../lib/supabase';
 import Home from './Home';
 import AboutPage from './About';
-import Portofolio from './Portofolio';
+import Portfolio from './Portfolio';
 import ContactPage from './Contact';
+import WhyMe from './WhyMe';
+import AnimatedBackground from '../components/AnimatedBackground';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 import { Loader, AlertCircle, User } from 'lucide-react';
+
 const PublicPortfolio = () => {
   const { username } = useParams();
   const [developer, setDeveloper] = useState(null);
@@ -14,23 +19,23 @@ const PublicPortfolio = () => {
 
   useEffect(() => {
     fetchDeveloperData();
-    
-    // تسجيل الزيارة إذا وجد المطور
-    if (developer?.id) {
-      trackVisit();
-    }
   }, [username]);
 
   const fetchDeveloperData = async () => {
     setLoading(true);
     try {
-      // جلب بيانات المطور مع جميع العلاقات
       const data = await developerService.getByUsername(username);
       
       if (!data) {
         setError('المطور غير موجود');
       } else {
         setDeveloper(data);
+        // تسجيل الزيارة
+        await developerService.trackVisit(data.id, {
+          visitor_ip: 'visitor_ip',
+          visitor_country: 'country',
+          // يمكن إضافة المزيد من البيانات لاحقاً
+        });
       }
     } catch (err) {
       console.error('Error fetching developer:', err);
@@ -38,11 +43,6 @@ const PublicPortfolio = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const trackVisit = async () => {
-    // تسجيل الزيارة (اختياري - يمكن إضافته لاحقاً)
-    console.log('New visit to:', username);
   };
 
   if (loading) {
@@ -80,43 +80,26 @@ const PublicPortfolio = () => {
     );
   }
 
-  // ✅ تمرير بيانات المطور إلى جميع الصفحات عبر props
   return (
-    <div className="bg-[#030014] min-h-screen">
-      {/* شريط تعريف بالمطور (اختياري) */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-black/50 backdrop-blur-md border-b border-white/10 py-2 px-4">
-        <div className="container mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {developer.profile_image ? (
-              <img
-                src={developer.profile_image}
-                alt={developer.full_name}
-                className="w-8 h-8 rounded-full object-cover border border-white/20"
-              />
-            ) : (
-              <div className="w-8 h-8 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-full flex items-center justify-center">
-                <User className="w-4 h-4 text-white" />
-              </div>
-            )}
-            <span className="text-white text-sm font-medium">
-              {developer.full_name || developer.username}
-            </span>
-          </div>
-          <a
-            href="/"
-            className="text-xs text-gray-400 hover:text-white transition-colors"
-          >
-            PortfolioAI
-          </a>
-        </div>
-      </div>
-
-      {/* تمرير البيانات إلى المكونات */}
-      <Home developer={developer} />
-      <AboutPage developer={developer} />
-      <Portofolio developer={developer} />
-      <ContactPage developer={developer} />
-    </div>
+    <>
+      {/* الخلفية المتحركة - في جميع الصفحات */}
+      <AnimatedBackground />
+      
+      {/* شريط التنقل */}
+      <Navbar />
+      
+      {/* المحتوى الرئيسي مع z-index أعلى من الخلفية */}
+      <main className="relative z-10">
+        <Home developer={developer} />
+        <AboutPage developer={developer} />
+        <Portfolio developer={developer} />
+        <WhyMe developer={developer} />
+        <ContactPage developer={developer} />
+      </main>
+      
+      {/* الفوتر */}
+      <Footer developer={developer} />
+    </>
   );
 };
 
