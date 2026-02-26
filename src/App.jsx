@@ -8,12 +8,12 @@ import WelcomeScreen from './pages/WelcomeScreen'
 import LandingPage from './pages/LandingPage'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
-import PublicPortfolio from './pages/PublicPortfolio'
-import ProjectDetail from './components/ProjectDetail';
-
 
 // AI Builder
 import Builder from './pages/Builder'
+
+// الصفحة العامة للمطور
+import PublicPortfolio from './pages/PublicPortfolio'
 
 // صفحات لوحة التحكم
 import ProtectedRoute from './components/ProtectedRoute'
@@ -25,10 +25,12 @@ import Certificates from './pages/dashboard/Certificates'
 import Experience from './pages/dashboard/Experience'
 import Education from './pages/dashboard/Education'
 import Settings from './pages/dashboard/Settings'
-import PlanStatus from './pages/dashboard/PlanStatus'      // ✅ الباقات
-import Messages from './pages/dashboard/Messages'          // ✅ الرسائل
-// import Opportunities from './pages/dashboard/Opportunities' // (اختياري) لوقت لاحق
+import PlanStatus from './pages/dashboard/PlanStatus'
+import Messages from './pages/dashboard/Messages'
 import NotFound from './pages/NotFound'
+
+// صفحات المشروع
+import ProjectDetail from './pages/ProjectDetail'
 
 // Providers
 import { DeveloperProvider } from './context/DeveloperContext'
@@ -63,14 +65,16 @@ const AppRoutes = () => {
               user ? <Navigate to="/dashboard" replace /> : <LandingPage />
             } 
           />
-          // أضف هذا المسار داخل Routes
-<Route path="/u/:username" element={<PublicPortfolio />} />
-          // داخل Routes، أضف:
-<Route path="/project/:id" element={<ProjectDetail />} />
-  
+          
           {/* مسارات المصادقة */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          
+          {/* الصفحة العامة للمطور */}
+          <Route path="/u/:username" element={<PublicPortfolio />} />
+          
+          {/* صفحة تفاصيل المشروع */}
+          <Route path="/project/:id" element={<ProjectDetail />} />
           
           {/* AI Builder */}
           <Route 
@@ -82,7 +86,7 @@ const AppRoutes = () => {
             } 
           />
           
-          {/* لوحة التحكم - جميع المسارات المحمية */}
+          {/* لوحة التحكم */}
           <Route 
             path="/dashboard" 
             element={
@@ -98,9 +102,8 @@ const AppRoutes = () => {
             <Route path="experience" element={<Experience />} />
             <Route path="education" element={<Education />} />
             <Route path="settings" element={<Settings />} />
-            <Route path="plan-status" element={<PlanStatus />} />   {/* ✅ مسار الباقات */}
-            <Route path="messages" element={<Messages />} />         {/* ✅ مسار الرسائل */}
-            {/* <Route path="opportunities" element={<Opportunities />} /> */} 
+            <Route path="plan-status" element={<PlanStatus />} />
+            <Route path="messages" element={<Messages />} />
           </Route>
           
           {/* صفحة 404 */}
