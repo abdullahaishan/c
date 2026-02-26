@@ -1,4 +1,3 @@
-
 import { useParams } from "react-router-dom"
 import React, { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
@@ -34,7 +33,7 @@ import NotFound from './pages/NotFound'
 // صفحات المشروع
 import ProjectDetail from './components/ProjectDetail'
 
-// Providers
+// Provider
 import { DeveloperProvider } from './context/DeveloperContext'
 import { useAuth } from './hooks/useAuth'
 const PublicPortfolioWrapper = () => {
@@ -45,7 +44,7 @@ const PublicPortfolioWrapper = () => {
       <PublicPortfolio />
     </DeveloperProvider>
   )
-}
+  }
 const AppRoutes = () => {
   const [showWelcome, setShowWelcome] = useState(true)
   const { user, loading } = useAuth()
@@ -68,7 +67,8 @@ const AppRoutes = () => {
 
       {!showWelcome && (
         <Routes>
-          {/* الصفحة الرئيسية - توجيه ذكي */}
+
+          {/* الصفحة الرئيسية */}
           <Route 
             path="/" 
             element={
@@ -76,16 +76,17 @@ const AppRoutes = () => {
             } 
           />
           
-          {/* مسارات المصادقة */}
+          {/* المصادقة */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          
-        <Route 
+
+          {/* ⭐ الصفحة العامة للمطور — نلفها فقط بالـ Provider */}
+          <Route 
   path="/u/:username" 
   element={<PublicPortfolioWrapper />} 
 />
           
-          {/* صفحة تفاصيل المشروع */}
+          {/* تفاصيل مشروع */}
           <Route path="/project/:id" element={<ProjectDetail />} />
           
           {/* AI Builder */}
@@ -118,7 +119,6 @@ const AppRoutes = () => {
             <Route path="messages" element={<Messages />} />
           </Route>
           
-          {/* صفحة 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       )}
@@ -128,11 +128,9 @@ const AppRoutes = () => {
 
 function App() {
   return (
-    <DeveloperProvider>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <AppRoutes />
-      </BrowserRouter>
-    </DeveloperProvider>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <AppRoutes />
+    </BrowserRouter>
   )
 }
 
