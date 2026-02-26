@@ -14,12 +14,10 @@ export const useDeveloper = () => {
 }
 
 export const DeveloperProvider = ({ children, username }) => {  const { username } = useParams()
-  const { username } = useParams()
   const [developer, setDeveloper] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  const isPublicPage = window.location.pathname.startsWith('/u/')
 
   
 
