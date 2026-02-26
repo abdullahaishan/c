@@ -15,71 +15,76 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 // خدمات المطورين (Developers)
 // ===========================================
 export const developerService = {
-  // جلب مطور بواسطة اسم المستخدم
-  // جلب مطور بواسطة اسم المستخدم
-async getByUsername(username) {
+  async getByUsername(username) {
+    try {
+      // استعلام واحد يجلب المطور + العلاقات
+      const { data, error } = await supabase
+        .from('developers')
+        .select(`
+          *,
+          projects:projects(*),
+          skills:skills(*),
+          experience:experience(*),
+          education:education(*),
+          certificates:certificates(*),
+          social_links:social_links(*)
+        `)
+        .eq('username', username)
+        .eq('is_active', true)
+        .single()
 
-  const { data: developer, error } = await supabase
-    .from('developers')
-    .select('*')
-    .eq('username', username)
-    .eq('is_active', true)
-    .single()
+      if (error) {
+        console.error('developerService.getByUsername error:', error)
+        throw error
+      }
 
-  if (error || !developer) {
-    throw new Error('Developer not found')
-  }
+      if (!data) throw new Error('Developer not found')
 
-  const developerId = developer.id
+      // تحضيرات: تأكد أن الحقول المصفوفية ليست undefined
+      data.projects = data.projects || []
+      data.skills = data.skills || []
+      data.experience = data.experience || []
+      data.education = data.education || []
+      data.certificates = data.certificates || []
+      data.social_links = data.social_links || []
 
-  const [
-    { data: projects },
-    { data: skills },
-    { data: experience },
-    { data: education },
-    { data: certificates },
-    { data: social_links }
-  ] = await Promise.all([
-    supabase.from('projects')
-      .select('*')
-      .eq('developer_id', developerId)
-      .order('display_order', { ascending: true }),
+      // معالجة profile_image إذا كان مخزناً كمسار داخل الـ storage (وليس URL كامل)
+      const img = data.profile_image
+      if (img && !/^https?:\/\//i.test(img)) {
+        // نعتبره مسار في bucket 'developers'
+        try {
+          const { data: urlObj } = supabase.storage.from('developers').getPublicUrl(img)
+          if (urlObj?.publicUrl) {
+            data.profile_image = urlObj.publicUrl
+          }
+        } catch (e) {
+          console.warn('Failed to get public URL for profile_image', e)
+        }
+      }
 
-    supabase.from('skills')
-      .select('*')
-      .eq('developer_id', developerId)
-      .order('display_order', { ascending: true }),
+      // نفس الشيء للـ cover_image و resume_file إن رغبت (اختياري)
+      if (data.cover_image && !/^https?:\/\//i.test(data.cover_image)) {
+        try {
+          const { data: urlObj } = supabase.storage.from('developers').getPublicUrl(data.cover_image)
+          if (urlObj?.publicUrl) data.cover_image = urlObj.publicUrl
+        } catch (e) {}
+      }
 
-    supabase.from('experience')
-      .select('*')
-      .eq('developer_id', developerId)
-      .order('start_date', { ascending: false }),
+      return data
+    } catch (err) {
+      throw err
+    }
+  },
 
-    supabase.from('education')
-      .select('*')
-      .eq('developer_id', developerId)
-      .order('start_date', { ascending: false }),
-
-    supabase.from('certificates')
-      .select('*')
-      .eq('developer_id', developerId)
-      .order('issue_date', { ascending: false }),
-
-    supabase.from('social_links')
-      .select('*')
-      .eq('developer_id', developerId),
-  ])
-
-  return {
-    ...developer,
-    projects: projects || [],
-    skills: skills || [],
-    experience: experience || [],
-    education: education || [],
-    certificates: certificates || [],
-    social_links: social_links || [],
-  }
-},
+  // زيادة عدد الزيارات (fire-and-forget لتقليل التأخير)
+  async incrementViews(id) {
+    // لا ننتظر النتيجة هنا (لا نستخدم await) لكي لا نبطئ العرض
+    supabase.rpc('increment_views', { developer_id: id })
+      .then(({ error }) => {
+        if (error) console.error('incrementViews rpc error', error)
+      })
+      .catch(e => console.error('incrementViews catch', e))
+  },
 
   // جلب مطور بواسطة ID
   async getById(id) {
