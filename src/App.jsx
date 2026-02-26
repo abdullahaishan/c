@@ -1,3 +1,5 @@
+
+import { useParams } from "react-router-dom"
 import React, { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { AnimatePresence } from 'framer-motion'
@@ -33,9 +35,17 @@ import NotFound from './pages/NotFound'
 import ProjectDetail from './components/ProjectDetail'
 
 // Providers
-import { DeveloperProvider } from './context/DeveloperContext' // <<-- وضعنا الـ Provider داخل الـ Router الآن
+import { DeveloperProvider } from './context/DeveloperContext'
 import { useAuth } from './hooks/useAuth'
+const PublicPortfolioWrapper = () => {
+  const { username } = useParams()
 
+  return (
+    <DeveloperProvider username={username}>
+      <PublicPortfolio />
+    </DeveloperProvider>
+  )
+}
 const AppRoutes = () => {
   const [showWelcome, setShowWelcome] = useState(true)
   const { user, loading } = useAuth()
@@ -70,8 +80,10 @@ const AppRoutes = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           
-          {/* الصفحة العامة للمطور */}
-          <Route path="/u/:username" element={<PublicPortfolio />} />
+        <Route 
+  path="/u/:username" 
+  element={<PublicPortfolioWrapper />} 
+/>
           
           {/* صفحة تفاصيل المشروع */}
           <Route path="/project/:id" element={<ProjectDetail />} />
@@ -116,12 +128,11 @@ const AppRoutes = () => {
 
 function App() {
   return (
-    // === المهم: BrowserRouter أولاً، ثم Provider (حتى useParams تعمل داخل الـ Provider) ===
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <DeveloperProvider>
+    <DeveloperProvider>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AppRoutes />
-      </DeveloperProvider>
-    </BrowserRouter>
+      </BrowserRouter>
+    </DeveloperProvider>
   )
 }
 
