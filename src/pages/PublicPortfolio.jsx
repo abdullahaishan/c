@@ -10,7 +10,37 @@ import Portfolio from './Portfolio'
 import WhyMe from './WhyMe'
 import ExperienceSection from '../components/ExperienceSection'
 import { useDeveloper } from '../context/DeveloperContext'
+import { useParams } from 'react-router-dom'
+import { developerService } from '../lib/supabase'
+const { username } = useParams()
+const { developer, setDeveloper, loading, setLoading, error, setError } = useDeveloper()
 
+useEffect(() => {
+  const loadDeveloper = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const data = await developerService.getByUsername(username)
+
+      if (!data) {
+        setDeveloper(null)
+        setError("Developer not found")
+      } else {
+        setDeveloper(data)
+      }
+
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (username) {
+    loadDeveloper()
+  }
+}, [username])
 const PublicPortfolio = () => {
   const {
     developer,
