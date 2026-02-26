@@ -18,27 +18,67 @@ export const developerService = {
   // جلب مطور بواسطة اسم المستخدم
   // جلب مطور بواسطة اسم المستخدم
 async getByUsername(username) {
-  const { data, error } = await supabase
+
+  const { data: developer, error } = await supabase
     .from('developers')
-    .select(`
-      *,
-      portfolios (*),
-      projects (*),
-      skills (*),
-      certificates (*),
-      experience (*),
-      education (*),
-      social_links (*)
-    `)
+    .select('*')
     .eq('username', username)
     .eq('is_active', true)
-    .maybeSingle()  // ✅ استخدم maybeSingle بدلاً من single
-  
-  if (error) {
-    console.error('Error fetching developer:', error)
-    throw error
+    .single()
+
+  if (error || !developer) {
+    throw new Error('Developer not found')
   }
-  return data  // قد يكون null إذا لم يوجد المستخدم
+
+  const developerId = developer.id
+
+  const [
+    { data: projects },
+    { data: skills },
+    { data: experience },
+    { data: education },
+    { data: certificates },
+    { data: social_links }
+  ] = await Promise.all([
+    supabase.from('projects')
+      .select('*')
+      .eq('developer_id', developerId)
+      .order('display_order', { ascending: true }),
+
+    supabase.from('skills')
+      .select('*')
+      .eq('developer_id', developerId)
+      .order('display_order', { ascending: true }),
+
+    supabase.from('experience')
+      .select('*')
+      .eq('developer_id', developerId)
+      .order('start_date', { ascending: false }),
+
+    supabase.from('education')
+      .select('*')
+      .eq('developer_id', developerId)
+      .order('start_date', { ascending: false }),
+
+    supabase.from('certificates')
+      .select('*')
+      .eq('developer_id', developerId)
+      .order('issue_date', { ascending: false }),
+
+    supabase.from('social_links')
+      .select('*')
+      .eq('developer_id', developerId),
+  ])
+
+  return {
+    ...developer,
+    projects: projects || [],
+    skills: skills || [],
+    experience: experience || [],
+    education: education || [],
+    certificates: certificates || [],
+    social_links: social_links || [],
+  }
 },
 
   // جلب مطور بواسطة ID
