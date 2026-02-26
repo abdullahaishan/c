@@ -42,7 +42,7 @@ const PublicPortfolio = () => {
     }
   };
 
-  // صفحة التحميل - بسيطة مثل القديم
+  // صفحة التحميل
   if (loading) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center">
