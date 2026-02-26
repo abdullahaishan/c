@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Menu, X, Home, Briefcase, User, Mail, Award, Code } from "lucide-react";
+import { Menu, X, Home, User, Code, Briefcase, Heart, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDeveloper } from "../context/DeveloperContext";
 
@@ -13,10 +13,9 @@ const Navbar = () => {
     const navItems = [
         { href: "#Home", label: "Home", icon: Home },
         { href: "#About", label: "About", icon: User },
-        { href: "#Portfolio", label: "Portfolio", icon: Briefcase },
-        { href: "#WhyMe", label: "Why Me", icon: Award },
         { href: "#Skills", label: "Skills", icon: Code },
-        { href: "#Contact", label: "Contact", icon: Mail },
+        { href: "#Portfolio", label: "Projects", icon: Briefcase },
+        { href: "#WhyMe", label: "Why Me", icon: Heart },
     ];
 
     useEffect(() => {
@@ -93,7 +92,7 @@ const Navbar = () => {
                     <div className="flex-shrink-0 cursor-pointer group" onClick={handleLogoClick}>
                         <div className="relative">
                             <div className="absolute -inset-1 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-lg blur opacity-0 group-hover:opacity-70 transition duration-300"></div>
-                            <div className="relative text-xl font-bold bg-gradient-to-r from-[#6366f1] to-[#a855f7] bg-clip-text text-transparent hover:from-[#a855f7] hover:to-[#6366f1] transition-all duration-300">
+                            <div className="relative text-xl font-bold bg-gradient-to-r from-[#6366f1] to-[#a855f7] bg-clip-text text-transparent">
                                 Portfolio<span className="text-white">-v5</span>
                             </div>
                         </div>
@@ -101,44 +100,30 @@ const Navbar = () => {
     
                     {/* Desktop Navigation */}
                     <div className="hidden md:block">
-                        <div className="ml-8 flex items-center space-x-2">
+                        <div className="flex items-center space-x-1">
                             {navItems.map((item) => (
                                 <a
                                     key={item.label}
                                     href={item.href}
                                     onClick={(e) => scrollToSection(e, item.href)}
-                                    className="group relative px-4 py-2 text-sm font-medium rounded-lg transition-all duration-300"
-                                >
-                                    <div className={`absolute inset-0 rounded-lg transition-all duration-300 ${
+                                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                                         activeSection === item.href.substring(1)
-                                            ? "bg-gradient-to-r from-[#6366f1]/20 to-[#a855f7]/20"
-                                            : "group-hover:bg-white/5"
-                                    }`}></div>
-                                    <div className="relative flex items-center gap-2">
-                                        <item.icon className={`w-4 h-4 transition-colors duration-300 ${
-                                            activeSection === item.href.substring(1)
-                                                ? "text-[#a855f7]"
-                                                : "text-gray-400 group-hover:text-white"
-                                        }`} />
-                                        <span
-                                            className={`transition-colors duration-300 ${
-                                                activeSection === item.href.substring(1)
-                                                    ? "text-white font-semibold"
-                                                    : "text-gray-400 group-hover:text-white"
-                                            }`}
-                                        >
-                                            {item.label}
-                                        </span>
-                                    </div>
+                                            ? 'text-white bg-gradient-to-r from-[#6366f1]/20 to-[#a855f7]/20'
+                                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                    }`}
+                                >
+                                    {item.label}
                                 </a>
                             ))}
                             
-                            {/* علامة الباقة المجانية */}
-                            {isFreePlan && (
-                                <div className="ml-4 px-3 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded-full">
-                                    <span className="text-xs text-yellow-400">Free Plan</span>
-                                </div>
-                            )}
+                            {/* Join Button */}
+                            <a
+                                href="#Contact"
+                                onClick={(e) => scrollToSection(e, "#Contact")}
+                                className="ml-4 px-4 py-2 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg text-sm font-medium hover:scale-105 transition-all"
+                            >
+                                Join
+                            </a>
                         </div>
                     </div>
     
@@ -146,9 +131,7 @@ const Navbar = () => {
                     <div className="md:hidden">
                         <button
                             onClick={() => setIsOpen(!isOpen)}
-                            className={`relative p-2 text-gray-400 hover:text-white transition-transform duration-300 ease-in-out transform ${
-                                isOpen ? "rotate-90 scale-125" : "rotate-0 scale-100"
-                            }`}
+                            className="p-2 text-gray-400 hover:text-white"
                         >
                             {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
                         </button>
@@ -158,52 +141,33 @@ const Navbar = () => {
     
             {/* Mobile Menu */}
             <div
-                className={`md:hidden fixed inset-0 bg-[#030014] transition-all duration-300 ease-in-out ${
-                    isOpen
-                        ? "opacity-100 translate-y-0"
-                        : "opacity-0 translate-y-[-100%] pointer-events-none"
+                className={`md:hidden fixed inset-0 bg-[#030014] transition-all duration-300 ${
+                    isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-[-100%] pointer-events-none'
                 }`}
                 style={{ top: "64px" }}
             >
-                <div className="flex flex-col h-full">
-                    <div className="px-4 py-6 space-y-2">
-                        {navItems.map((item, index) => (
-                            <a
-                                key={item.label}
-                                href={item.href}
-                                onClick={(e) => scrollToSection(e, item.href)}
-                                className="flex items-center gap-3 px-4 py-3 text-lg font-medium rounded-xl transition-all duration-300"
-                                style={{
-                                    transitionDelay: `${index * 100}ms`,
-                                    transform: isOpen ? "translateX(0)" : "translateX(50px)",
-                                    opacity: isOpen ? 1 : 0,
-                                    backgroundColor: activeSection === item.href.substring(1) 
-                                        ? 'rgba(99, 102, 241, 0.1)' 
-                                        : 'transparent'
-                                }}
-                            >
-                                <item.icon className={`w-5 h-5 ${
-                                    activeSection === item.href.substring(1)
-                                        ? "text-[#a855f7]"
-                                        : "text-gray-400"
-                                }`} />
-                                <span className={
-                                    activeSection === item.href.substring(1)
-                                        ? "text-white font-semibold"
-                                        : "text-gray-400"
-                                }>
-                                    {item.label}
-                                </span>
-                            </a>
-                        ))}
-                        
-                        {/* علامة الباقة المجانية في الموبايل */}
-                        {isFreePlan && (
-                            <div className="mt-4 px-4 py-2 bg-yellow-500/10 border border-yellow-500/30 rounded-xl text-center">
-                                <span className="text-sm text-yellow-400">Free Plan - بعض الميزات محدودة</span>
-                            </div>
-                        )}
-                    </div>
+                <div className="flex flex-col h-full p-4">
+                    {navItems.map((item) => (
+                        <a
+                            key={item.label}
+                            href={item.href}
+                            onClick={(e) => scrollToSection(e, item.href)}
+                            className={`px-4 py-3 text-lg font-medium rounded-lg ${
+                                activeSection === item.href.substring(1)
+                                    ? 'text-white bg-gradient-to-r from-[#6366f1]/20 to-[#a855f7]/20'
+                                    : 'text-gray-400'
+                            }`}
+                        >
+                            {item.label}
+                        </a>
+                    ))}
+                    <a
+                        href="#Contact"
+                        onClick={(e) => scrollToSection(e, "#Contact")}
+                        className="mt-4 px-4 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg text-center font-medium"
+                    >
+                        Join
+                    </a>
                 </div>
             </div>
         </nav>
