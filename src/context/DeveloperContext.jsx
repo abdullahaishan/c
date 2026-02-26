@@ -27,9 +27,10 @@ export const DeveloperProvider = ({ children }) => {
       try {
         setLoading(true)
         setError(null)
-        console.log('Loading public developer:', username)
+        console.log('Loading developer:', username)
         
         const data = await developerService.getByUsername(username)
+        console.log('Developer data:', data)
         setDeveloper(data)
         
         if (data) {
@@ -37,7 +38,7 @@ export const DeveloperProvider = ({ children }) => {
         }
       } catch (err) {
         console.error('Error loading developer:', err)
-        setError('المطور غير موجود')
+        setError('Developer not found')
       } finally {
         setLoading(false)
       }
@@ -46,21 +47,43 @@ export const DeveloperProvider = ({ children }) => {
     loadDeveloper()
   }, [username, isPublicPage])
 
+  // ===========================================
   // دوال المشاريع
+  // ===========================================
   const getProjects = () => developer?.projects || []
   
+  // ===========================================
   // دوال المهارات
+  // ===========================================
   const getSkills = () => developer?.skills || []
   
   const getMainSkills = () => {
     const skills = developer?.skills || []
-    return skills.filter(s => s.is_main).map(s => s.name)
+    const mainSkills = skills.filter(s => s.is_main === true)
+    if (mainSkills.length === 0) {
+      return skills.slice(0, 4).map(s => s.name)
+    }
+    return mainSkills.map(s => s.name)
   }
   
+  const getSkillsWithLevel = () => {
+    const skills = developer?.skills || []
+    return skills.map(s => ({
+      name: s.name,
+      level: s.proficiency || 0,
+      category: s.category || 'Other',
+      is_main: s.is_main || false
+    }))
+  }
+  
+  // ===========================================
   // دوال الشهادات
+  // ===========================================
   const getCertificates = () => developer?.certificates || []
   
+  // ===========================================
   // دوال الخبرات
+  // ===========================================
   const getExperience = () => developer?.experience || []
   
   const getTotalExperienceYears = () => {
@@ -76,10 +99,14 @@ export const DeveloperProvider = ({ children }) => {
     return Math.round(totalYears * 10) / 10 || 0
   }
   
+  // ===========================================
   // دوال التعليم
+  // ===========================================
   const getEducation = () => developer?.education || []
   
-  // دوال روابط التواصل - الأهم!
+  // ===========================================
+  // ⭐ دوال روابط التواصل (الأهم)
+  // ===========================================
   const getSocialLinks = () => {
     const links = {}
     developer?.social_links?.forEach(link => {
@@ -96,36 +123,84 @@ export const DeveloperProvider = ({ children }) => {
       instagram: 'https://instagram.com/abdullah_aishan',
       twitter: 'https://twitter.com/abdullah_aishan',
       facebook: 'https://facebook.com/abdullah.aishan',
-      youtube: 'https://youtube.com/@abdullah_aishan'
+      youtube: 'https://youtube.com/@abdullah_aishan',
+      email: 'mailto:eng.abdullah.z.aishan@gmail.com',
+      website: 'https://portfolio-v5.com'
     }
   }
 
+  // ===========================================
   // الصورة الشخصية
+  // ===========================================
   const getProfileImage = () => {
     return developer?.profile_image || '/Coding.gif'
   }
 
+  // ===========================================
   // التحقق من الباقة
+  // ===========================================
+  const getPlanId = () => developer?.plan_id || 1
+  
   const isFreePlan = () => {
-    return developer?.plan_id === 1
+    return getPlanId() === 1
+  }
+  
+  const isPaidPlan = () => {
+    return getPlanId() > 1
+  }
+
+  // ===========================================
+  // الإحصائيات
+  // ===========================================
+  const getStats = () => {
+    return {
+      projects: developer?.projects?.length || 0,
+      skills: developer?.skills?.length || 0,
+      certificates: developer?.certificates?.length || 0,
+      experience: getTotalExperienceYears(),
+      education: developer?.education?.length || 0
+    }
   }
 
   const value = {
+    // البيانات الأساسية
     publicDeveloper: developer,
     publicLoading: loading,
     publicError: error,
     isPublicPage,
+    
+    // دوال المشاريع
     getProjects,
+    
+    // دوال المهارات
     getSkills,
     getMainSkills,
+    getSkillsWithLevel,
+    
+    // دوال الشهادات
     getCertificates,
+    
+    // دوال الخبرات
     getExperience,
     getTotalExperienceYears,
+    
+    // دوال التعليم
     getEducation,
+    
+    // ⭐ دوال التواصل
     getSocialLinks,
     getAdminSocialLinks,
+    
+    // الصورة
     getProfileImage,
+    
+    // الباقات
+    getPlanId,
     isFreePlan,
+    isPaidPlan,
+    
+    // الإحصائيات
+    getStats,
   }
 
   return (
