@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { developerService } from '../lib/supabase';
 import Home from './Home';
 import AboutPage from './About';
 import Skills from './Skills';
@@ -19,51 +18,34 @@ const PublicPortfolio = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    let mounted = true;
-    
-    const loadData = async () => {
-      try {
-        console.log('📥 جلب بيانات:', username);
-        const data = await developerService.getByUsername(username);
-        
-        if (!mounted) return;
-        
-        if (!data) {
-          setError('المطور غير موجود');
-        } else {
-          console.log('✅ تم التحميل:', data);
-          setDeveloper(data);
-        }
-      } catch (err) {
-        console.error('❌ خطأ:', err);
-        setError('فشل في تحميل البورتفليو');
-      } finally {
-        // ✅ هذا السطر مهم جداً - يخفي التحميل
-        setLoading(false);
-      }
-    };
+  const handleLoadComplete = (results) => {
+    console.log('✅ جميع البيانات:', results);
+    setDeveloper(results.developers);
+    setLoading(false);
+  };
 
-    loadData();
+  const handleLoadError = (err) => {
+    setError(err);
+    setLoading(false);
+  };
 
-    return () => { mounted = false; };
-  }, [username]);
-
-  // ✅ صفحة التحميل
   if (loading) {
-    return <LoadingPortfolio username={username} />;
+    return (
+      <LoadingPortfolio 
+        username={username}
+        onComplete={handleLoadComplete}
+        onError={handleLoadError}
+      />
+    );
   }
 
-  // ✅ صفحة الخطأ
   if (error || !developer) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center p-4">
         <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 max-w-md w-full text-center border border-white/10">
-          <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="w-10 h-10 text-red-400" />
-          </div>
-          <h2 className="text-2xl font-bold text-white mb-2">المطور غير موجود</h2>
-          <p className="text-gray-400 mb-6">{error || 'لا يوجد مطور بهذا الاسم'}</p>
+          <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-white mb-2">خطأ في التحميل</h2>
+          <p className="text-gray-400 mb-6">{error || 'المطور غير موجود'}</p>
           <a
             href="/"
             className="inline-block px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg hover:scale-105 transition-all"
@@ -75,7 +57,6 @@ const PublicPortfolio = () => {
     );
   }
 
-  // ✅ صفحة النجاح
   return (
     <>
       <AnimatedBackground />
