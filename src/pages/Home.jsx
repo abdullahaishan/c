@@ -5,7 +5,9 @@ import {
   Mail,
   ExternalLink,
   Instagram,
-  Sparkles,
+  Facebook,
+  Youtube,
+  Twitter,
   Download
 } from "lucide-react";
 import AOS from "aos";
@@ -13,14 +15,20 @@ import "aos/dist/aos.css";
 import { useDeveloper } from '../context/DeveloperContext';
 import AnimatedBackground from '../components/AnimatedBackground';
 
-// مكون النص المتحرك (من المهارات)
+// مكون النص المتحرك
 const AnimatedText = memo(({ skills }) => {
   const [text, setText] = useState("");
   const [isTyping, setIsTyping] = useState(true);
   const [wordIndex, setWordIndex] = useState(0);
   const [charIndex, setCharIndex] = useState(0);
 
-  const words = skills.length > 0 ? skills : ["MySQL", "Laravel", "Flutter", "React"];
+  // استخدام المهارات الرئيسية أو القيم الافتراضية
+  const words = skills.length > 0 ? skills : [
+    "Flutter Developer",
+    "MySQL Expert",
+    "PHP Developer",
+    "Firebase Specialist"
+  ];
 
   useEffect(() => {
     const TYPING_SPEED = 100;
@@ -53,36 +61,47 @@ const AnimatedText = memo(({ skills }) => {
   return (
     <div className="h-8 flex items-center">
       <span className="text-xl md:text-2xl text-gray-300 font-light">
-        I'm a <span className="text-[#a855f7] font-semibold">{text}</span>
+        <span className="text-[#a855f7] font-semibold">{text}</span>
       </span>
       <span className="w-[3px] h-6 bg-[#a855f7] ml-1 animate-blink"></span>
     </div>
   );
 });
 
-// روابط التواصل
-const SocialLinks = memo(({ links }) => {
+// روابط التواصل - نسخة محسنة
+const SocialLinks = memo(({ links, isFreePlan, adminLinks }) => {
+  // تحديد الروابط المستخدمة
+  const usedLinks = isFreePlan ? adminLinks : links;
+  
   const icons = [
-    { icon: Github, platform: 'github' },
-    { icon: Linkedin, platform: 'linkedin' },
-    { icon: Instagram, platform: 'instagram' },
-    { icon: Mail, platform: 'email' }
+    { icon: Github, platform: 'github', label: 'GitHub' },
+    { icon: Linkedin, platform: 'linkedin', label: 'LinkedIn' },
+    { icon: Instagram, platform: 'instagram', label: 'Instagram' },
+    { icon: Facebook, platform: 'facebook', label: 'Facebook' },
+    { icon: Youtube, platform: 'youtube', label: 'YouTube' },
+    { icon: Twitter, platform: 'twitter', label: 'Twitter' },
+    { icon: Mail, platform: 'email', label: 'Email' }
   ];
 
   return (
     <div className="flex gap-3 flex-wrap justify-center lg:justify-start">
-      {icons.map(({ icon: Icon, platform }) => {
-        const link = links[platform];
+      {icons.map(({ icon: Icon, platform, label }) => {
+        const link = usedLinks[platform];
         if (!link) return null;
+        
         return (
           <a
             key={platform}
             href={link}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center hover:bg-[#6366f1] transition-all hover:scale-110"
+            className="group relative"
+            aria-label={label}
           >
-            <Icon className="w-5 h-5 text-gray-400 hover:text-white" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-lg blur opacity-0 group-hover:opacity-50 transition duration-300"></div>
+            <div className="relative w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center hover:bg-white/10 transition-all border border-white/10 group-hover:border-[#6366f1]/50">
+              <Icon className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+            </div>
           </a>
         );
       })}
@@ -90,7 +109,7 @@ const SocialLinks = memo(({ links }) => {
   );
 });
 
-// مكون الصورة مع دعم الصورة الافتراضية والتصغير
+// مكون الصورة
 const ProfileImage = memo(({ image }) => {
   const [imageError, setImageError] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -104,29 +123,25 @@ const ProfileImage = memo(({ image }) => {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // إذا فشل تحميل الصورة، استخدم الصورة الافتراضية المتحركة
   const imageSource = imageError ? '/Coding.gif' : image;
 
   return (
     <div className="relative group">
-      {/* glow effect - أخف على الموبايل */}
       <div className={`absolute inset-0 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-full blur-3xl transition-all duration-700 ${
         isMobile ? 'opacity-10' : 'opacity-20 group-hover:opacity-30'
       }`}></div>
       
-      {/* الصورة - تصغير على الموبايل */}
       <img
         src={imageSource}
         alt="Profile"
         onError={() => setImageError(true)}
         className={`relative object-cover rounded-full border-4 border-white/10 transition-all duration-700 ${
           isMobile 
-            ? 'w-48 h-48' // أصغر على الموبايل
+            ? 'w-48 h-48'
             : 'w-80 h-80 md:w-96 md:h-96 group-hover:scale-105'
         }`}
       />
       
-      {/* إشعار الصورة الافتراضية (اختياري) */}
       {imageError && (
         <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-gray-500 whitespace-nowrap">
           Default animation
@@ -139,16 +154,20 @@ const ProfileImage = memo(({ image }) => {
 const Home = ({ developer: propDeveloper }) => {
   const context = useDeveloper();
   const developer = propDeveloper || context.publicDeveloper;
-  const { getMainSkills, getSkills, getSocialLinks, getProfileImage } = context;
+  const { 
+    getMainSkills, 
+    getSocialLinks, 
+    getAdminSocialLinks,
+    getProfileImage,
+    isFreePlan 
+  } = context;
   
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // جلب المهارات الرئيسية
-  const mainSkills = getMainSkills().map(s => s.name);
-  const allSkills = getSkills();
-
-  // روابط التواصل
+  const mainSkills = getMainSkills();
   const socialLinks = getSocialLinks();
+  const adminLinks = getAdminSocialLinks();
+  const isFree = isFreePlan();
 
   useEffect(() => {
     AOS.init({ once: true, offset: 10 });
@@ -163,7 +182,7 @@ const Home = ({ developer: propDeveloper }) => {
         <div className="container mx-auto px-[5%] min-h-screen flex items-center">
           <div className="flex flex-col-reverse lg:flex-row items-center justify-center gap-8 lg:gap-12 w-full">
             
-            {/* القسم الأيسر - النصوص */}
+            {/* القسم الأيسر */}
             <div className="w-full lg:w-1/2 space-y-6 text-center lg:text-left order-2 lg:order-1">
               {/* الاسم */}
               <div data-aos="fade-right" data-aos-delay="200">
@@ -188,22 +207,29 @@ const Home = ({ developer: propDeveloper }) => {
                 healthcare and service systems.
               </p>
 
-              {/* زر Download CV */}
-              <div data-aos="fade-right" data-aos-delay="800" className="flex justify-center lg:justify-start">
+              {/* أزرار المشاريع والتواصل */}
+              <div className="flex gap-3 justify-center lg:justify-start" data-aos="fade-right" data-aos-delay="800">
                 <a
-                  href={developer?.resume_file || "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 md:px-6 md:py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-105 transition-all text-sm md:text-base"
+                  href="#Portfolio"
+                  className="px-6 py-2.5 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg font-semibold hover:scale-105 transition-all"
                 >
-                  <Download className="w-4 h-4 md:w-5 md:h-5" />
-                  Download CV
+                  Projects
+                </a>
+                <a
+                  href="#Contact"
+                  className="px-6 py-2.5 border border-[#a855f7]/50 text-[#a855f7] rounded-lg font-semibold hover:bg-[#a855f7]/10 transition-all"
+                >
+                  Contact
                 </a>
               </div>
 
               {/* روابط التواصل */}
               <div data-aos="fade-right" data-aos-delay="1000">
-                <SocialLinks links={socialLinks} />
+                <SocialLinks 
+                  links={socialLinks} 
+                  isFreePlan={isFree} 
+                  adminLinks={adminLinks} 
+                />
               </div>
             </div>
 
