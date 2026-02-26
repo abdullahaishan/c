@@ -21,17 +21,22 @@ const PublicPortfolio = () => {
   } = useDeveloper();
 
   if (publicLoading) {
-    return (
-      <div className="min-h-screen bg-[#030014] flex items-center justify-center">
-        <div className="text-center">
-          <Loader className="w-12 h-12 text-[#6366f1] animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">Loading portfolio...</p>
-        </div>
-      </div>
-    );
-  }
+  return (
+    <div className="min-h-screen bg-[#030014] flex items-center justify-center">
+      <div className="w-12 h-12 border-4 border-[#6366f1]/20 border-t-[#6366f1] rounded-full animate-spin" />
+    </div>
+  )
+}
 
-  if (publicError || !developer) {
+if (publicError) {
+  return (
+    <div className="min-h-screen bg-[#030014] flex items-center justify-center text-white">
+      <h1>{publicError}</h1>
+    </div>
+  )
+}
+
+  if (!developer) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center px-4">
         <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 max-w-md w-full text-center border border-white/10">
