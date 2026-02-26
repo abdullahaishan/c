@@ -112,6 +112,104 @@ export const developerService = {
     const { data, error } = await supabase
       .from('developers')
       .update({
+export const developerService = {
+  async getByUsername(username) {
+    try {
+      // استعلام واحد يجلب المطور + العلاقات
+      const { data, error } = await supabase
+        .from('developers')
+        .select(`
+          *,
+          projects:projects(*),
+          skills:skills(*),
+          experience:experience(*),
+          education:education(*),
+          certificates:certificates(*),
+          social_links:social_links(*)
+        `)
+        .eq('username', username)
+        .eq('is_active', true)
+        .single()
+
+      if (error) {
+        console.error('developerService.getByUsername error:', error)
+        throw error
+      }
+
+      if (!data) throw new Error('Developer not found')
+
+      // تحضيرات: تأكد أن الحقول المصفوفية ليست undefined
+      data.projects = data.projects || []
+      data.skills = data.skills || []
+      data.experience = data.experience || []
+      data.education = data.education || []
+      data.certificates = data.certificates || []
+      data.social_links = data.social_links || []
+
+      // معالجة profile_image إذا كان مخزناً كمسار داخل الـ storage (وليس URL كامل)
+      const img = data.profile_image
+      if (img && !/^https?:\/\//i.test(img)) {
+        // نعتبره مسار في bucket 'developers'
+        try {
+          const { data: urlObj } = supabase.storage.from('developers').getPublicUrl(img)
+          if (urlObj?.publicUrl) {
+            data.profile_image = urlObj.publicUrl
+          }
+        } catch (e) {
+          console.warn('Failed to get public URL for profile_image', e)
+        }
+      }
+
+      // نفس الشيء للـ cover_image و resume_file إن رغبت (اختياري)
+      if (data.cover_image && !/^https?:\/\//i.test(data.cover_image)) {
+        try {
+          const { data: urlObj } = supabase.storage.from('developers').getPublicUrl(data.cover_image)
+          if (urlObj?.publicUrl) data.cover_image = urlObj.publicUrl
+        } catch (e) {}
+      }
+
+      return data
+    } catch (err) {
+      throw err
+    }
+  },
+
+  // زيادة عدد المشاهدات (نسخة واحدة فقط - احتفظ بهذه)
+  async incrementViews(id) {
+    // fire-and-forget - لا ننتظر النتيجة
+    supabase.rpc('increment_views', { developer_id: id })
+      .then(({ error }) => {
+        if (error) console.error('incrementViews error:', error)
+      })
+      .catch(e => console.error('incrementViews catch:', e))
+  },
+
+  // جلب مطور بواسطة ID
+  async getById(id) {
+    const { data, error } = await supabase
+      .from('developers')
+      .select(`
+        *,
+        portfolios (*),
+        projects (*),
+        skills (*),
+        certificates (*),
+        experience (*),
+        education (*),
+        social_links (*)
+      `)
+      .eq('id', id)
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  // تحديث بيانات المطور
+  async update(id, updates) {
+    const { data, error } = await supabase
+      .from('developers')
+      .update({
         ...updates,
         updated_at: new Date()
       })
@@ -121,14 +219,6 @@ export const developerService = {
     
     if (error) throw error
     return data
-  },
-
-  // زيادة عدد المشاهدات
-  async incrementViews(id) {
-    const { error } = await supabase.rpc('increment_views', {
-      developer_id: id
-    })
-    if (error) console.error('Error incrementing views:', error)
   },
 
   // تسجيل زيارة
@@ -143,7 +233,6 @@ export const developerService = {
     if (error) console.error('Error tracking visit:', error)
   }
 }
-
 // ===========================================
 // خدمات الرسائل (Messages)
 // ===========================================
