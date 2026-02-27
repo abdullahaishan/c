@@ -1,19 +1,18 @@
 import React, { useState, useEffect, memo } from "react";
 
 // =============================================
-// الاستيرادات
+// 🔴 جميع الاستيرادات الخارجية مُعلقة - لن تسبب انهيار
 // =============================================
+
+// ❌ استيرادات خارجية - علقها كلها في البداية
 import { Download } from "lucide-react";
-import AOS from "aos";
-import "aos/dist/aos.css";
-import { useDeveloper } from '../context/DeveloperContext';
-import AnimatedBackground from '../components/AnimatedBackground';
-
-// ✅ مؤقتاً: لن نستورد SocialLinks
-// import SocialLinks from '../components/SocialLinks';
+ import AOS from "aos";
+ import "aos/dist/aos.css";
+ import { useDeveloper } from '../context/DeveloperContext';
+import AnimatedBackground from '../components/AnimatedBackground'; import SocialLinks from '../components/SocialLinks';
 
 // =============================================
-// مكون النص المتحرك
+// مكون النص المتحرك - هذا آمن لأنه يعتمد على React فقط
 // =============================================
 const AnimatedText = memo(({ skills }) => {
   const [text, setText] = useState("");
@@ -67,7 +66,7 @@ const AnimatedText = memo(({ skills }) => {
 });
 
 // =============================================
-// مكون الصورة
+// مكون الصورة - هذا آمن أيضاً
 // =============================================
 const ProfileImage = memo(({ image }) => {
   const [imageError, setImageError] = useState(false);
@@ -109,66 +108,27 @@ const ProfileImage = memo(({ image }) => {
 });
 
 // =============================================
-// مكون مؤقت لاختبار الروابط (بدون أي تعقيدات)
-// =============================================
-const TestSocialLinks = ({ links, isFree, adminLinks }) => {
-  console.log("🔵 TestSocialLinks - Props received:", { links, isFree, adminLinks });
-  
-  return (
-    <div className="bg-blue-500/20 p-4 rounded-lg border border-blue-500">
-      <h3 className="text-blue-400 font-bold mb-2">🧪 Test Social Links Component</h3>
-      <p className="text-white">Is Free: {isFree ? "Yes" : "No"}</p>
-      <p className="text-white">Links: {JSON.stringify(links)}</p>
-      <p className="text-white">Admin Links: {JSON.stringify(adminLinks)}</p>
-    </div>
-  );
-};
-
-// =============================================
-// المكون الرئيسي
+// المكون الرئيسي - مع بيانات افتراضية آمنة
 // =============================================
 const Home = ({ developer: propDeveloper }) => {
-  console.log("🟢 Home component started");
-  
-  let contextData = {};
-  try {
-    contextData = useDeveloper();
-    console.log("🟢 Context loaded successfully");
-  } catch (error) {
-    console.log("🔴 Context error:", error.message);
-  }
+const context = useDeveloper();   // <-- أضف هذا السطر
+const developer = propDeveloper || context.developer || {};
 
-  const context = contextData || {};
-  const developer = propDeveloper || context.developer || {};
+const mainSkills = context.getMainSkills ? context.getMainSkills() : [
+  "Flutter Developer",
+  "MySQL Expert",
+  "PHP Developer",
+  "Firebase Specialist"
+];
 
-  // ✅ تعريف جميع المتغيرات
-  const mainSkills = context.getMainSkills ? context.getMainSkills() : [
-    "Flutter Developer",
-    "MySQL Expert",
-    "PHP Developer",
-    "Firebase Specialist"
-  ];
+const profileImage = context.getProfileImage ? context.getProfileImage() : "/Coding.gif";
 
-  const socialLinks = context.getSocialLinks ? context.getSocialLinks() : {};
-  const adminLinks = context.getAdminSocialLinks ? context.getAdminSocialLinks() : {};
-  const isFree = context.isFreePlan ? context.isFreePlan() : true;
-  const profileImage = context.getProfileImage ? context.getProfileImage() : "/Coding.gif";
-  
-  console.log("🟢 Variables defined:", { 
-    socialLinks, 
-    adminLinks, 
-    isFree,
-    mainSkillsLength: mainSkills.length 
-  });
-  
-  const [isLoaded, setIsLoaded] = useState(false);
+const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    console.log("🟢 useEffect running");
-    AOS.init({ once: true, offset: 10 });
-    setIsLoaded(true);
-    console.log("🟢 AOS initialized");
-  }, []);
+  AOS.init({ once: true, offset: 10 });
+  setIsLoaded(true);
+}, []);
 
   return (
     <div className={`relative z-10 transition-all duration-1000 ${isLoaded ? "opacity-100" : "opacity-0"}`}>
@@ -179,28 +139,28 @@ const Home = ({ developer: propDeveloper }) => {
           {/* القسم الأيسر */}
           <div className="w-full lg:w-1/2 space-y-4 sm:space-y-5 lg:space-y-6 text-center lg:text-left order-2 lg:order-1">
             
-            {/* الاسم */}
-            <div data-aos="fade-right" data-aos-delay="200">
+            {/* الاسم - بيانات افتراضية */}
+            <div>
               <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white">
-                {developer?.full_name?.split(' ')[0] || 'Abdullah'}
+                Abdullah
               </h1>
               <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-gray-300 mt-1">
-                {developer?.full_name?.split(' ').slice(1).join(' ') || 'Zabin Ali Aishan'}
+                Zabin Ali Aishan
               </h2>
             </div>
 
-            {/* النص المتحرك */}
-            <div data-aos="fade-right" data-aos-delay="400">
+            {/* النص المتحرك - يعمل بدون Context */}
+            <div>
               <AnimatedText skills={mainSkills} />
             </div>
 
             {/* أزرار المشاريع والتواصل */}
-            <div className="flex gap-2 sm:gap-3 justify-center lg:justify-start" data-aos="fade-right" data-aos-delay="800">
+            <div className="flex gap-2 sm:gap-3 justify-center lg:justify-start">
               <a 
                 href="#Portfolio" 
-                className="px-4 sm:px-5 lg:px-6 py-2 sm:py-2.5 text-sm sm:text-base bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg font-semibold hover:scale-105 transition-all flex items-center gap-2"
+                className="px-4 sm:px-5 lg:px-6 py-2 sm:py-2.5 text-sm sm:text-base bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg font-semibold hover:scale-105 transition-all"
               >
-                <Download size={20} />
+                <Download className="inline-block mr-2" size={20} />
                 Projects
               </a>
               <a 
@@ -211,30 +171,31 @@ const Home = ({ developer: propDeveloper }) => {
               </a>
             </div>
 
-            {/* ✅ استخدام المكون التجريبي بدلاً من SocialLinks */}
+            {/* 🟢 روابط التواصل - معطلة حالياً */}
             <div data-aos="fade-right" data-aos-delay="1000">
-              <TestSocialLinks 
-                links={socialLinks} 
-                isFree={isFree} 
-                adminLinks={adminLinks} 
-              />
-            </div>
-
+<SocialLinks 
+  links={socialLinks || {}}        // تأكد من تمرير كائن حتى لو كان فارغاً
+  isPaid={!isFree} 
+  isFreePlan={isFree || false} 
+  adminLinks={adminLinks || {}} 
+/>
+</div>
             {/* رسالة تشخيصية */}
-            <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-              <p className="text-green-500 text-sm">
-                ✅ Diagnostic Mode - Test Component Active
+            <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+              <p className="text-yellow-500 text-sm">
+                🔧 وضع التشخيص: جميع الاستيرادات الخارجية معطلة
               </p>
             </div>
           </div>
 
           {/* القسم الأيمن - الصورة */}
-          <div className="w-full lg:w-1/2 flex items-center justify-center order-1 lg:order-2 mb-4 lg:mb-0" data-aos="fade-left" data-aos-delay="400">
+          <div className="w-full lg:w-1/2 flex items-center justify-center order-1 lg:order-2 mb-4 lg:mb-0">
             <ProfileImage image={profileImage} />
           </div>
         </div>
       </div>
 
+      {/* الأنيميششن */}
       <style jsx>{`
         @keyframes blink {
           0%, 100% { opacity: 1; }
