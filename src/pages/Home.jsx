@@ -109,7 +109,7 @@ const isFree = context.isFreePlan ? context.isFreePlan() : true;
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    AOS.init({ once: true, offset: 10 });
+   // AOS.init({ once: true, offset: 10 });
     setIsLoaded(true);
   }, []);
 
