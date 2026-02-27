@@ -20,8 +20,8 @@ import React, { useEffect, useMemo, memo } from "react";
   MapPin
  } from "lucide-react";
 
-// import AOS from "aos";
-// import "aos/dist/aos.css";
+ import AOS from "aos";
+ import "aos/dist/aos.css";
 // import { useDeveloper } from '../context/DeveloperContext';
 
 const About = ({ developer: propDeveloper }) => {
@@ -66,9 +66,9 @@ const About = ({ developer: propDeveloper }) => {
   };
 
   useEffect(() => {
-    // AOS.init({ once: true });
-    console.log("AboutPage mounted - AOS commented");
-  }, []);
+  AOS.init({ once: true });
+  console.log("AboutPage mounted - AOS active");
+}, []);
 
   return (
     <div className="relative min-h-screen bg-[#030014] overflow-hidden" id="About">
@@ -80,13 +80,12 @@ const About = ({ developer: propDeveloper }) => {
             About Me
           </h2>
           <p className="text-gray-400 max-w-2xl mx-auto flex items-center justify-center gap-2">
-            {/* <Sparkles className="w-5 h-5 text-purple-400" /> */}
-            <span>✨</span>
+            <Sparkles className="w-5 h-5 text-purple-400" /> 
+         
             Transforming ideas into digital experiences
-            {/* <Sparkles className="w-5 h-5 text-purple-400" /> */}
-// بـ
+            
 <Sparkles className="w-5 h-5 text-purple-400" />
-            <span>✨</span>
+           
           </p>
         </div>
 
