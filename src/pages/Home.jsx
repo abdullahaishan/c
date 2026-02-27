@@ -1,16 +1,16 @@
 import React, { useState, useEffect, memo } from "react";
 
 // =============================================
-// 🔴 جميع الاستيرادات الخارجية مُعلقة - لن تسبب انهيار
+// الاستيرادات
 // =============================================
-
-// ❌ استيرادات خارجية - علقها كلها في البداية
 import { Download } from "lucide-react";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import { useDeveloper } from '../context/DeveloperContext';
 import AnimatedBackground from '../components/AnimatedBackground';
-import SocialLinks from '../components/SocialLinks';
+
+// ✅ مؤقتاً: لن نستورد SocialLinks
+// import SocialLinks from '../components/SocialLinks';
 
 // =============================================
 // مكون النص المتحرك
@@ -109,21 +109,39 @@ const ProfileImage = memo(({ image }) => {
 });
 
 // =============================================
+// مكون مؤقت لاختبار الروابط (بدون أي تعقيدات)
+// =============================================
+const TestSocialLinks = ({ links, isFree, adminLinks }) => {
+  console.log("🔵 TestSocialLinks - Props received:", { links, isFree, adminLinks });
+  
+  return (
+    <div className="bg-blue-500/20 p-4 rounded-lg border border-blue-500">
+      <h3 className="text-blue-400 font-bold mb-2">🧪 Test Social Links Component</h3>
+      <p className="text-white">Is Free: {isFree ? "Yes" : "No"}</p>
+      <p className="text-white">Links: {JSON.stringify(links)}</p>
+      <p className="text-white">Admin Links: {JSON.stringify(adminLinks)}</p>
+    </div>
+  );
+};
+
+// =============================================
 // المكون الرئيسي
 // =============================================
 const Home = ({ developer: propDeveloper }) => {
-  // ✅ استخدام try/catch لمنع الانهيار
+  console.log("🟢 Home component started");
+  
   let contextData = {};
   try {
     contextData = useDeveloper();
+    console.log("🟢 Context loaded successfully");
   } catch (error) {
-    console.log("Context not available");
+    console.log("🔴 Context error:", error.message);
   }
 
   const context = contextData || {};
   const developer = propDeveloper || context.developer || {};
 
-  // ✅ تعريف جميع المتغيرات المطلوبة
+  // ✅ تعريف جميع المتغيرات
   const mainSkills = context.getMainSkills ? context.getMainSkills() : [
     "Flutter Developer",
     "MySQL Expert",
@@ -131,18 +149,25 @@ const Home = ({ developer: propDeveloper }) => {
     "Firebase Specialist"
   ];
 
-  // ✅ هذه المتغيرات كانت مفقودة وتسبب الانهيار
   const socialLinks = context.getSocialLinks ? context.getSocialLinks() : {};
   const adminLinks = context.getAdminSocialLinks ? context.getAdminSocialLinks() : {};
   const isFree = context.isFreePlan ? context.isFreePlan() : true;
-
   const profileImage = context.getProfileImage ? context.getProfileImage() : "/Coding.gif";
+  
+  console.log("🟢 Variables defined:", { 
+    socialLinks, 
+    adminLinks, 
+    isFree,
+    mainSkillsLength: mainSkills.length 
+  });
   
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
+    console.log("🟢 useEffect running");
     AOS.init({ once: true, offset: 10 });
     setIsLoaded(true);
+    console.log("🟢 AOS initialized");
   }, []);
 
   return (
@@ -186,20 +211,19 @@ const Home = ({ developer: propDeveloper }) => {
               </a>
             </div>
 
-            {/* ✅ روابط التواصل - الآن المتغيرات معرفة بشكل صحيح */}
+            {/* ✅ استخدام المكون التجريبي بدلاً من SocialLinks */}
             <div data-aos="fade-right" data-aos-delay="1000">
-              <SocialLinks 
+              <TestSocialLinks 
                 links={socialLinks} 
-                isPaid={!isFree} 
-                isFreePlan={isFree} 
+                isFree={isFree} 
                 adminLinks={adminLinks} 
               />
             </div>
 
             {/* رسالة تشخيصية */}
-            <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-              <p className="text-yellow-500 text-sm">
-                🔧 Social Links Active - {Object.keys(socialLinks).length} links found
+            <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+              <p className="text-green-500 text-sm">
+                ✅ Diagnostic Mode - Test Component Active
               </p>
             </div>
           </div>
