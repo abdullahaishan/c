@@ -173,12 +173,12 @@ const [isLoaded, setIsLoaded] = useState(false);
 
             {/* 🟢 روابط التواصل - معطلة حالياً */}
             <div data-aos="fade-right" data-aos-delay="1000">
-  <SocialLinks 
-    links={socialLinks} 
-    isPaid={!isFree} 
-    isFreePlan={isFree} 
-    adminLinks={adminLinks} 
-  />
+<SocialLinks 
+  links={socialLinks || {}}        // تأكد من تمرير كائن حتى لو كان فارغاً
+  isPaid={!isFree} 
+  isFreePlan={isFree || false} 
+  adminLinks={adminLinks || {}} 
+/>
 </div>
             {/* رسالة تشخيصية */}
             <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
