@@ -12,7 +12,6 @@ import Footer from '../components/Footer';
 import { Loader, AlertCircle, Crown } from 'lucide-react';
 
 const PublicPortfolio = () => {
-
   const {
     developer,
     loading,
