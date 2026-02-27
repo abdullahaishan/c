@@ -1,40 +1,23 @@
 import React, { useState, useEffect, memo } from "react";
-import {
-Download
-} from "lucide-react";
-import AOS from "aos";
-import "aos/dist/aos.css";
-import { useDeveloper } from '../context/DeveloperContext';
-import AnimatedBackground from '../components/AnimatedBackground';
-import SocialLinks from '../components/SocialLinks';
+import { Download } from "lucide-react";
 
-// مكون النص المتحرك
-const AnimatedText = memo(({ skills }) => {
-const [text, setText] = useState("");
-const [isTyping, setIsTyping] = useState(true);
-const [wordIndex, setWordIndex] = useState(0);
-const [charIndex, setCharIndex] = useState(0);
+const Home = ({ developer: propDeveloper }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  
+  useEffect(() => {
+    setIsLoaded(true);
+  }, []);
 
-const words = skills && skills.length > 0 ? skills : [
-"Flutter Developer",
-"MySQL Expert",
-"PHP Developer",
-"Firebase Specialist"
-];
+  // تجنب استخدام أي سياق أو مكونات خارجية
+  return (
+    <div style={{ color: "white", padding: "100px", backgroundColor: "#1a1a1a" }}>
+      <h1>HOME TEST OK</h1>
+      <p>Loading State: {isLoaded ? "Loaded" : "Loading..."}</p>
+    </div>
+  );
+};
 
-useEffect(() => {
-const TYPING_SPEED = 100;
-const ERASING_SPEED = 50;
-const PAUSE_DURATION = 2000;
-
-const handleTyping = () => {  
-  if (isTyping) {  
-    if (charIndex < words[wordIndex].length) {  
-      setText(prev => prev + words[wordIndex][charIndex]);  
-      setCharIndex(prev => prev + 1);  
-    } else {  
-      setTimeout(() => setIsTyping(false), PAUSE_DURATION);  
-    }  
+export default memo(Home);    }  
   } else {  
     if (charIndex > 0) {  
       setText(prev => prev.slice(0, -1));  
