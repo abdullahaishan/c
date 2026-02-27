@@ -98,7 +98,7 @@ const ProfileImage = memo(({ image }) => {
 
 const Home = ({ developer: propDeveloper }) => {
   const context = useDeveloper();
-  const developer = propDeveloper || context.publicDeveloper;
+  const developer = propDeveloper || context.developer;
   const { 
     getMainSkills, 
     getSocialLinks, 
