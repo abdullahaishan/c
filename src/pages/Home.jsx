@@ -5,7 +5,7 @@ import React, { useState, useEffect, memo } from "react";
 // =============================================
 
 // ❌ استيرادات خارجية - علقها كلها في البداية
-// import { Download } from "lucide-react";
+import { Download } from "lucide-react";
 // import AOS from "aos";
 // import "aos/dist/aos.css";
 // import { useDeveloper } from '../context/DeveloperContext';
@@ -163,6 +163,7 @@ const Home = ({ developer: propDeveloper }) => {
                 href="#Portfolio" 
                 className="px-4 sm:px-5 lg:px-6 py-2 sm:py-2.5 text-sm sm:text-base bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg font-semibold hover:scale-105 transition-all"
               >
+                <Download className="inline-block mr-2" size={20} />
                 Projects
               </a>
               <a 
