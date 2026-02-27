@@ -10,7 +10,7 @@ import { useDeveloper } from '../context/DeveloperContext';
 
 const ContactPage = ({ developer: propDeveloper }) => {
   const context = useDeveloper();
-  const developer = propDeveloper || context.publicDeveloper;
+  const developer = propDeveloper || context.developer;
   
   const [formData, setFormData] = useState({
     name: "",
