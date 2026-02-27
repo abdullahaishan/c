@@ -97,12 +97,6 @@ const ProfileImage = memo(({ image }) => {
 });
 
 const Home = ({ developer: propDeveloper }) => {
-  let context = null;
-try {
-  context = useDeveloper();
-} catch (e) {
-  console.warn("DeveloperContext not ready:", e);
-}
 
 const context = useDeveloper() || {};
 const developer = propDeveloper || context.developer || {};
@@ -146,9 +140,9 @@ const isFree = context.isFreePlan ? context.isFreePlan() : true;
               </div>
 
               {/* الوصف */}
-        //      <p className="text-xs sm:text-sm md:text-base text-gray-400 leading-relaxed max-w-xl mx-auto lg:mx-0" data-aos="fade-right" data-aos-delay="600">
-             //   {developer?.bio || "Passionate about technology since 2008, I started programming professionally in 2015."}
-           //   </p>
+              {/*  <p className="text-xs sm:text-sm md:text-base text-gray-400 leading-relaxed max-w-xl mx-auto lg:mx-0" data-aos="fade-right" data-aos-delay="600">
+              {developer?.bio || "Passionate about technology since 2008, I started programming professionally in 2015."}
+             </p>*/}
               {/* أزرار المشاريع والتواصل */}
               <div className="flex gap-2 sm:gap-3 justify-center lg:justify-start" data-aos="fade-right" data-aos-delay="800">
                 <a
@@ -178,7 +172,7 @@ const isFree = context.isFreePlan ? context.isFreePlan() : true;
 
             {/* القسم الأيمن - الصورة */}
             <div className="w-full lg:w-1/2 flex items-center justify-center order-1 lg:order-2 mb-4 lg:mb-0" data-aos="fade-left" data-aos-delay="400">
-              <ProfileImage image={getProfileImage()} />
+              <ProfileImage image={profileImage} />
             </div>
           </div>
         </div>
