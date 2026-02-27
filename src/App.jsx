@@ -1,9 +1,8 @@
 import { useParams } from "react-router-dom"
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { AnimatePresence } from 'framer-motion'
 import "./index.css"
-
 
 // الصفحات العامة
 import WelcomeScreen from './pages/WelcomeScreen'
@@ -37,39 +36,51 @@ import ProjectDetail from './components/ProjectDetail'
 // Provider
 import { DeveloperProvider } from './context/DeveloperContext'
 import { useAuth } from './hooks/useAuth'
+
 const PublicPortfolioWrapper = () => {
   const { username } = useParams()
-
   return (
     <DeveloperProvider username={username}>
       <PublicPortfolio />
     </DeveloperProvider>
   )
-  }
+}
+
 const AppRoutes = () => {
   const [showWelcome, setShowWelcome] = useState(true)
   const { user, loading } = useAuth()
+  const [redirectTo, setRedirectTo] = useState(null)
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#030014] flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-[#6366f1]/20 border-t-[#6366f1] rounded-full animate-spin" />
-      </div>
-    )
+  // عند انتهاء شاشة الترحيب، نقرر أين نذهب
+  const handleWelcomeComplete = () => {
+    if (user) {
+      setRedirectTo('/dashboard')
+    } else {
+      setShowWelcome(false) // يظهر المحتوى العادي (LandingPage)
+    }
+  }
+
+  // إذا كان فيه توجيه، ننفذه
+  if (redirectTo) {
+    return <Navigate to={redirectTo} replace />
+  }
+
+  // أثناء التحميل، نظهر شاشة الترحيب (بدون محتوى)
+  if (loading && showWelcome) {
+    return <WelcomeScreen onLoadingComplete={handleWelcomeComplete} />
   }
 
   return (
     <>
       <AnimatePresence mode="wait">
         {showWelcome && (
-          <WelcomeScreen onLoadingComplete={() => setShowWelcome(false)} />
+          <WelcomeScreen onLoadingComplete={handleWelcomeComplete} />
         )}
       </AnimatePresence>
 
       {!showWelcome && (
         <Routes>
-
-          {/* الصفحة الرئيسية */}
+          {/* الصفحة الرئيسية - تظهر فقط لغير المسجلين */}
           <Route 
             path="/" 
             element={
@@ -81,11 +92,11 @@ const AppRoutes = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* ⭐ الصفحة العامة للمطور — نلفها فقط بالـ Provider */}
+          {/* الصفحة العامة للمطور */}
           <Route 
-  path="/u/:username" 
-  element={<PublicPortfolioWrapper />} 
-/>
+            path="/u/:username" 
+            element={<PublicPortfolioWrapper />} 
+          />
           
           {/* تفاصيل مشروع */}
           <Route path="/project/:id" element={<ProjectDetail />} />
