@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { AnimatePresence } from 'framer-motion'
 import "./index.css"
-import { logError } from './utils/logger';
+import { logError } from './utils/Logger';
 import CrashReporter from './components/CrashReporter';
 
 // الصفحات العامة
