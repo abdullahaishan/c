@@ -46,8 +46,31 @@ const About = ({ developer: propDeveloper }) => {
   // ⚡ الروابط الاجتماعية الديناميكية
   const socialLinks = getSocialLinks() || {};
   const adminLinks = getAdminSocialLinks() || {};
-  const usedLinks = isFreePlan() ? adminLinks : socialLinks;
-
+  {/* Social Links - مع تحقق إضافي */}
+{usedLinks && typeof usedLinks === 'object' && Object.keys(usedLinks).length > 0 && (
+  <div className="flex gap-3 pt-4">
+    {usedLinks.github && (
+      <a href={usedLinks.github} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center hover:bg-[#6366f1] transition-all">
+        <Github className="w-5 h-5 text-gray-400" />
+      </a>
+    )}
+    {usedLinks.linkedin && (
+      <a href={usedLinks.linkedin} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center hover:bg-[#0077b5] transition-all">
+        <Linkedin className="w-5 h-5 text-gray-400" />
+      </a>
+    )}
+    {usedLinks.instagram && (
+      <a href={usedLinks.instagram} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center hover:bg-[#e4405f] transition-all">
+        <Instagram className="w-5 h-5 text-gray-400" />
+      </a>
+    )}
+    {usedLinks.facebook && (
+      <a href={usedLinks.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center hover:bg-[#1877f2] transition-all">
+        <Facebook className="w-5 h-5 text-gray-400" />
+      </a>
+    )}
+  </div>
+)}
   // ⚡ الإحصائيات
   const stats = useMemo(() => {
     return {
