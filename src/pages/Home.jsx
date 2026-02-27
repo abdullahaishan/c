@@ -77,25 +77,28 @@ const ProfileImage = memo(({ image }) => {
   const imageSource = imageError ? '/Coding.gif' : image;
 
   return (
+    return (
+  <div className="relative group">
     <div
-  className={`absolute inset-0 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-full blur-3xl transition-all duration-700 ${
-    isMobile
-      ? 'opacity-10'
-      : 'opacity-20 group-hover:opacity-30'
-  }`}
-></div>
-      
-      <img
-        src={imageSource}
-        alt="Profile"
-        onError={() => setImageError(true)}
-        className={`relative object-cover rounded-full border-4 border-white/10 transition-all duration-700 ${
-          isMobile 
-            ? 'w-40 h-40 sm:w-48 sm:h-48'
-            : 'w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 group-hover:scale-105'
-        }`}
-      />
-    </div>
+      className={`absolute inset-0 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-full blur-3xl transition-all duration-700 ${
+        isMobile
+          ? 'opacity-10'
+          : 'opacity-20 group-hover:opacity-30'
+      }`}
+    ></div>
+
+    <img
+      src={imageSource}
+      alt="Profile"
+      onError={() => setImageError(true)}
+      className={`relative object-cover rounded-full border-4 border-white/10 transition-all duration-700 ${
+        isMobile
+          ? 'w-40 h-40 sm:w-48 sm:h-48'
+          : 'w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 group-hover:scale-105'
+      }`}
+    />
+  </div>
+);
   );
 });
 
