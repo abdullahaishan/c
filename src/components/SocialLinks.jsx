@@ -39,10 +39,13 @@ const SocialLinks = ({
   isFreePlan = false, 
   adminLinks = {} 
 }) => {
+  // ✅ التحقق من وجود الروابط بشكل آمن
+  const safeLinks = links || {};
+  const safeAdminLinks = adminLinks || {};
+  
   // تحديد الروابط المستخدمة
-  const usedLinks = isFreePlan 
-  ? (adminLinks || {}) 
-  : (links || {});
+  const usedLinks = isFreePlan ? safeAdminLinks : safeLinks;
+  
   const socialIcons = [
     { icon: Github, platform: 'github', label: 'GitHub', color: 'hover:bg-[#333]' },
     { icon: Linkedin, platform: 'linkedin', label: 'LinkedIn', color: 'hover:bg-[#0077b5]' },
@@ -54,10 +57,15 @@ const SocialLinks = ({
     { icon: Globe, platform: 'website', label: 'Website', color: 'hover:bg-[#a855f7]' }
   ];
 
-  // إذا لم توجد أي روابط، لا تعرض شيئاً
-  const hasAnyLinks = socialIcons.some(({ platform }) => 
-  usedLinks && usedLinks[platform]
-);
+  // ✅ التحقق من وجود أي روابط بشكل آمن
+  const hasAnyLinks = socialIcons.some(({ platform }) => {
+    try {
+      return usedLinks && usedLinks[platform] && usedLinks[platform].trim() !== '';
+    } catch (e) {
+      return false;
+    }
+  });
+  
   if (!hasAnyLinks && !isFreePlan) return null;
 
   return (
@@ -72,10 +80,16 @@ const SocialLinks = ({
       {/* الأيقونات */}
       <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
         {socialIcons.map(({ icon: Icon, platform, label, color }) => {
-          const link = usedLinks[platform];
+          // ✅ الوصول الآمن للرابط
+          let link = '';
+          try {
+            link = usedLinks && usedLinks[platform] ? usedLinks[platform] : '';
+          } catch (e) {
+            link = '';
+          }
           
-          // إذا كان الرابط موجوداً
-          if (link) {
+          // إذا كان الرابط موجوداً وصالحاً
+          if (link && typeof link === 'string' && link.trim() !== '') {
             return (
               <a
                 key={platform}
@@ -115,7 +129,7 @@ const SocialLinks = ({
             );
           }
           
-          // إذا كان الرابط غير موجود، نعرض نسخة معتمة
+          // إذا كان الرابط غير موجود أو فارغ، نعرض نسخة معتمة
           return <UnavailableLink key={platform} platform={platform} />;
         })}
       </div>
