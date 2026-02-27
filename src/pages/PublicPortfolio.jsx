@@ -15,8 +15,8 @@ const PublicPortfolio = () => {
 
   const {
     developer,
-    publicLoading,
-    publicError,
+    loading,
+    error,
     isPaidPlan
   } = useDeveloper();
 
