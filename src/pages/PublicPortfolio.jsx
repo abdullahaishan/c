@@ -61,14 +61,11 @@ const PublicPortfolio = () => {
       <Navbar />
 
       <main className="relative z-10">
-          <About developer={developer}/>
+        <Home developer={developer} />
+        {/*<About developer={developer}/>*/}
         <Skills developer={developer} />
         <Portfolio developer={developer} />
-        {/*     
-<Home developer={developer} />
-         
-        
-        */}
+      
         {/* قسم الخبرات الجديد */}
         {/*  <ExperienceSection />*/}
 
