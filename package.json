@@ -47,7 +47,7 @@
     "tailwind-merge": "^2.5.5",
     "typewriter-effect": "^2.21.0",
     "lottie-web": "^5.12.2",
-    "localforage": "^1.10.0",
+    "sweetalert2": "^11.0.0"
     "uuid": "^9.0.1"
   },
   "devDependencies": {
