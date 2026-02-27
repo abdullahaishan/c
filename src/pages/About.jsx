@@ -22,16 +22,27 @@ import React, { useEffect, useMemo, memo } from "react";
 
  import AOS from "aos";
  import "aos/dist/aos.css";
-// import { useDeveloper } from '../context/DeveloperContext';
+ import { useDeveloper } from '../context/DeveloperContext';
 
 const About = ({ developer: propDeveloper }) => {
-  // ✅ بيانات افتراضية للتجربة
-  const developer = propDeveloper || {
-    full_name: "Abdullah Zabin Ali Aishan",
-    username: "abdullah_aishan",
-    bio: "Passionate developer building smart digital solutions.",
-    resume_file: null
-  };
+
+
+// داخل المكون، استبدل البيانات الافتراضية بـ:
+const context = useDeveloper();
+const developer = propDeveloper || context.developer;
+
+const {
+  getProfileImage,
+  getProjects,
+  getCertificates,
+  getSkills,
+  getExperience,
+  getEducation,
+  getTotalExperienceYears,
+  getSocialLinks,
+  isFreePlan,
+  getAdminSocialLinks
+} = context;
 
   // ⚡ دوال مساعدة افتراضية
   const getProfileImage = () => "/Coding.gif";
