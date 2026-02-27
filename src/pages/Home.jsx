@@ -15,12 +15,12 @@ const AnimatedText = memo(({ skills }) => {
   const [wordIndex, setWordIndex] = useState(0);
   const [charIndex, setCharIndex] = useState(0);
 
-  const words = skills.length > 0 ? skills : [
-    "Flutter Developer",
-    "MySQL Expert",
-    "PHP Developer",
-    "Firebase Specialist"
-  ];
+  const words = skills && skills.length > 0 ? skills : [
+  "Flutter Developer",
+  "MySQL Expert",
+  "PHP Developer",
+  "Firebase Specialist"
+];
 
   useEffect(() => {
     const TYPING_SPEED = 100;
@@ -158,9 +158,9 @@ const isFreePlan = context?.isFreePlan || (() => true);
               </div>
 
               {/* الوصف */}
-              <p className="text-xs sm:text-sm md:text-base text-gray-400 leading-relaxed max-w-xl mx-auto lg:mx-0" data-aos="fade-right" data-aos-delay="600">
-                {developer?.bio || "Passionate about technology since 2008, I started programming professionally in 2015."}
-              </p>
+        //      <p className="text-xs sm:text-sm md:text-base text-gray-400 leading-relaxed max-w-xl mx-auto lg:mx-0" data-aos="fade-right" data-aos-delay="600">
+             //   {developer?.bio || "Passionate about technology since 2008, I started programming professionally in 2015."}
+           //   </p>
 
               {/* أزرار المشاريع والتواصل */}
               <div className="flex gap-2 sm:gap-3 justify-center lg:justify-start" data-aos="fade-right" data-aos-delay="800">
