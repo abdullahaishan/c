@@ -15,10 +15,10 @@ const Footer = () => {
   const handleAdminClick = () => {
     navigate('/u/abdullah_aishan');
   };
-const adminLinks = getAdminSocialLinks();
+  {/*const adminLinks = getAdminSocialLinks();
   const socialLinks = getSocialLinks();
   const isFree = isFreePlan();
-
+*/}
   return (
     <footer className="bg-gradient-to-t from-[#030014] to-transparent border-t border-white/10 pt-8 sm:pt-10 lg:pt-12 pb-4 sm:pb-5 lg:pb-6 px-4 sm:px-6 lg:px-8 relative">
       <div className="max-w-7xl mx-auto">
