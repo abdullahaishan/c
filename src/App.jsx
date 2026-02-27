@@ -124,7 +124,7 @@ const AppRoutes = () => {
         </Routes>
       )}
     </>
-  ),
+  )
 }
 
 function App() {
