@@ -115,7 +115,7 @@ const isFree = context.isFreePlan ? context.isFreePlan() : true;
 
   return (
     <div className="relative min-h-screen bg-[#030014] overflow-hidden" id="Home">
-      <AnimatedBackground />
+      {/*  <AnimatedBackground />*/}
       
       <div className={`relative z-10 transition-all duration-1000 ${isLoaded ? "opacity-100" : "opacity-0"}`}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 min-h-screen flex items-center">
