@@ -10,7 +10,6 @@ import {
   Globe,
   MessageCircle  // لإضافة أيقونة WhatsApp
 } from 'lucide-react';
-
 // مكون رابط غير متوفر
 const UnavailableLink = ({ platform }) => (
   <div className="group relative cursor-not-allowed opacity-50">
