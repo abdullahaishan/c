@@ -9,12 +9,13 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
   const { 
   isFreePlan, 
+  getAdminSocialLinks, 
   getSocialLinks
 } = useDeveloper();
   const handleAdminClick = () => {
     navigate('/u/abdullah_aishan');
   };
-
+const adminLinks = getAdminSocialLinks();
   const socialLinks = getSocialLinks();
   const isFree = isFreePlan();
 
