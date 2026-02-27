@@ -19,7 +19,17 @@ import { useDeveloper } from '../context/DeveloperContext';
 
 const AboutPage = ({ developer: propDeveloper }) => {
   const context = useDeveloper();
-const developer = propDeveloper || context.developer;
+  const developer = propDeveloper || context.developer;
+
+  // ⚠️ منع انهيار الصفحة قبل تحميل البيانات
+  if (!developer) {
+    return (
+      <div className="text-center py-20 text-gray-400">
+        Loading developer data...
+      </div>
+    );
+  }
+
   const {
     getProfileImage,
     getProjects,
@@ -32,24 +42,27 @@ const developer = propDeveloper || context.developer;
     getAdminSocialLinks
   } = context;
 
+  // ⚡ الإحصائيات
   const stats = useMemo(() => {
-    const projects = getProjects();
-    const certificates = getCertificates();
-    const skills = getSkills();
-    const totalYears = getTotalExperienceYears();
+    const projects = getProjects() || [];
+    const certificates = getCertificates() || [];
+    const skills = getSkills() || [];
+    const totalYears = getTotalExperienceYears() || 0;
 
     return {
-      projects: projects?.length || 0,
-      certificates: certificates?.length || 0,
-      skills: skills?.length || 0,
-      experience: totalYears || 5
+      projects: projects.length,
+      certificates: certificates.length,
+      skills: skills.length,
+      experience: totalYears
     };
   }, [developer]);
 
-  const socialLinks = getSocialLinks();
-  const adminLinks = getAdminSocialLinks();
+  // ⚡ الروابط الاجتماعية الديناميكية
+  const socialLinks = getSocialLinks() || {};
+  const adminLinks = getAdminSocialLinks() || {};
   const usedLinks = isFreePlan() ? adminLinks : socialLinks;
 
+  // ⚡ معلومات الاتصال
   const contactInfo = {
     email: usedLinks.email || "eng.abdullah.z.aishan@gmail.com",
     phone: "+967-771-315-459",
@@ -57,12 +70,13 @@ const developer = propDeveloper || context.developer;
   };
 
   useEffect(() => {
-    AOS.init({ once: false });
+    AOS.init({ once: true });
   }, []);
 
   return (
     <div className="relative min-h-screen bg-[#030014] overflow-hidden" id="About">
       <div className="container mx-auto px-[5%] py-20">
+
         {/* Header */}
         <div className="text-center mb-12" data-aos="fade-up">
           <h2 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6366f1] to-[#a855f7] mb-4">
@@ -82,51 +96,51 @@ const developer = propDeveloper || context.developer;
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#6366f1] to-[#a855f7]">
                 Hello, I'm
               </span>
-              <span className="block mt-2">
-                Abdullah Zabin Ali Aishan
-              </span>
+              <span className="block mt-2">{developer.full_name || developer.username}</span>
             </h3>
 
             <p className="text-gray-300 leading-relaxed">
-              Passionate about technology since 2008, I started programming professionally in 2015.
-              I specialize in cross-platform Flutter development with strong experience integrating
-              backends (PHP, Firebase, MySQL). I focus on building smart, reliable solutions for
-              healthcare and service systems.
+              {developer.bio || "Passionate developer building smart digital solutions."}
             </p>
 
-            <a
-              href={developer?.resume_file || "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-105 transition-all"
-            >
-              <FileText className="w-5 h-5" />
-              Download CV
-            </a>
+            {/* Download CV */}
+            {developer.resume_file && (
+              <a
+                href={developer.resume_file}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-105 transition-all"
+              >
+                <FileText className="w-5 h-5" />
+                Download CV
+              </a>
+            )}
 
             {/* Social Media Icons */}
-            <div className="flex gap-3 pt-4">
-              {usedLinks.github && (
-                <a href={usedLinks.github} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center hover:bg-[#6366f1] transition-all">
-                  <Github className="w-5 h-5 text-gray-400" />
-                </a>
-              )}
-              {usedLinks.linkedin && (
-                <a href={usedLinks.linkedin} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center hover:bg-[#0077b5] transition-all">
-                  <Linkedin className="w-5 h-5 text-gray-400" />
-                </a>
-              )}
-              {usedLinks.instagram && (
-                <a href={usedLinks.instagram} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center hover:bg-[#e4405f] transition-all">
-                  <Instagram className="w-5 h-5 text-gray-400" />
-                </a>
-              )}
-              {usedLinks.facebook && (
-                <a href={usedLinks.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center hover:bg-[#1877f2] transition-all">
-                  <Facebook className="w-5 h-5 text-gray-400" />
-                </a>
-              )}
-            </div>
+            {usedLinks && Object.keys(usedLinks).length > 0 && (
+              <div className="flex gap-3 pt-4">
+                {usedLinks.github && (
+                  <a href={usedLinks.github} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center hover:bg-[#6366f1] transition-all">
+                    <Github className="w-5 h-5 text-gray-400" />
+                  </a>
+                )}
+                {usedLinks.linkedin && (
+                  <a href={usedLinks.linkedin} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center hover:bg-[#0077b5] transition-all">
+                    <Linkedin className="w-5 h-5 text-gray-400" />
+                  </a>
+                )}
+                {usedLinks.instagram && (
+                  <a href={usedLinks.instagram} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center hover:bg-[#e4405f] transition-all">
+                    <Instagram className="w-5 h-5 text-gray-400" />
+                  </a>
+                )}
+                {usedLinks.facebook && (
+                  <a href={usedLinks.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center hover:bg-[#1877f2] transition-all">
+                    <Facebook className="w-5 h-5 text-gray-400" />
+                  </a>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Right Column - Image */}
@@ -177,6 +191,7 @@ const developer = propDeveloper || context.developer;
             <div className="text-xs text-gray-400">Certificates</div>
           </div>
         </div>
+
       </div>
     </div>
   );
