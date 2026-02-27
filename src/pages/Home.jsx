@@ -6,13 +6,14 @@ import React, { useState, useEffect, memo } from "react";
 
 // ❌ استيرادات خارجية - علقها كلها في البداية
 import { Download } from "lucide-react";
- import AOS from "aos";
- import "aos/dist/aos.css";
- import { useDeveloper } from '../context/DeveloperContext';
-import AnimatedBackground from '../components/AnimatedBackground'; import SocialLinks from '../components/SocialLinks';
+import AOS from "aos";
+import "aos/dist/aos.css";
+import { useDeveloper } from '../context/DeveloperContext';
+import AnimatedBackground from '../components/AnimatedBackground';
+import SocialLinks from '../components/SocialLinks';
 
 // =============================================
-// مكون النص المتحرك - هذا آمن لأنه يعتمد على React فقط
+// مكون النص المتحرك
 // =============================================
 const AnimatedText = memo(({ skills }) => {
   const [text, setText] = useState("");
@@ -66,7 +67,7 @@ const AnimatedText = memo(({ skills }) => {
 });
 
 // =============================================
-// مكون الصورة - هذا آمن أيضاً
+// مكون الصورة
 // =============================================
 const ProfileImage = memo(({ image }) => {
   const [imageError, setImageError] = useState(false);
@@ -108,27 +109,41 @@ const ProfileImage = memo(({ image }) => {
 });
 
 // =============================================
-// المكون الرئيسي - مع بيانات افتراضية آمنة
+// المكون الرئيسي
 // =============================================
 const Home = ({ developer: propDeveloper }) => {
-const context = useDeveloper();   // <-- أضف هذا السطر
-const developer = propDeveloper || context.developer || {};
+  // ✅ استخدام try/catch لمنع الانهيار
+  let contextData = {};
+  try {
+    contextData = useDeveloper();
+  } catch (error) {
+    console.log("Context not available");
+  }
 
-const mainSkills = context.getMainSkills ? context.getMainSkills() : [
-  "Flutter Developer",
-  "MySQL Expert",
-  "PHP Developer",
-  "Firebase Specialist"
-];
+  const context = contextData || {};
+  const developer = propDeveloper || context.developer || {};
 
-const profileImage = context.getProfileImage ? context.getProfileImage() : "/Coding.gif";
+  // ✅ تعريف جميع المتغيرات المطلوبة
+  const mainSkills = context.getMainSkills ? context.getMainSkills() : [
+    "Flutter Developer",
+    "MySQL Expert",
+    "PHP Developer",
+    "Firebase Specialist"
+  ];
 
-const [isLoaded, setIsLoaded] = useState(false);
+  // ✅ هذه المتغيرات كانت مفقودة وتسبب الانهيار
+  const socialLinks = context.getSocialLinks ? context.getSocialLinks() : {};
+  const adminLinks = context.getAdminSocialLinks ? context.getAdminSocialLinks() : {};
+  const isFree = context.isFreePlan ? context.isFreePlan() : true;
+
+  const profileImage = context.getProfileImage ? context.getProfileImage() : "/Coding.gif";
+  
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-  AOS.init({ once: true, offset: 10 });
-  setIsLoaded(true);
-}, []);
+    AOS.init({ once: true, offset: 10 });
+    setIsLoaded(true);
+  }, []);
 
   return (
     <div className={`relative z-10 transition-all duration-1000 ${isLoaded ? "opacity-100" : "opacity-0"}`}>
@@ -139,28 +154,28 @@ const [isLoaded, setIsLoaded] = useState(false);
           {/* القسم الأيسر */}
           <div className="w-full lg:w-1/2 space-y-4 sm:space-y-5 lg:space-y-6 text-center lg:text-left order-2 lg:order-1">
             
-            {/* الاسم - بيانات افتراضية */}
-            <div>
+            {/* الاسم */}
+            <div data-aos="fade-right" data-aos-delay="200">
               <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white">
-                Abdullah
+                {developer?.full_name?.split(' ')[0] || 'Abdullah'}
               </h1>
               <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-gray-300 mt-1">
-                Zabin Ali Aishan
+                {developer?.full_name?.split(' ').slice(1).join(' ') || 'Zabin Ali Aishan'}
               </h2>
             </div>
 
-            {/* النص المتحرك - يعمل بدون Context */}
-            <div>
+            {/* النص المتحرك */}
+            <div data-aos="fade-right" data-aos-delay="400">
               <AnimatedText skills={mainSkills} />
             </div>
 
             {/* أزرار المشاريع والتواصل */}
-            <div className="flex gap-2 sm:gap-3 justify-center lg:justify-start">
+            <div className="flex gap-2 sm:gap-3 justify-center lg:justify-start" data-aos="fade-right" data-aos-delay="800">
               <a 
                 href="#Portfolio" 
-                className="px-4 sm:px-5 lg:px-6 py-2 sm:py-2.5 text-sm sm:text-base bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg font-semibold hover:scale-105 transition-all"
+                className="px-4 sm:px-5 lg:px-6 py-2 sm:py-2.5 text-sm sm:text-base bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg font-semibold hover:scale-105 transition-all flex items-center gap-2"
               >
-                <Download className="inline-block mr-2" size={20} />
+                <Download size={20} />
                 Projects
               </a>
               <a 
@@ -171,31 +186,31 @@ const [isLoaded, setIsLoaded] = useState(false);
               </a>
             </div>
 
-            {/* 🟢 روابط التواصل - معطلة حالياً */}
+            {/* ✅ روابط التواصل - الآن المتغيرات معرفة بشكل صحيح */}
             <div data-aos="fade-right" data-aos-delay="1000">
-<SocialLinks 
-  links={socialLinks || {}}        // تأكد من تمرير كائن حتى لو كان فارغاً
-  isPaid={!isFree} 
-  isFreePlan={isFree || false} 
-  adminLinks={adminLinks || {}} 
-/>
-</div>
+              <SocialLinks 
+                links={socialLinks} 
+                isPaid={!isFree} 
+                isFreePlan={isFree} 
+                adminLinks={adminLinks} 
+              />
+            </div>
+
             {/* رسالة تشخيصية */}
             <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
               <p className="text-yellow-500 text-sm">
-                🔧 وضع التشخيص: جميع الاستيرادات الخارجية معطلة
+                🔧 Social Links Active - {Object.keys(socialLinks).length} links found
               </p>
             </div>
           </div>
 
           {/* القسم الأيمن - الصورة */}
-          <div className="w-full lg:w-1/2 flex items-center justify-center order-1 lg:order-2 mb-4 lg:mb-0">
+          <div className="w-full lg:w-1/2 flex items-center justify-center order-1 lg:order-2 mb-4 lg:mb-0" data-aos="fade-left" data-aos-delay="400">
             <ProfileImage image={profileImage} />
           </div>
         </div>
       </div>
 
-      {/* الأنيميششن */}
       <style jsx>{`
         @keyframes blink {
           0%, 100% { opacity: 1; }
