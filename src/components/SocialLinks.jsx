@@ -33,10 +33,16 @@ const UnavailableLink = ({ platform }) => (
   </div>
 );
 
-const SocialLinks = ({ links, isPaid = false, isFreePlan = false, adminLinks = {} }) => {
+const SocialLinks = ({ 
+  links = {}, 
+  isPaid = false, 
+  isFreePlan = false, 
+  adminLinks = {} 
+}) => {
   // تحديد الروابط المستخدمة
-  const usedLinks = isFreePlan ? adminLinks : links;
-  
+  const usedLinks = isFreePlan 
+  ? (adminLinks || {}) 
+  : (links || {});
   const socialIcons = [
     { icon: Github, platform: 'github', label: 'GitHub', color: 'hover:bg-[#333]' },
     { icon: Linkedin, platform: 'linkedin', label: 'LinkedIn', color: 'hover:bg-[#0077b5]' },
@@ -49,7 +55,9 @@ const SocialLinks = ({ links, isPaid = false, isFreePlan = false, adminLinks = {
   ];
 
   // إذا لم توجد أي روابط، لا تعرض شيئاً
-  const hasAnyLinks = socialIcons.some(({ platform }) => usedLinks[platform]);
+  const hasAnyLinks = socialIcons.some(({ platform }) => 
+  usedLinks && usedLinks[platform]
+);
   if (!hasAnyLinks && !isFreePlan) return null;
 
   return (
