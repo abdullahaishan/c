@@ -18,7 +18,34 @@ export const DeveloperProvider = ({ children, username }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
+useEffect(() => {
+  if (!username) return
 
+  const fetchDeveloper = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const data = await developerService.getByUsername(username)
+
+      if (!data) {
+        setDeveloper(null)
+        setError("Developer not found")
+      } else {
+        setDeveloper(data)
+      }
+
+    } catch (err) {
+      console.error("Error fetching developer:", err)
+      setError("Failed to load developer")
+      setDeveloper(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  fetchDeveloper()
+}, [username])
   
 
   // دوال المساعدة (تستخدم نفس الأسماء لتوافق ملفات العرض)
