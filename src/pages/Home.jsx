@@ -9,8 +9,7 @@ import { Download } from "lucide-react";
  import AOS from "aos";
  import "aos/dist/aos.css";
  import { useDeveloper } from '../context/DeveloperContext';
-import AnimatedBackground from '../components/AnimatedBackground';
-// import SocialLinks from '../components/SocialLinks';
+import AnimatedBackground from '../components/AnimatedBackground'; import SocialLinks from '../components/SocialLinks';
 
 // =============================================
 // مكون النص المتحرك - هذا آمن لأنه يعتمد على React فقط
@@ -173,8 +172,14 @@ const [isLoaded, setIsLoaded] = useState(false);
             </div>
 
             {/* 🟢 روابط التواصل - معطلة حالياً */}
-            {/* <SocialLinks links={socialLinks} isPaid={!isFree} isFreePlan={isFree} adminLinks={adminLinks} /> */}
-            
+            <div data-aos="fade-right" data-aos-delay="1000">
+  <SocialLinks 
+    links={socialLinks} 
+    isPaid={!isFree} 
+    isFreePlan={isFree} 
+    adminLinks={adminLinks} 
+  />
+</div>
             {/* رسالة تشخيصية */}
             <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
               <p className="text-yellow-500 text-sm">
