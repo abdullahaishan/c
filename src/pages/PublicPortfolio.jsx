@@ -55,12 +55,37 @@ const PublicPortfolio = () => {
   }
 
   
-return (
-  <>
-    <Footer />
-    <div className="text-white">Footer Test</div>
-  </>
-)
+ return (
+    <>
+      <AnimatedBackground />
+      <Navbar />
+
+      <main className="relative z-10">
+
+        <Home developer={developer} />
+        <AboutPage developer={developer} />
+
+        <Skills developer={developer} />
+        <Portfolio developer={developer} />
+        {/* قسم الخبرات الجديد */}
+        {/*  <ExperienceSection />*/}
+
+        {/* WhyMe يظهر فقط للباقة المجانية */}
+        {/*  {!isPaidPlan() && <WhyMe developer={developer} />*/}}
+
+      </main>
+
+      <Footer />
+      {isPaidPlan() && (
+        <div className="fixed top-16 right-4 z-50">
+          <div className="bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 shadow-lg">
+            <Crown className="w-4 h-4" />
+            Premium Plan
+          </div>
+        </div>
+      )}
+    </>
+  );
 };
 
 export default PublicPortfolio;
