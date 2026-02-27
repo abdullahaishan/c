@@ -3,6 +3,10 @@ import React, { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { AnimatePresence } from 'framer-motion'
 import "./index.css"
+import React, { useEffect } from 'react';
+import { View } from 'react-native';
+import { logError } from './utils/logger';
+import CrashReporter from './components/CrashReporter';
 
 // الصفحات العامة
 import WelcomeScreen from './pages/WelcomeScreen'
@@ -46,6 +50,11 @@ const PublicPortfolioWrapper = () => {
   )
   }
 const AppRoutes = () => {
+  useEffect(() => {
+    // تسجيل بداية التطبيق
+    console.log('🚀 App started at:', new Date().toISOString());
+  }, []);
+     <View style={{ flex: 1 }}>
   const [showWelcome, setShowWelcome] = useState(true)
   const { user, loading } = useAuth()
 
@@ -123,7 +132,9 @@ const AppRoutes = () => {
         </Routes>
       )}
     </>
-  )
+  ),
+            <CrashReporter />
+    </View>
 }
 
 function App() {
