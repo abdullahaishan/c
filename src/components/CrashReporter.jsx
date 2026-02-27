@@ -1,20 +1,37 @@
-// src/components/CrashReporter.js - نسخة الويب
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  Modal, 
-  ScrollView,
-  ActivityIndicator,
-  StyleSheet 
-} from 'react-native';
-import { getErrors, clearErrors, downloadErrors } from '../utils/logger';
+import { getErrors, clearErrors, downloadErrors, logError } from '../utils/logger';
 
 const CrashReporter = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [errors, setErrors] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // اعتراض الأخطاء العالمية
+  useEffect(() => {
+    const handleError = (event) => {
+      logError(event.error || new Error(event.message), 'Global');
+    };
+
+    const handleRejection = (event) => {
+      logError(event.reason, 'UnhandledPromise');
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleRejection);
+
+    // اعتراض console.error
+    const originalConsoleError = console.error;
+    console.error = (...args) => {
+      logError(new Error(args.join(' ')), 'ConsoleError');
+      originalConsoleError.apply(console, args);
+    };
+
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleRejection);
+      console.error = originalConsoleError;
+    };
+  }, []);
 
   const loadErrors = async () => {
     setLoading(true);
@@ -41,207 +58,235 @@ const CrashReporter = () => {
     }
   };
 
-  const handleDownload = async () => {
-    await downloadErrors();
-  };
-
-  // اعتراض الأخطاء العالمية
-  useEffect(() => {
-    const handleError = (event) => {
-      logError(event.error || new Error(event.message), 'Global');
-    };
-
-    window.addEventListener('error', handleError);
-    window.addEventListener('unhandledrejection', (event) => {
-      logError(event.reason, 'UnhandledPromise');
-    });
-
-    return () => {
-      window.removeEventListener('error', handleError);
-      window.removeEventListener('unhandledrejection', handleError);
-    };
-  }, []);
-
+  // لا تعرض شيئاً إذا كان هناك أخطاء في التحميل (لن يتم استدعاء هذا أصلاً)
   return (
     <>
-      {/* الزر العائم */}
-      <TouchableOpacity
+      {/* الزر العائم - عنصر HTML <button> */}
+      <button
+        onClick={handleOpen}
         style={styles.floatingButton}
-        onPress={handleOpen}
+        aria-label="فتح سجل الأخطاء"
       >
-        <Text style={styles.buttonText}>🐛</Text>
-      </TouchableOpacity>
+        <span style={styles.buttonText}>🐛</span>
+      </button>
 
-      {/* نافذة عرض الأخطاء */}
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
+      {/* نافذة عرض الأخطاء - نافذة مخصصة */}
+      {modalVisible && (
+        <div style={styles.modalOverlay} onClick={() => setModalVisible(false)}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <h2 style={styles.modalTitle}>
               📋 سجلات الأعطال
-            </Text>
+            </h2>
 
-            <Text style={styles.errorCount}>
+            <p style={styles.errorCount}>
               عدد الأخطاء: {errors.length}
-            </Text>
+            </p>
 
             {loading ? (
-              <ActivityIndicator size="large" color="#a855f7" />
+              <div style={styles.loadingContainer}>
+                <div style={styles.spinner}></div>
+              </div>
             ) : (
-              <ScrollView style={styles.errorList}>
+              <div style={styles.errorList}>
                 {errors.length === 0 ? (
-                  <Text style={styles.noErrors}>✨ لا توجد أخطاء مسجلة</Text>
+                  <p style={styles.noErrors}>✨ لا توجد أخطاء مسجلة</p>
                 ) : (
                   errors.map((error, index) => (
-                    <View key={error.id || index} style={styles.errorItem}>
-                      <Text style={styles.errorTime}>🕒 {new Date(error.timestamp).toLocaleString()}</Text>
-                      <Text style={styles.errorComponent}>📁 {error.component}</Text>
-                      <Text style={styles.errorMessage}>❌ {error.message}</Text>
-                      {error.stack && (
-                        <Text style={styles.errorStack} numberOfLines={3}>
-                          {error.stack}
-                        </Text>
+                    <div key={error.id || index} style={styles.errorItem}>
+                      <p style={styles.errorTime}>🕒 {new Date(error.timestamp).toLocaleString()}</p>
+                      <p style={styles.errorComponent}>📁 {error.component}</p>
+                      <p style={styles.errorMessage}>❌ {error.message}</p>
+                      <p style={styles.errorUrl}>🔗 {error.url}</p>
+                      {error.stack && error.stack !== 'No stack trace' && (
+                        <pre style={styles.errorStack}>
+                          {error.stack.substring(0, 200)}...
+                        </pre>
                       )}
-                    </View>
+                    </div>
                   ))
                 )}
-              </ScrollView>
+              </div>
             )}
 
             {/* الأزرار */}
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[styles.button, styles.downloadButton]}
-                onPress={handleDownload}
+            <div style={styles.buttonContainer}>
+              <button
+                onClick={downloadErrors}
+                style={{...styles.button, ...styles.downloadButton}}
               >
-                <Text style={styles.buttonText}>📥 تحميل</Text>
-              </TouchableOpacity>
+                📥 تحميل
+              </button>
 
-              <TouchableOpacity
-                style={[styles.button, styles.clearButton]}
-                onPress={handleClear}
+              <button
+                onClick={handleClear}
+                style={{...styles.button, ...styles.clearButton}}
               >
-                <Text style={styles.buttonText}>🗑️ تنظيف</Text>
-              </TouchableOpacity>
+                🗑️ تنظيف
+              </button>
 
-              <TouchableOpacity
-                style={[styles.button, styles.closeButton]}
-                onPress={() => setModalVisible(false)}
+              <button
+                onClick={() => setModalVisible(false)}
+                style={{...styles.button, ...styles.closeButton}}
               >
-                <Text style={styles.buttonText}>❌ إغلاق</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+                ❌ إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
 
-const styles = StyleSheet.create({
+// أنماط CSS داخل JavaScript (مشابهة لـ StyleSheet.create)
+const styles = {
   floatingButton: {
     position: 'fixed',
-    bottom: 80,
-    right: 20,
+    bottom: '80px',
+    right: '20px',
     backgroundColor: '#a855f7',
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: '50px',
+    height: '50px',
+    borderRadius: '25px',
+    border: 'none',
+    cursor: 'pointer',
+    display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 9999,
     boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
-    cursor: 'pointer'
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: '20px',
   },
   modalOverlay: {
-    flex: 1,
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.9)',
+    display: 'flex',
     justifyContent: 'center',
-    padding: 20
+    alignItems: 'center',
+    padding: '20px',
+    zIndex: 10000,
   },
   modalContent: {
     backgroundColor: '#1a1a1a',
-    borderRadius: 20,
-    padding: 20,
-    maxHeight: '80%'
+    borderRadius: '20px',
+    padding: '20px',
+    maxHeight: '80%',
+    width: '90%',
+    maxWidth: '800px',
+    overflow: 'auto',
+    color: 'white',
   },
   modalTitle: {
     color: '#a855f7',
-    fontSize: 24,
+    fontSize: '24px',
     fontWeight: 'bold',
-    marginBottom: 15,
-    textAlign: 'center'
+    marginBottom: '15px',
+    textAlign: 'center',
   },
   errorCount: {
     color: '#888',
-    marginBottom: 10
+    marginBottom: '10px',
+  },
+  loadingContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    padding: '20px',
+  },
+  spinner: {
+    width: '40px',
+    height: '40px',
+    border: '4px solid #2a2a2a',
+    borderTop: '4px solid #a855f7',
+    borderRadius: '50%',
+    animation: 'spin 1s linear infinite',
   },
   errorList: {
     backgroundColor: '#2a2a2a',
-    borderRadius: 10,
-    padding: 15,
-    maxHeight: 400
+    borderRadius: '10px',
+    padding: '15px',
+    maxHeight: '400px',
+    overflowY: 'auto',
   },
   errorItem: {
-    marginBottom: 15,
-    padding: 10,
+    marginBottom: '15px',
+    padding: '10px',
     backgroundColor: '#333',
-    borderRadius: 8
+    borderRadius: '8px',
   },
   errorTime: {
     color: '#888',
-    fontSize: 11
+    fontSize: '11px',
+    margin: '0 0 2px 0',
   },
   errorComponent: {
     color: '#a855f7',
-    fontSize: 12,
-    marginTop: 2
+    fontSize: '12px',
+    margin: '2px 0',
   },
   errorMessage: {
     color: '#ef4444',
-    fontSize: 14,
-    marginTop: 5
+    fontSize: '14px',
+    margin: '5px 0',
+  },
+  errorUrl: {
+    color: '#4caf50',
+    fontSize: '11px',
+    margin: '2px 0',
   },
   errorStack: {
     color: '#888',
-    fontSize: 11,
-    marginTop: 5,
-    fontFamily: 'monospace'
+    fontSize: '11px',
+    margin: '5px 0 0 0',
+    fontFamily: 'monospace',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
   },
   noErrors: {
     color: '#4caf50',
     textAlign: 'center',
-    padding: 20
+    padding: '20px',
+    margin: 0,
   },
   buttonContainer: {
-    flexDirection: 'row',
+    display: 'flex',
     justifyContent: 'space-around',
-    marginTop: 20,
-    gap: 10
+    marginTop: '20px',
+    gap: '10px',
   },
   button: {
-    padding: 12,
-    borderRadius: 10,
+    padding: '12px',
+    borderRadius: '10px',
+    border: 'none',
+    cursor: 'pointer',
     flex: 1,
-    alignItems: 'center'
+    color: 'white',
+    fontSize: '14px',
   },
   downloadButton: {
-    backgroundColor: '#6366f1'
+    backgroundColor: '#6366f1',
   },
   clearButton: {
-    backgroundColor: '#ef4444'
+    backgroundColor: '#ef4444',
   },
   closeButton: {
-    backgroundColor: '#4b5563'
+    backgroundColor: '#4b5563',
   },
-  buttonText: {
-    color: 'white',
-    textAlign: 'center'
-  }
-});
+};
+
+// إضافة animation للـ spinner (يحتاج أن يكون في ملف CSS عام أو داخل <style>)
+// يمكنك إضافته في ملف index.css الرئيسي
+/*
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+*/
 
 export default CrashReporter;
