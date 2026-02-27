@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
+import Swal from 'sweetalert2'
 import { projectService, storageService } from '../../lib/supabase'
 import {
   Plus,
@@ -14,39 +15,74 @@ import {
   AlertCircle,
   ChevronUp,
   ChevronDown,
-  FolderKanban
+  FolderKanban,
+  Eye,
+  EyeOff,
+  Star,
+  Upload,
+  Image as ImageIcon,
+  Link,
+  Tag,
+  ListChecks,
+  Hash,
+  Globe,
+  Code,
+  FileText,
+  Settings
 } from 'lucide-react'
 
 const Projects = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
-
+// أضف هذه الدالة في بداية المكون، بعد useState
+const checkPlanPermission = () => {
+  // تحقق من الباقة - استبدلها بالمنطق الخاص بمشروعك
+  const userPlan = user?.plan_id || 1; // 1 = مجاني، 2 = مدفوع
+  
+  if (userPlan === 1) {
+    setError('❌ هذه الميزة متاحة فقط في الباقة المدفوعة')
+    return false
+  }
+  return true
+}
+  
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [editingId, setEditingId] = useState(null)
+  const [showForm, setShowForm] = useState(false)
+  const [previewImage, setPreviewImage] = useState(null)
 
-  const [newProject, setNewProject] = useState({
-  title: '',
-  description: '',
-  technologies: [],
-  github_url: '',
-  live_url: '',
-  features: [],
-  image: null,
-  status: 'draft',
-  is_featured: false
-})
+  // =============================================
+  // نموذج المشروع (لإضافة وتعديل)
+  // =============================================
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    content: '',
+    technologies: [],
+    github_url: '',
+    live_url: '',
+    features: [],
+    image: null,
+    status: 'draft',
+    is_featured: false,
+    category: ''
+  })
 
   const [techInput, setTechInput] = useState('')
   const [featureInput, setFeatureInput] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('all')
 
   useEffect(() => {
     if (user) fetchProjects()
   }, [user])
 
+  // =============================================
+  // جلب المشاريع من قاعدة البيانات
+  // =============================================
   const fetchProjects = async () => {
     setLoading(true)
     try {
@@ -60,6 +96,16 @@ const Projects = () => {
     }
   }
 
+  // =============================================
+  // دوال مساعدة
+  // =============================================
+  const generateSlug = (title) => {
+    return title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+  }
+
   const handleImageUpload = async (file, projectId = 'new') => {
     if (!file) return null
     try {
@@ -71,8 +117,103 @@ const Projects = () => {
     }
   }
 
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      setFormData({ ...formData, image: file })
+      setPreviewImage(URL.createObjectURL(file))
+    }
+  }
+
+  // =============================================
+  // إضافة التقنيات والميزات
+  // =============================================
+  const addTechnology = () => {
+    if (techInput.trim() && !formData.technologies.includes(techInput.trim())) {
+      setFormData({
+        ...formData,
+        technologies: [...formData.technologies, techInput.trim()]
+      })
+      setTechInput('')
+    }
+  }
+
+  const removeTechnology = (tech) => {
+    setFormData({
+      ...formData,
+      technologies: formData.technologies.filter(t => t !== tech)
+    })
+  }
+
+  const addFeature = () => {
+    if (featureInput.trim() && !formData.features.includes(featureInput.trim())) {
+      setFormData({
+        ...formData,
+        features: [...formData.features, featureInput.trim()]
+      })
+      setFeatureInput('')
+    }
+  }
+
+  const removeFeature = (feature) => {
+    setFormData({
+      ...formData,
+      features: formData.features.filter(f => f !== feature)
+    })
+  }
+
+  // =============================================
+  // إعادة تعيين النموذج
+  // =============================================
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      content: '',
+      technologies: [],
+      github_url: '',
+      live_url: '',
+      features: [],
+      image: null,
+      status: 'draft',
+      is_featured: false,
+      category: ''
+    })
+    setTechInput('')
+    setFeatureInput('')
+    setPreviewImage(null)
+    setEditingId(null)
+    setShowForm(false)
+  }
+
+  // =============================================
+  // بدء التعديل على مشروع
+  // =============================================
+  const handleEdit = (project) => {
+    setFormData({
+      title: project.title || '',
+      description: project.description || '',
+      content: project.content || '',
+      technologies: project.technologies || [],
+      github_url: project.github_url || '',
+      live_url: project.live_url || '',
+      features: project.features || [],
+      image: null,
+      status: project.status || 'draft',
+      is_featured: project.is_featured || false,
+      category: project.category || ''
+    })
+    setPreviewImage(project.image || null)
+    setEditingId(project.id)
+    setShowForm(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // =============================================
+  // إضافة مشروع جديد
+  // =============================================
   const handleAddProject = async () => {
-    if (!newProject.title || !newProject.description) {
+    if (!formData.title || !formData.description) {
       setError('العنوان والوصف مطلوبان')
       return
     }
@@ -83,84 +224,135 @@ const Projects = () => {
 
     try {
       let imageUrl = null
-      if (newProject.image) {
-        imageUrl = await handleImageUpload(newProject.image)
+      if (formData.image) {
+        imageUrl = await handleImageUpload(formData.image)
       }
 
-      const slug = generateSlug(newProject.title)
+      const slug = generateSlug(formData.title)
 
-const projectData = {
-  title: newProject.title,
-  slug,
-  description: newProject.description,
-  technologies: newProject.technologies,
-  github_url: newProject.github_url || null,
-  live_url: newProject.live_url || null,
-  features: newProject.features,
-  image: imageUrl,
-  display_order: projects.length,
-  status: newProject.status,
-  is_featured: newProject.is_featured,
-  developer_id: user.id
-}
+      const projectData = {
+        title: formData.title,
+        slug,
+        description: formData.description,
+        content: formData.content || formData.description,
+        technologies: formData.technologies,
+        github_url: formData.github_url || null,
+        live_url: formData.live_url || null,
+        features: formData.features,
+        image: imageUrl,
+        display_order: projects.length,
+        status: formData.status,
+        is_featured: formData.is_featured,
+        category: formData.category || null,
+        developer_id: user.id
+      }
 
       const created = await projectService.create(user.id, projectData)
-
       setProjects([...projects, created])
-
-      setNewProject({
-        title: '',
-        description: '',
-        technologies: [],
-        github_url: '',
-        live_url: '',
-        features: [],
-        image: null
-      })
-
-      setSuccess('تم إضافة المشروع بنجاح')
+      resetForm()
+      setSuccess('✅ تم إضافة المشروع بنجاح')
     } catch (err) {
       if (err.message?.includes('permission')) {
-  setError('ليس لديك صلاحية لإضافة مشروع')
-} else if (err.message?.includes('quota')) {
-  setError('تم تجاوز حد التخزين المسموح')
-} else {
-  setError(err.message || 'فشل في إضافة المشروع')
-}
+        setError('❌ ليس لديك صلاحية لإضافة مشروع')
+      } else if (err.message?.includes('quota')) {
+        setError('❌ تم تجاوز حد التخزين المسموح')
+      } else {
+        setError(err.message || '❌ فشل في إضافة المشروع')
+      }
     } finally {
       setSaving(false)
+      setTimeout(() => setSuccess(''), 3000)
+      setTimeout(() => setError(''), 3000)
     }
   }
 
-  const handleUpdateProject = async (id, updates) => {
+  // =============================================
+  // تحديث مشروع موجود
+  // =============================================
+  const handleUpdateProject = async () => {
+    if (!formData.title || !formData.description) {
+      setError('العنوان والوصف مطلوبان')
+      return
+    }
+
     setSaving(true)
+    setError('')
+    setSuccess('')
+
     try {
-      if (updates.image instanceof File) {
-        const imageUrl = await handleImageUpload(updates.image, id)
-        updates.image_url = imageUrl
+      let imageUrl = formData.image
+      if (formData.image instanceof File) {
+        imageUrl = await handleImageUpload(formData.image, editingId)
       }
 
-      updates.technologies = updates.technologies || []
-      updates.features = updates.features || []
+      const updates = {
+        title: formData.title,
+        description: formData.description,
+        content: formData.content,
+        technologies: formData.technologies,
+        github_url: formData.github_url || null,
+        live_url: formData.live_url || null,
+        features: formData.features,
+        image: imageUrl,
+        status: formData.status,
+        is_featured: formData.is_featured,
+        category: formData.category
+      }
 
-      const updated = await projectService.update(id, updates)
-
-      setProjects(projects.map(p => p.id === id ? updated : p))
-      setEditingId(null)
-      setSuccess('تم تحديث المشروع')
+      const updated = await projectService.update(editingId, updates)
+      setProjects(projects.map(p => p.id === editingId ? updated : p))
+      resetForm()
+      setSuccess('✅ تم تحديث المشروع بنجاح')
     } catch (err) {
-      setError('فشل في التحديث')
+      setError('❌ فشل في تحديث المشروع')
     } finally {
       setSaving(false)
+      setTimeout(() => setSuccess(''), 3000)
+      setTimeout(() => setError(''), 3000)
     }
   }
 
+  // =============================================
+  // حذف مشروع
+  // =============================================
   const handleDeleteProject = async (id) => {
-    if (!window.confirm('هل أنت متأكد؟')) return
+  // التحقق من الباقة
+  if (user?.plan_id === 1) {
+    setError('❌ ميزة الحذف متاحة فقط في المشتركين')
+    return
+  }
+  
+  // تأكيد الحذف
+  const result = await Swal.fire({
+    title: 'هل أنت متأكد؟',
+    text: "لن تتمكن من استعادة هذا المشروع بعد الحذف!",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ef4444',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'نعم، احذف',
+    cancelButtonText: 'إلغاء',
+    background: '#1a1a1a',
+    color: '#fff'
+  })
+  
+  if (!result.isConfirmed) return
+  
+  try {
     await projectService.delete(id)
     setProjects(projects.filter(p => p.id !== id))
+    setSuccess('✅ تم حذف المشروع')
+  } catch (err) {
+    setError('❌ فشل في حذف المشروع')
+  } finally {
+    setTimeout(() => setSuccess(''), 3000)
+    setTimeout(() => setError(''), 3000)
   }
+}
 
+  // =============================================
+  // ترتيب المشاريع
+  // =============================================
   const handleMoveProject = async (index, direction) => {
     const newIndex = direction === 'up' ? index - 1 : index + 1
     if (newIndex < 0 || newIndex >= projects.length) return
@@ -178,118 +370,590 @@ const projectData = {
     )
   }
 
+  // =============================================
+  // فلترة المشاريع
+  // =============================================
+  const filteredProjects = projects.filter(p => 
+    selectedCategory === 'all' ? true : 
+    selectedCategory === 'published' ? p.status === 'published' :
+    selectedCategory === 'draft' ? p.status === 'draft' :
+    selectedCategory === 'featured' ? p.is_featured : true
+  )
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center">
-        <Loader className="w-10 h-10 animate-spin text-[#6366f1]" />
+        <div className="text-center">
+          <Loader className="w-12 h-12 animate-spin text-[#6366f1] mx-auto mb-4" />
+          <p className="text-gray-400">جاري تحميل المشاريع...</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 p-6">
+      {/* =============================================
+          الهيدر مع الإحصائيات
+      ============================================= */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">المشاريع</h1>
+          <p className="text-gray-400">إدارة وتنظيم مشاريعك وعرضها بشكل احترافي</p>
+        </div>
+        <div className="flex gap-4">
+          <div className="text-center px-4 py-2 bg-white/5 rounded-xl">
+            <div className="text-2xl font-bold text-[#a855f7]">{projects.length}</div>
+            <div className="text-xs text-gray-400">إجمالي</div>
+          </div>
+          <div className="text-center px-4 py-2 bg-white/5 rounded-xl">
+            <div className="text-2xl font-bold text-green-400">
+              {projects.filter(p => p.status === 'published').length}
+            </div>
+            <div className="text-xs text-gray-400">منشور</div>
+          </div>
+        </div>
+      </div>
 
-      <h1 className="text-2xl font-bold text-white">المشاريع</h1>
+      {/* =============================================
+          رسائل النجاح والخطأ
+      ============================================= */}
+      {error && (
+        <div className="flex items-center gap-2 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <p className="flex-1">{error}</p>
+          <button onClick={() => setError('')} className="hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
-      {error && <div className="text-red-400">{error}</div>}
-      {success && <div className="text-green-400">{success}</div>}
-{/* Status */}
-      <label className="flex items-center gap-2 text-sm text-gray-400">
-  <input
-    type="checkbox"
-    checked={newProject.is_featured}
-    onChange={(e) =>
-      setNewProject({ ...newProject, is_featured: e.target.checked })
-    }
-    className="w-4 h-4"
-  />
-  تمييز كمشروع بارز
-</label>
-<div>
-  <label className="block text-sm text-gray-400 mb-2">حالة المشروع</label>
-  <select
-    value={newProject.status}
-    onChange={(e) => setNewProject({ ...newProject, status: e.target.value })}
-    className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-  >
-    <option value="draft">مسودة</option>
-    <option value="published">منشور</option>
-  </select>
-</div>
-      <button
-        onClick={handleAddProject}
-        disabled={saving}
-        className="px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl"
-      >
-        {saving ? <Loader className="w-4 h-4 animate-spin" /> : <Plus />}
-        إضافة مشروع
-      </button>
+      {success && (
+        <div className="flex items-center gap-2 p-4 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <p className="flex-1">{success}</p>
+          <button onClick={() => setSuccess('')} className="hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
-      {projects.length === 0 ? (
-        <div className="text-gray-400">لا توجد مشاريع</div>
-      ) : (
-        projects.map((project, index) => (
-          <div
-            key={project.id}
-            onClick={() => navigate(`/project/${project.id}`)}
-            className="bg-white/5 p-6 rounded-2xl border border-white/10 hover:border-[#6366f1] cursor-pointer transition-all"
-          >
-            <h3 className="text-white text-lg font-semibold mb-2">
-              {project.title}
-            </h3>
+      {/* =============================================
+          زر إظهار/إخفاء النموذج
+      ============================================= */}
+      {!showForm && (
+        <button
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-[1.02] transition-all"
+        >
+          <Plus className="w-5 h-5" />
+          إضافة مشروع جديد
+        </button>
+      )}
 
-            <p className="text-gray-400 mb-3">
-              {project.description}
-            </p>
+      {/* =============================================
+          نموذج إضافة/تعديل المشروع
+      ============================================= */}
+      {showForm && (
+        <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+              {editingId ? (
+                <>
+                  <Edit className="w-5 h-5 text-[#6366f1]" />
+                  تعديل المشروع
+                </>
+              ) : (
+                <>
+                  <Plus className="w-5 h-5 text-[#6366f1]" />
+                  إضافة مشروع جديد
+                </>
+              )}
+            </h2>
+            <button
+              onClick={resetForm}
+              className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
-            {project.image_url && (
-              <img
-                src={project.image_url}
-                alt={project.title}
-                className="w-full h-40 object-cover rounded-lg mb-3"
-              />
-            )}
+          <div className="grid grid-cols-2 gap-6">
+            {/* =========================================
+                العمود الأيمن - المعلومات الأساسية
+            ========================================= */}
+            <div className="space-y-4">
+              <div>
+                <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
+                  <Tag className="w-4 h-4" />
+                  عنوان المشروع <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
+                  placeholder="مثال: منصة تعليمية متكاملة"
+                />
+              </div>
 
-            <div className="flex flex-wrap gap-2 mb-3">
-              {(project.technologies || []).map(tech => (
-                <span
-                  key={tech}
-                  className="px-2 py-1 bg-[#6366f1]/10 text-[#6366f1] rounded-lg text-xs"
-                >
-                  {tech}
-                </span>
-              ))}
+              <div>
+                <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
+                  <ListChecks className="w-4 h-4" />
+                  وصف مختصر <span className="text-red-400">*</span>
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows="3"
+                  className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
+                  placeholder="وصف موجز للمشروع..."
+                />
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
+                  <FileText className="w-4 h-4" />
+                  وصف تفصيلي
+                </label>
+                <textarea
+                  value={formData.content}
+                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                  rows="5"
+                  className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
+                  placeholder="شرح مفصل للمشروع، التحديات، الحلول..."
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
+                    <Github className="w-4 h-4" />
+                    رابط GitHub
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.github_url}
+                    onChange={(e) => setFormData({ ...formData, github_url: e.target.value })}
+                    className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
+                    placeholder="https://github.com/..."
+                  />
+                </div>
+                <div>
+                  <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
+                    <Globe className="w-4 h-4" />
+                    رابط المشروع
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.live_url}
+                    onChange={(e) => setFormData({ ...formData, live_url: e.target.value })}
+                    className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
+                    placeholder="https://example.com"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="flex gap-4 text-sm">
-              {project.github_url && (
-                <a
-                  href={project.github_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex items-center gap-1 text-gray-400 hover:text-white"
-                >
-                  <Github className="w-4 h-4" />
-                  GitHub
-                </a>
-              )}
+            {/* =========================================
+                العمود الأيسر - التقنيات والميزات
+            ========================================= */}
+            <div className="space-y-4">
+              <div>
+                <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
+                  <Hash className="w-4 h-4" />
+                  التصنيف
+                </label>
+                <input
+                  type="text"
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
+                  placeholder="مثال: ويب، موبايل، ذكاء اصطناعي"
+                />
+              </div>
 
-              {project.live_url && (
-                <a
-                  href={project.live_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex items-center gap-1 text-gray-400 hover:text-white"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  عرض
-                </a>
-              )}
+              <div>
+                <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
+                  <Code className="w-4 h-4" />
+                  التقنيات المستخدمة
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={techInput}
+                    onChange={(e) => setTechInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && addTechnology()}
+                    className="flex-1 p-3 bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
+                    placeholder="مثال: React"
+                  />
+                  <button
+                    onClick={addTechnology}
+                    className="px-4 py-2 bg-[#6366f1] text-white rounded-lg hover:bg-[#a855f7] transition-all"
+                  >
+                    إضافة
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2 min-h-[40px] p-2 bg-white/5 rounded-lg">
+                  {formData.technologies.map((tech) => (
+                    <span
+                      key={tech}
+                      className="flex items-center gap-1 px-3 py-1 bg-[#6366f1]/20 text-[#6366f1] rounded-lg text-sm"
+                    >
+                      {tech}
+                      <button onClick={() => removeTechnology(tech)} className="hover:text-white">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
+                  <Star className="w-4 h-4" />
+                  الميزات الرئيسية
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={featureInput}
+                    onChange={(e) => setFeatureInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && addFeature()}
+                    className="flex-1 p-3 bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
+                    placeholder="مثال: تسجيل دخول آمن"
+                  />
+                  <button
+                    onClick={addFeature}
+                    className="px-4 py-2 bg-[#6366f1] text-white rounded-lg hover:bg-[#a855f7] transition-all"
+                  >
+                    إضافة
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2 min-h-[40px] p-2 bg-white/5 rounded-lg">
+                  {formData.features.map((feature) => (
+                    <span
+                      key={feature}
+                      className="flex items-center gap-1 px-3 py-1 bg-purple-500/20 text-purple-400 rounded-lg text-sm"
+                    >
+                      {feature}
+                      <button onClick={() => removeFeature(feature)} className="hover:text-white">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
+                  <ImageIcon className="w-4 h-4" />
+                  صورة المشروع
+                </label>
+                <div className="relative">
+                  {previewImage ? (
+                    <div className="relative w-full h-40 rounded-lg overflow-hidden">
+                      <img
+                        src={previewImage}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        onClick={() => {
+                          setFormData({ ...formData, image: null })
+                          setPreviewImage(null)
+                        }}
+                        className="absolute top-2 right-2 p-1 bg-red-500/80 rounded-full hover:bg-red-600 transition"
+                      >
+                        <X className="w-4 h-4 text-white" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-white/20 rounded-lg cursor-pointer hover:border-[#6366f1]/50 transition bg-white/5">
+                      <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                      <span className="text-sm text-gray-400">اضغط لرفع صورة</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageSelect}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
+                    {formData.status === 'published' ? (
+                      <Eye className="w-4 h-4 text-green-400" />
+                    ) : (
+                      <EyeOff className="w-4 h-4 text-yellow-400" />
+                    )}
+                    حالة المشروع
+                  </label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
+                  >
+                    <option value="draft">🔒 مسودة</option>
+                    <option value="published">🌍 منشور</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
+                    <Star className={`w-4 h-4 ${formData.is_featured ? 'text-yellow-400' : ''}`} />
+                    مشروع مميز
+                  </label>
+                  <div className="flex items-center h-[50px]">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.is_featured}
+                        onChange={(e) =>
+                          setFormData({ ...formData, is_featured: e.target.checked })
+                        }
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm text-gray-300">
+                        {formData.is_featured ? 'مميز' : 'عادي'}
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        ))
+
+          {/* أزرار الحفظ والإلغاء */}
+          <div className="flex gap-4 mt-6">
+            <button
+              onClick={editingId ? handleUpdateProject : handleAddProject}
+              disabled={saving || !formData.title || !formData.description}
+              className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-[1.02] transition-all disabled:opacity-50"
+            >
+              {saving ? (
+                <>
+                  <Loader className="w-5 h-5 animate-spin" />
+                  جاري الحفظ...
+                </>
+              ) : (
+                <>
+                  {editingId ? <Save className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                  {editingId ? 'تحديث المشروع' : 'إضافة المشروع'}
+                </>
+              )}
+            </button>
+            <button
+              onClick={resetForm}
+              className="px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all"
+            >
+              إلغاء
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* =============================================
+          فلاتر المشاريع
+      ============================================= */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-white">المشاريع الحالية</h2>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setSelectedCategory('all')}
+            className={`px-3 py-1 rounded-lg text-sm transition ${
+              selectedCategory === 'all'
+                ? 'bg-[#6366f1] text-white'
+                : 'bg-white/5 text-gray-400 hover:bg-white/10'
+            }`}
+          >
+            الكل ({projects.length})
+          </button>
+          <button
+            onClick={() => setSelectedCategory('published')}
+            className={`px-3 py-1 rounded-lg text-sm transition ${
+              selectedCategory === 'published'
+                ? 'bg-green-500/80 text-white'
+                : 'bg-white/5 text-gray-400 hover:bg-white/10'
+            }`}
+          >
+            منشور ({projects.filter(p => p.status === 'published').length})
+          </button>
+          <button
+            onClick={() => setSelectedCategory('draft')}
+            className={`px-3 py-1 rounded-lg text-sm transition ${
+              selectedCategory === 'draft'
+                ? 'bg-yellow-500/80 text-white'
+                : 'bg-white/5 text-gray-400 hover:bg-white/10'
+            }`}
+          >
+            مسودة ({projects.filter(p => p.status === 'draft').length})
+          </button>
+        </div>
+      </div>
+
+      {/* =============================================
+          عرض المشاريع
+      ============================================= */}
+      {filteredProjects.length === 0 ? (
+        <div className="text-center py-12 bg-white/5 rounded-2xl">
+          <FolderKanban className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+          <p className="text-gray-400">لا توجد مشاريع في هذا التصنيف</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4">
+          {filteredProjects.map((project, index) => (
+            <div
+              key={project.id}
+              className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:border-[#6366f1]/50 transition-all group relative"
+            >
+              {/* أزرار التحكم */}
+              <div className="absolute top-4 right-4 flex items-center gap-2">
+                <div className="flex flex-col">
+                  {projects.findIndex(p => p.id === project.id) > 0 && (
+                    <button
+                      onClick={() => handleMoveProject(projects.findIndex(p => p.id === project.id), 'up')}
+                      className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </button>
+                  )}
+                  {projects.findIndex(p => p.id === project.id) < projects.length - 1 && (
+                    <button
+                      onClick={() => handleMoveProject(projects.findIndex(p => p.id === project.id), 'down')}
+                      className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <button
+                  onClick={() => handleEdit(project)}
+                  className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg"
+                >
+                  <Edit className="w-4 h-4" />
+                </button>
+                {user?.plan_id > 1 ? (
+  <button
+    onClick={() => handleDeleteProject(project.id)}
+    className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg"
+    title="حذف المشروع"
+  >
+    <Trash2 className="w-4 h-4" />
+  </button>
+) : (
+  <button
+    onClick={() => setError('❌ ميزة الحذف متاحة فقط في الباقة المدفوعة')}
+    className="p-2 text-gray-600 cursor-not-allowed relative group"
+    title="متاح فقط في الباقة المدفوعة"
+  >
+    <Trash2 className="w-4 h-4" />
+    <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 
+                     text-xs text-yellow-400 bg-black/80 px-2 py-1 rounded 
+                     opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
+      🔒 الباقة المدفوعة فقط
+    </span>
+  </button>
+)}
+              </div>
+
+              {/* حالة المشروع */}
+              <div className="absolute top-4 left-4 flex gap-2">
+                {project.status === 'published' ? (
+                  <span className="flex items-center gap-1 px-2 py-1 bg-green-500/20 text-green-400 rounded-lg text-xs">
+                    <Eye className="w-3 h-3" />
+                    منشور
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-lg text-xs">
+                    <EyeOff className="w-3 h-3" />
+                    مسودة
+                  </span>
+                )}
+                {project.is_featured && (
+                  <span className="flex items-center gap-1 px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-lg text-xs">
+                    <Star className="w-3 h-3" />
+                    مميز
+                  </span>
+                )}
+              </div>
+
+              {/* محتوى المشروع */}
+              <div className="mt-12 cursor-pointer" onClick={() => navigate(`/project/${project.id}`)}>
+                {project.image && (
+                  <img
+                    src={project.image}
+                    alt={project.title}
+                    className="w-full h-48 object-cover rounded-lg mb-4"
+                  />
+                )}
+
+                <h3 className="text-xl font-semibold text-white mb-2 pr-24">
+                  {project.title}
+                </h3>
+
+                {project.category && (
+                  <span className="inline-block px-2 py-1 bg-[#6366f1]/10 text-[#6366f1] rounded-lg text-xs mb-3">
+                    {project.category}
+                  </span>
+                )}
+
+                <p className="text-gray-400 mb-4 line-clamp-2">
+                  {project.description}
+                </p>
+
+                {project.technologies?.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {project.technologies.slice(0, 5).map((tech) => (
+                      <span
+                        key={tech}
+                        className="px-2 py-1 bg-[#6366f1]/10 text-[#6366f1] rounded-lg text-xs"
+                      >
+                        {tech}
+                      </span>
+                    ))}
+                    {project.technologies.length > 5 && (
+                      <span className="px-2 py-1 bg-white/5 text-gray-400 rounded-lg text-xs">
+                        +{project.technologies.length - 5}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex gap-4 text-sm">
+                  {project.github_url && (
+                    <a
+                      href={project.github_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-1 text-gray-400 hover:text-white transition"
+                    >
+                      <Github className="w-4 h-4" />
+                      <span>GitHub</span>
+                    </a>
+                  )}
+                  {project.live_url && (
+                    <a
+                      href={project.live_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-1 text-gray-400 hover:text-white transition"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>معاينة</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )
