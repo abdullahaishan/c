@@ -1,7 +1,7 @@
 import React from 'react';
 import { useDeveloper } from '../context/DeveloperContext';
 import Home from './Home';
-import AboutPage from './About';
+import About from './About';
 import Skills from './Skills';
 import Portfolio from './Portfolio';
 import WhyMe from './WhyMe';
