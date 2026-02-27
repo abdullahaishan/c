@@ -57,8 +57,8 @@ const PublicPortfolio = () => {
   
 return (
   <>
-    <AnimatedBackground />
-    <div className="text-white">Background Test</div>
+    <Footer />
+    <div className="text-white">Footer Test</div>
   </>
 )
 };
