@@ -56,9 +56,10 @@ const PublicPortfolio = () => {
 
   
 return (
-  <div className="min-h-screen bg-red-500 text-white flex items-center justify-center">
-    TEST OK
-  </div>
+  <>
+    <Navbar />
+    <div className="text-white">Navbar Test</div>
+  </>
 )
 };
 
