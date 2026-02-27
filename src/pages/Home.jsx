@@ -104,20 +104,15 @@ try {
   console.warn("DeveloperContext not ready:", e);
 }
 
-const developer = propDeveloper || context?.developer;
+const context = useDeveloper() || {};
+const developer = propDeveloper || context.developer || {};
 
-const getMainSkills = context?.getMainSkills || (() => []);
-const getSocialLinks = context?.getSocialLinks || (() => ({}));
-const getAdminSocialLinks = context?.getAdminSocialLinks || (() => ({}));
-const getProfileImage = context?.getProfileImage || (() => "/Coding.gif");
-const isFreePlan = context?.isFreePlan || (() => true);
-  
+const mainSkills = context.getMainSkills ? context.getMainSkills() : [];
+const socialLinks = context.getSocialLinks ? context.getSocialLinks() : {};
+const adminLinks = context.getAdminSocialLinks ? context.getAdminSocialLinks() : {};
+const profileImage = context.getProfileImage ? context.getProfileImage() : "/Coding.gif";
+const isFree = context.isFreePlan ? context.isFreePlan() : true;
   const [isLoaded, setIsLoaded] = useState(false);
-
-  const mainSkills = getMainSkills();
-  const socialLinks = getSocialLinks();
-  const adminLinks = getAdminSocialLinks();
-  const isFree = isFreePlan();
 
   useEffect(() => {
     AOS.init({ once: true, offset: 10 });
