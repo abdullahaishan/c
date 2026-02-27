@@ -52,10 +52,12 @@ useEffect(() => {
   const getProjects = () => developer?.projects || []
   
    const getMainSkills = () => {
-  return (developer?.skills || [])
-    .filter(skill => skill.is_main) // لو عندك عمود is_main
+  if (!Array.isArray(developer?.skills)) return [];
+  return developer.skills
+    .filter(skill => skill.is_main)
     .map(skill => skill.name);
-};const getSkills = () => developer?.skills || []
+};
+const getSkills = () => developer?.skills || []
   const getCertificates = () => developer?.certificates || []
   const getExperience = () => developer?.experience || []
   const getEducation = () => developer?.education || []
