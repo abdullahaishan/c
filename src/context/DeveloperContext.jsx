@@ -50,7 +50,12 @@ useEffect(() => {
 
   // دوال المساعدة (تستخدم نفس الأسماء لتوافق ملفات العرض)
   const getProjects = () => developer?.projects || []
-  const getSkills = () => developer?.skills || []
+  
+   const getMainSkills = () => {
+  return (developer?.skills || [])
+    .filter(skill => skill.is_main) // لو عندك عمود is_main
+    .map(skill => skill.name);
+};const getSkills = () => developer?.skills || []
   const getCertificates = () => developer?.certificates || []
   const getExperience = () => developer?.experience || []
   const getEducation = () => developer?.education || []
@@ -99,6 +104,7 @@ const value = {
 
   getProjects,
   getSkills,
+   getMainSkills,
   getCertificates,
   getExperience,
   getEducation,
