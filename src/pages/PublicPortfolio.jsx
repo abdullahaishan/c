@@ -57,8 +57,8 @@ const PublicPortfolio = () => {
   
 return (
   <>
-    <Navbar />
-    <div className="text-white">Navbar Test</div>
+    <AnimatedBackground />
+    <div className="text-white">Background Test</div>
   </>
 )
 };
