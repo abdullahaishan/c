@@ -39,9 +39,9 @@ const {
   getExperience,
   getEducation,
   getTotalExperienceYears,
-  getSocialLinks,
-  isFreePlan,
-  getAdminSocialLinks
+  //getSocialLinks,
+  //isFreePlan,
+  //getAdminSocialLinks
 } = context;
 
   // ⚡ دوال مساعدة افتراضية
