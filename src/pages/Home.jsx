@@ -103,7 +103,12 @@ const ProfileImage = memo(({ image }) => {
 
 const Home = ({ developer: propDeveloper }) => {
 
-const context = useDeveloper() || {};
+let context = {};
+try {
+  context = useDeveloper();
+} catch (e) {
+  console.error("Context error:", e);
+          }
 const developer = propDeveloper || context.developer || {};
 
 const mainSkills = context.getMainSkills ? context.getMainSkills() : [];
