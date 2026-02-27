@@ -996,43 +996,80 @@ export const storageService = {
   },
 
   // ✅ دالة جديدة لرفع صور المشاريع
-  async uploadProjectImage(file, userId, projectId, oldImageUrl = null) {
-    try {
-      if (!file) throw new Error('لا يوجد ملف')
-      if (!file.type.startsWith('image/')) throw new Error('الملف ليس صورة')
-      if (file.size > 5 * 1024 * 1024) throw new Error('الصورة أكبر من 5 ميجابايت')
+  // ✅ دالة جديدة لرفع صور المشاريع (مصححة)
+async uploadProjectImage(file, userId, projectId = 'temp', oldImageUrl = null) {
+  try {
+    if (!file) throw new Error('لا يوجد ملف')
+    if (!file.type.startsWith('image/')) throw new Error('الملف ليس صورة')
+    if (file.size > 5 * 1024 * 1024) throw new Error('الصورة أكبر من 5 ميجابايت')
 
-      const fileName = `${userId}/projects/${projectId}/${uuidv4()}-${file.name}`
+    // استخدام مسار مؤقت إذا كان projectId = 'new'
+    const folder = projectId === 'new' || projectId === 'temp' ? 'temp' : projectId
+    const fileName = `${userId}/projects/${folder}/${uuidv4()}-${file.name}`
 
-      const { error: uploadError } = await supabase.storage
-        .from('developers')
-        .upload(fileName, file, {
-          upsert: true,
-          cacheControl: '3600'
-        })
+    const { error: uploadError } = await supabase.storage
+      .from('developers')
+      .upload(fileName, file, {
+        upsert: true,
+        cacheControl: '3600'
+      })
 
-      if (uploadError) throw uploadError
+    if (uploadError) throw uploadError
 
-      const { data } = supabase.storage
-        .from('developers')
-        .getPublicUrl(fileName)
+    const { data } = supabase.storage
+      .from('developers')
+      .getPublicUrl(fileName)
 
-      if (oldImageUrl) {
-        try {
-          const oldPath = oldImageUrl.split('/developers/')[1]
-          if (oldPath) {
-            await supabase.storage.from('developers').remove([oldPath])
-          }
-        } catch (e) {}
-      }
-
-      return data.publicUrl
-
-    } catch (error) {
-      console.error('فشل رفع صورة المشروع:', error)
-      throw error
+    // حذف الصورة القديمة إذا وجدت
+    if (oldImageUrl) {
+      try {
+        const oldPath = oldImageUrl.split('/developers/')[1]
+        if (oldPath) {
+          await supabase.storage.from('developers').remove([oldPath])
+        }
+      } catch (e) {}
     }
-  },
+
+    return {
+      url: data.publicUrl,
+      path: fileName // حفظ المسار لاستخدامه لاحقاً
+    }
+  } catch (error) {
+    console.error('فشل رفع صورة المشروع:', error)
+    throw error
+  }
+},
+
+// ✅ دالة جديدة لنقل الصور من المجلد المؤقت إلى المجلد النهائي
+async moveProjectImage(tempPath, userId, projectId) {
+  try {
+    if (!tempPath || !projectId || projectId === 'new') return null
+
+    // استخراج اسم الملف من المسار المؤقت
+    const fileName = tempPath.split('/').pop()
+    const newPath = `${userId}/projects/${projectId}/${fileName}`
+
+    // نسخ الملف إلى المسار الجديد
+    const { error: copyError } = await supabase.storage
+      .from('developers')
+      .copy(tempPath, newPath)
+
+    if (copyError) throw copyError
+
+    // حذف الملف القديم
+    await supabase.storage.from('developers').remove([tempPath])
+
+    // الحصول على الرابط الجديد
+    const { data } = supabase.storage
+      .from('developers')
+      .getPublicUrl(newPath)
+
+    return data.publicUrl
+  } catch (error) {
+    console.error('فشل نقل الصورة:', error)
+    return null
+  }
+}
 
   // ✅ دالة جديدة لرفع صور الشهادات
   async uploadCertificateImage(file, userId, oldImageUrl = null) {
