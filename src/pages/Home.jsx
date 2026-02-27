@@ -77,7 +77,7 @@ const ProfileImage = memo(({ image }) => {
   const imageSource = imageError ? '/Coding.gif' : image;
 
   return (
-    return (
+  
   <div className="relative group">
     <div
       className={`absolute inset-0 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-full blur-3xl transition-all duration-700 ${
@@ -98,7 +98,6 @@ const ProfileImage = memo(({ image }) => {
       }`}
     />
   </div>
-);
   );
 });
 
