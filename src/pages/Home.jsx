@@ -97,8 +97,20 @@ const ProfileImage = memo(({ image }) => {
 });
 
 const Home = ({ developer: propDeveloper }) => {
-  const context = useDeveloper();
-  const developer = propDeveloper || context.developer;
+  let context = null;
+try {
+  context = useDeveloper();
+} catch (e) {
+  console.warn("DeveloperContext not ready:", e);
+}
+
+const developer = propDeveloper || context?.developer;
+
+const getMainSkills = context?.getMainSkills || (() => []);
+const getSocialLinks = context?.getSocialLinks || (() => ({}));
+const getAdminSocialLinks = context?.getAdminSocialLinks || (() => ({}));
+const getProfileImage = context?.getProfileImage || (() => "/Coding.gif");
+const isFreePlan = context?.isFreePlan || (() => true);
   const { 
     getMainSkills, 
     getSocialLinks, 
