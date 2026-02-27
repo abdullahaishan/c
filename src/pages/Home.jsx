@@ -8,7 +8,7 @@ import React, { useState, useEffect, memo } from "react";
 import { Download } from "lucide-react";
  import AOS from "aos";
  import "aos/dist/aos.css";
-// import { useDeveloper } from '../context/DeveloperContext';
+ import { useDeveloper } from '../context/DeveloperContext';
 // import AnimatedBackground from '../components/AnimatedBackground';
 // import SocialLinks from '../components/SocialLinks';
 
@@ -112,18 +112,19 @@ const ProfileImage = memo(({ image }) => {
 // المكون الرئيسي - مع بيانات افتراضية آمنة
 // =============================================
 const Home = ({ developer: propDeveloper }) => {
-  // 🟢 بيانات افتراضية - المكون سيعمل بدون Context
-  const [isLoaded, setIsLoaded] = useState(false);
-  
-  // بيانات وهمية للتجربة
-  const mainSkills = [
-    "Flutter Developer",
-    "MySQL Expert",
-    "PHP Developer",
-    "Firebase Specialist"
-  ];
-  
-  const profileImage = "/Coding.gif";
+const context = useDeveloper();   // <-- أضف هذا السطر
+const developer = propDeveloper || context.developer || {};
+
+const mainSkills = context.getMainSkills ? context.getMainSkills() : [
+  "Flutter Developer",
+  "MySQL Expert",
+  "PHP Developer",
+  "Firebase Specialist"
+];
+
+const profileImage = context.getProfileImage ? context.getProfileImage() : "/Coding.gif";
+
+const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
   AOS.init({ once: true, offset: 10 });
