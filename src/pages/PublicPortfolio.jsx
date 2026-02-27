@@ -13,11 +13,11 @@ import { Loader, AlertCircle, Crown } from 'lucide-react';
 
 const PublicPortfolio = () => {
   const {
-    developer,
-    loading,
-    error,
-    isPaidPlan
-  } = useDeveloper();
+  developer,
+  publicLoading,
+  publicError,
+  isPaidPlan
+} = useDeveloper();
 
   if (publicLoading) {
     return (
