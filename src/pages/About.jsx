@@ -83,6 +83,7 @@ const {
     phone: "+967-771-315-459",
     location: "Sana'a, Yemen"
   };
+   
   useEffect(() => {
   AOS.init({ once: true });
   console.log("AboutPage mounted - AOS active");
@@ -102,7 +103,7 @@ const {
          
             Transforming ideas into digital experiences
             
-<Sparkles className="w-5 h-5 text-purple-400" />
+            <Sparkles className="w-5 h-5 text-purple-400" />
            
           </p>
         </div>
@@ -119,11 +120,11 @@ const {
             <p className="text-gray-300 leading-relaxed">{developer.bio}</p>
             
             {/* CV Button - معطل مؤقتاً */}
-            {/* {developer.resume_file && (
+             {developer.resume_file && (
               <a href={developer.resume_file} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-105 transition-all">
                 <FileText className="w-5 h-5" /> Download CV
               </a>
-            )} */}
+            )}
 
             {/* Social Links - معطل تماماً */}
             {/* <div className="flex gap-3 pt-4">
@@ -138,7 +139,7 @@ const {
           <div className="relative">
             <div className="relative w-72 h-72 mx-auto">
               <div className="absolute inset-0 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-full blur-3xl opacity-30"></div>
-              <img src={getProfileImage()} alt="Profile" className="relative w-full h-full object-cover rounded-full border-4 border-white/10"/>
+              <img src={getProfileImage} alt="Profile" className="relative w-full h-full object-cover rounded-full border-4 border-white/10"/>
             </div>
           </div>
         </div>
