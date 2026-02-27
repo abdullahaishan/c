@@ -1,53 +1,26 @@
 import React, { useEffect, useMemo, memo } from "react";
-
-// =============================================
-// 🔴 جميع الاستيرادات الخارجية مُعلقة - لن تسبب انهيار
-// =============================================
-
-// ❌ استيرادات خارجية - علقها كلها
- import {
-   FileText,
-//   Code,
-//   Award,
-//   Globe,
-   Sparkles,
-   Github,
-   Linkedin,
+import {
+  FileText,
+  Sparkles,
+  Github,
+  Linkedin,
   Instagram,
-   Facebook,
+  Facebook,
   Mail,
   Phone,
   MapPin
- } from "lucide-react";
-
- import AOS from "aos";
- import "aos/dist/aos.css";
- import { useDeveloper } from '../context/DeveloperContext';
+} from "lucide-react";
+import AOS from "aos";
+import "aos/dist/aos.css";
+import { useDeveloper } from '../context/DeveloperContext';
 
 const About = ({ developer: propDeveloper }) => {
-
-
-// داخل المكون، استبدل البيانات الافتراضية بـ:
-const context = useDeveloper();
-const developer = propDeveloper || context.developer;
-
-const {
-  getProfileImage,
-  getProjects,
-  getCertificates,
-  getSkills,
-  getExperience,
-  getEducation,
-  getTotalExperienceYears,
-  //getSocialLinks,
-  //isFreePlan,
-  //getAdminSocialLinks
-} = context;
-
   const context = useDeveloper();
-  const developer = propDeveloper || context.developer;
+  const developer = propDeveloper || context.developer || {};
 
-  // ✅ استخدم دوال context مع قيم افتراضية آمنة
+  // =====================================================
+  // ✅ الطريقة الصحيحة: تعريف الدوال المساعدة بشكل آمن
+  // =====================================================
   const getProfileImage = context.getProfileImage || (() => "/Coding.gif");
   const getProjects = context.getProjects || (() => []);
   const getCertificates = context.getCertificates || (() => []);
@@ -55,38 +28,37 @@ const {
   const getExperience = context.getExperience || (() => []);
   const getEducation = context.getEducation || (() => []);
   const getTotalExperienceYears = context.getTotalExperienceYears || (() => 5);
-  
-  // ✅ أضف دوال التواصل (كانت معلقة)
-//  const getSocialLinks = context.getSocialLinks || (() => ({}));
-//  const isFreePlan = context.isFreePlan || (() => true);
-//  const getAdminSocialLinks = context.getAdminSocialLinks || (() => ({}));
+  const getSocialLinks = context.getSocialLinks || (() => ({}));
+  const isFreePlan = context.isFreePlan || (() => true);
+  const getAdminSocialLinks = context.getAdminSocialLinks || (() => ({}));
 
-  // ⚡ الروابط الاجتماعية (مع قيم افتراضية آمنة)
- const socialLinks = getSocialLinks() || {};
+  // =====================================================
+  // ✅ استخدام الدوال للحصول على البيانات
+  // =====================================================
+  const socialLinks = getSocialLinks() || {};
   const adminLinks = getAdminSocialLinks() || {};
- const usedLinks = (isFreePlan() ? adminLinks : socialLinks) || {};
+  const usedLinks = (isFreePlan() ? adminLinks : socialLinks) || {};
 
-  // ⚡ الإحصائيات (استخدم الدوال بشكل صحيح)
+  // الإحصائيات
   const stats = {
-    experience: getTotalExperienceYears() || 0,
+    experience: getTotalExperienceYears() || 5,
     projects: (getProjects() || []).length,
     skills: (getSkills() || []).length,
     certificates: (getCertificates() || []).length
   };
 
-  // ⚡ معلومات الاتصال
- // const contactInfo = {
-   // email: usedLinks.email || "eng.abdullah.z.aishan@gmail.com",
-   // phone: "+967-771-315-459",
-   // location: "Sana'a, Yemen"
-//  };
-   
-  useEffect(() => {
-  AOS.init({ once: true });
-  console.log("AboutPage mounted - AOS active");
-}, []);
+  // معلومات الاتصال
+  const contactInfo = {
+    email: usedLinks.email || "eng.abdullah.z.aishan@gmail.com",
+    phone: "+967-771-315-459",
+    location: "Sana'a, Yemen"
+  };
 
-    return (
+  useEffect(() => {
+    AOS.init({ once: true });
+  }, []);
+
+  return (
     <div className="relative min-h-screen bg-[#030014] overflow-hidden" id="About">
       <div className="container mx-auto px-[5%] py-20">
 
@@ -96,7 +68,7 @@ const {
             About Me
           </h2>
           <p className="text-gray-400 max-w-2xl mx-auto flex items-center justify-center gap-2">
-            <Sparkles className="w-5 h-5 text-purple-400" /> 
+            <Sparkles className="w-5 h-5 text-purple-400" />
             Transforming ideas into digital experiences
             <Sparkles className="w-5 h-5 text-purple-400" />
           </p>
@@ -112,59 +84,57 @@ const {
               <span className="block mt-2">{developer.full_name || developer.username}</span>
             </h3>
             <p className="text-gray-300 leading-relaxed">{developer.bio || "Passionate developer building smart digital solutions."}</p>
-            
+
             {/* CV Button */}
             {developer?.resume_file && (
-              <a 
-                href={developer.resume_file} 
-                target="_blank" 
-                rel="noopener noreferrer" 
+              <a
+                href={developer.resume_file}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-105 transition-all"
               >
                 <FileText className="w-5 h-5" /> Download CV
               </a>
             )}
 
-            {/* Social Links - معطل حالياً، للتفعيل استخدم الخيار 2 أعلاه */}
-            {/* 
+            {/* Social Links */}
             {Object.keys(usedLinks).length > 0 && (
               <div className="flex gap-3 pt-4">
                 {usedLinks.github && (
-                  <a href={usedLinks.github} target="_blank" rel="noopener noreferrer" 
+                  <a href={usedLinks.github} target="_blank" rel="noopener noreferrer"
                      className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center hover:bg-[#6366f1] transition-all">
                     <Github className="w-5 h-5 text-gray-400" />
                   </a>
                 )}
                 {usedLinks.linkedin && (
-                  <a href={usedLinks.linkedin} target="_blank" rel="noopener noreferrer" 
+                  <a href={usedLinks.linkedin} target="_blank" rel="noopener noreferrer"
                      className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center hover:bg-[#0077b5] transition-all">
                     <Linkedin className="w-5 h-5 text-gray-400" />
                   </a>
                 )}
                 {usedLinks.instagram && (
-                  <a href={usedLinks.instagram} target="_blank" rel="noopener noreferrer" 
+                  <a href={usedLinks.instagram} target="_blank" rel="noopener noreferrer"
                      className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center hover:bg-[#e4405f] transition-all">
                     <Instagram className="w-5 h-5 text-gray-400" />
                   </a>
                 )}
                 {usedLinks.facebook && (
-                  <a href={usedLinks.facebook} target="_blank" rel="noopener noreferrer" 
+                  <a href={usedLinks.facebook} target="_blank" rel="noopener noreferrer"
                      className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center hover:bg-[#1877f2] transition-all">
                     <Facebook className="w-5 h-5 text-gray-400" />
                   </a>
                 )}
               </div>
             )}
-            */}
           </div>
 
           {/* Profile Image */}
           <div className="relative" data-aos="fade-left">
             <div className="relative w-72 h-72 mx-auto">
               <div className="absolute inset-0 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-full blur-3xl opacity-30"></div>
-              <img 
-                src={getProfileImage()} 
-                alt="Profile" 
+              <img
+                src={getProfileImage()}
+                alt="Profile"
                 className="relative w-full h-full object-cover rounded-full border-4 border-white/10"
               />
             </div>
@@ -207,18 +177,9 @@ const {
           </div>
         </div>
 
-        {/* رسالة تشخيصية */}
-        <div className="mt-8 p-4 bg-green-500/10 border border-green-500/20 rounded-lg text-center">
-          <p className="text-green-500">
-            ✅ المكون يعمل بشكل صحيح
-          </p>
-        </div>
       </div>
     </div>
   );
-};
-
-export default memo(About);
 };
 
 export default memo(About);
