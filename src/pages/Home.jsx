@@ -161,12 +161,12 @@ const isFree = context.isFreePlan ? context.isFreePlan() : true;
 
               {/* روابط التواصل - مع دعم الروابط الغير موجودة */}
               <div data-aos="fade-right" data-aos-delay="1000">
-                <SocialLinks 
+              {/*  <SocialLinks 
                   links={socialLinks}
                   isPaid={!isFree}
                   isFreePlan={isFree}
                   adminLinks={adminLinks}
-                />
+                />*/}
               </div>
             </div>
 
