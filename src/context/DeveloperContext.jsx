@@ -50,20 +50,31 @@ export const DeveloperProvider = ({ children, username }) => {
     return Math.round(totalYears * 10) / 10 || 0
   }
 
-  const value = {
-    developer,
-    loading,
-    error,
-    isPublicPage,
-    getProjects,
-    getSkills,
-    getCertificates,
-    getExperience,
-    getEducation,
-    getSocialLinks,
-    getProfileImage,
-    getTotalExperienceYears
-  }
+  const isFreePlan = () => developer?.plan_id === 1
+const isPaidPlan = () => developer?.plan_id > 1
+
+const value = {
+  developer,
+
+  // اجعل الأسماء متوافقة مع PublicPortfolio
+  publicLoading: loading,
+  publicError: error,
+
+  loading,
+  error,
+
+  isFreePlan,
+  isPaidPlan,
+
+  getProjects,
+  getSkills,
+  getCertificates,
+  getExperience,
+  getEducation,
+  getSocialLinks,
+  getProfileImage,
+  getTotalExperienceYears
+}
 
   return (
     <DeveloperContext.Provider value={value}>
