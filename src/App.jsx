@@ -3,8 +3,7 @@ import React, { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { AnimatePresence } from 'framer-motion'
 import "./index.css"
-import React, { useEffect } from 'react';
-import { View } from 'react-native';
+
 
 // الصفحات العامة
 import WelcomeScreen from './pages/WelcomeScreen'
