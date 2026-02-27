@@ -62,7 +62,7 @@ const PublicPortfolio = () => {
 
       <main className="relative z-10">
         <Home developer={developer} />
-        {/*<About developer={developer}/>*/}
+        <AboutPage developer={developer}/>
         <Skills developer={developer} />
         <Portfolio developer={developer} />
       
