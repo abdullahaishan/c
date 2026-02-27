@@ -62,6 +62,7 @@ const PublicPortfolio = () => {
 
       <main className="relative z-10">
 <Skills developer={developer} />
+        <ExperienceSection />
         <Portfolio developer={developer} />
         {/*     
 <Home developer={developer} />
