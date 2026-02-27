@@ -1,10 +1,10 @@
 import { useParams } from "react-router-dom"
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { AnimatePresence } from 'framer-motion'
 import "./index.css"
-import { logError } from './utils/Logger';
-import CrashReporter from './components/CrashReporter';
+import React, { useEffect } from 'react';
+import { View } from 'react-native';
 
 // الصفحات العامة
 import WelcomeScreen from './pages/WelcomeScreen'
@@ -38,24 +38,18 @@ import ProjectDetail from './components/ProjectDetail'
 // Provider
 import { DeveloperProvider } from './context/DeveloperContext'
 import { useAuth } from './hooks/useAuth'
-
 const PublicPortfolioWrapper = () => {
   const { username } = useParams()
+
   return (
     <DeveloperProvider username={username}>
       <PublicPortfolio />
     </DeveloperProvider>
   )
-}
-
+  }
 const AppRoutes = () => {
   const [showWelcome, setShowWelcome] = useState(true)
   const { user, loading } = useAuth()
-
-  useEffect(() => {
-    // تسجيل بداية التطبيق
-    console.log('🚀 App started at:', new Date().toISOString());
-  }, []);
 
   if (loading) {
     return (
@@ -75,6 +69,7 @@ const AppRoutes = () => {
 
       {!showWelcome && (
         <Routes>
+
           {/* الصفحة الرئيسية */}
           <Route 
             path="/" 
@@ -87,11 +82,11 @@ const AppRoutes = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* ⭐ الصفحة العامة للمطور */}
+          {/* ⭐ الصفحة العامة للمطور — نلفها فقط بالـ Provider */}
           <Route 
-            path="/u/:username" 
-            element={<PublicPortfolioWrapper />} 
-          />
+  path="/u/:username" 
+  element={<PublicPortfolioWrapper />} 
+/>
           
           {/* تفاصيل مشروع */}
           <Route path="/project/:id" element={<ProjectDetail />} />
@@ -129,11 +124,8 @@ const AppRoutes = () => {
           <Route path="*" element={<NotFound />} />
         </Routes>
       )}
-      
-      {/* ✅ زر تتبع الأخطاء - خارج Routes حتى يظهر في كل الصفحات */}
-      <CrashReporter />
     </>
-  )
+  ),
 }
 
 function App() {
