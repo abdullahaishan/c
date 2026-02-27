@@ -83,7 +83,7 @@ const ProfileImage = memo(({ image }) => {
       ? 'opacity-10'
       : 'opacity-20 group-hover:opacity-30'
   }`}
-/>
+></div>
       
       <img
         src={imageSource}
