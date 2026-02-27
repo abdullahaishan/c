@@ -207,7 +207,12 @@ const ContactPage = ({ developer: propDeveloper }) => {
             </form>
 
             <div className="mt-10 pt-6 border-t border-white/10 flex justify-center space-x-6">
-              <SocialLinks />
+              <SocialLinks
+  links={context.getSocialLinks()}
+  isPaid={!context.isFreePlan()}
+  isFreePlan={context.isFreePlan()}
+  adminLinks={context.getAdminSocialLinks()}
+/>
             </div>
           </div>
 
