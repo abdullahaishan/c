@@ -61,7 +61,7 @@ const PublicPortfolio = () => {
       <Navbar />
 
       <main className="relative z-10">
-        {/*    <Home developer={developer} />*/}
+          <Home developer={developer} />
         <Skills developer={developer} />
         <Portfolio developer={developer} />
         {/*     
