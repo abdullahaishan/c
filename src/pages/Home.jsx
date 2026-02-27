@@ -111,13 +111,6 @@ const getSocialLinks = context?.getSocialLinks || (() => ({}));
 const getAdminSocialLinks = context?.getAdminSocialLinks || (() => ({}));
 const getProfileImage = context?.getProfileImage || (() => "/Coding.gif");
 const isFreePlan = context?.isFreePlan || (() => true);
-  const { 
-    getMainSkills, 
-    getSocialLinks, 
-    getAdminSocialLinks,
-    getProfileImage,
-    isFreePlan 
-  } = context;
   
   const [isLoaded, setIsLoaded] = useState(false);
 
