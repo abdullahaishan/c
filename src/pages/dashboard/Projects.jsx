@@ -29,14 +29,16 @@ const Projects = () => {
   const [editingId, setEditingId] = useState(null)
 
   const [newProject, setNewProject] = useState({
-    title: '',
-    description: '',
-    technologies: [],
-    github_url: '',
-    live_url: '',
-    features: [],
-    image: null
-  })
+  title: '',
+  description: '',
+  technologies: [],
+  github_url: '',
+  live_url: '',
+  features: [],
+  image: null,
+  status: 'draft',
+  is_featured: false
+})
 
   const [techInput, setTechInput] = useState('')
   const [featureInput, setFeatureInput] = useState('')
@@ -85,17 +87,22 @@ const Projects = () => {
         imageUrl = await handleImageUpload(newProject.image)
       }
 
-      const projectData = {
-        developer_id: user.id,
-        title: newProject.title,
-        description: newProject.description,
-        technologies: newProject.technologies || [],
-        github_url: newProject.github_url || null,
-        live_url: newProject.live_url || null,
-        features: newProject.features || [],
-        image_url: imageUrl,
-        display_order: projects.length
-      }
+      const slug = generateSlug(newProject.title)
+
+const projectData = {
+  title: newProject.title,
+  slug,
+  description: newProject.description,
+  technologies: newProject.technologies,
+  github_url: newProject.github_url || null,
+  live_url: newProject.live_url || null,
+  features: newProject.features,
+  image: imageUrl,
+  display_order: projects.length,
+  status: newProject.status,
+  is_featured: newProject.is_featured,
+  developer_id: user.id
+}
 
       const created = await projectService.create(user.id, projectData)
 
@@ -180,7 +187,18 @@ const Projects = () => {
 
       {error && <div className="text-red-400">{error}</div>}
       {success && <div className="text-green-400">{success}</div>}
-
+{/* Status */}
+<div>
+  <label className="block text-sm text-gray-400 mb-2">حالة المشروع</label>
+  <select
+    value={newProject.status}
+    onChange={(e) => setNewProject({ ...newProject, status: e.target.value })}
+    className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+  >
+    <option value="draft">مسودة</option>
+    <option value="published">منشور</option>
+  </select>
+</div>
       <button
         onClick={handleAddProject}
         disabled={saving}
