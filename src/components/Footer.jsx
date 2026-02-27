@@ -8,18 +8,14 @@ const Footer = () => {
   const navigate = useNavigate();
   const currentYear = new Date().getFullYear();
   const { 
-    isFreePlan, 
-    getAdminSocialLinks, 
-    getSocialLinks,
-    publicDeveloper 
-  } = useDeveloper();
-
+  isFreePlan, 
+  getSocialLinks
+} = useDeveloper();
   const handleAdminClick = () => {
     navigate('/u/abdullah_aishan');
   };
 
   const socialLinks = getSocialLinks();
-  const adminLinks = getAdminSocialLinks();
   const isFree = isFreePlan();
 
   return (
@@ -29,11 +25,10 @@ const Footer = () => {
         {/* ⭐ روابط التواصل - تظهر حسب الباقة */}
         <div className="mb-6 sm:mb-8">
           <SocialLinks 
-            links={socialLinks}
-            isPaid={!isFree}
-            isFreePlan={isFree}
-            adminLinks={adminLinks}
-          />
+  links={socialLinks}
+  isPaid={!isFree}
+  isFreePlan={isFree}
+/>
         </div>
 
         {/* سطر حقوق الملكية */}
