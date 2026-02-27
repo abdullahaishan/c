@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import Swal from 'sweetalert2'
 import { projectService, storageService } from '../../lib/supabase'
+import Swal from 'sweetalert2'
 import {
   Plus,
   Edit,
@@ -21,31 +21,21 @@ import {
   Star,
   Upload,
   Image as ImageIcon,
-  Link,
   Tag,
   ListChecks,
   Hash,
   Globe,
   Code,
-  FileText,
-  Settings
+  FileText
 } from 'lucide-react'
 
 const Projects = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
-// أضف هذه الدالة في بداية المكون، بعد useState
-const checkPlanPermission = () => {
-  // تحقق من الباقة - استبدلها بالمنطق الخاص بمشروعك
-  const userPlan = user?.plan_id || 1; // 1 = مجاني، 2 = مدفوع
-  
-  if (userPlan === 1) {
-    setError('❌ هذه الميزة متاحة فقط في الباقة المدفوعة')
-    return false
-  }
-  return true
-}
-  
+
+  // =============================================
+  // State management
+  // =============================================
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -55,9 +45,6 @@ const checkPlanPermission = () => {
   const [showForm, setShowForm] = useState(false)
   const [previewImage, setPreviewImage] = useState(null)
 
-  // =============================================
-  // نموذج المشروع (لإضافة وتعديل)
-  // =============================================
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -76,13 +63,25 @@ const checkPlanPermission = () => {
   const [featureInput, setFeatureInput] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
 
+  // =============================================
+  // التحقق من صلاحية الباقة
+  // =============================================
+  const checkPlanPermission = () => {
+    const userPlan = user?.plan_id || 1
+    if (userPlan === 1) {
+      setError('❌ هذه الميزة متاحة فقط في الباقة المدفوعة')
+      return false
+    }
+    return true
+  }
+
+  // =============================================
+  // جلب المشاريع
+  // =============================================
   useEffect(() => {
     if (user) fetchProjects()
   }, [user])
 
-  // =============================================
-  // جلب المشاريع من قاعدة البيانات
-  // =============================================
   const fetchProjects = async () => {
     setLoading(true)
     try {
@@ -313,42 +312,37 @@ const checkPlanPermission = () => {
   }
 
   // =============================================
-  // حذف مشروع
+  // حذف مشروع (للباقة المدفوعة فقط)
   // =============================================
   const handleDeleteProject = async (id) => {
-  // التحقق من الباقة
-  if (user?.plan_id === 1) {
-    setError('❌ ميزة الحذف متاحة فقط في المشتركين')
-    return
+    if (!checkPlanPermission()) return
+
+    const result = await Swal.fire({
+      title: 'هل أنت متأكد؟',
+      text: "لن تتمكن من استعادة هذا المشروع بعد الحذف!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'نعم، احذف',
+      cancelButtonText: 'إلغاء',
+      background: '#1a1a1a',
+      color: '#fff'
+    })
+
+    if (!result.isConfirmed) return
+
+    try {
+      await projectService.delete(id)
+      setProjects(projects.filter(p => p.id !== id))
+      setSuccess('✅ تم حذف المشروع')
+    } catch (err) {
+      setError('❌ فشل في حذف المشروع')
+    } finally {
+      setTimeout(() => setSuccess(''), 3000)
+      setTimeout(() => setError(''), 3000)
+    }
   }
-  
-  // تأكيد الحذف
-  const result = await Swal.fire({
-    title: 'هل أنت متأكد؟',
-    text: "لن تتمكن من استعادة هذا المشروع بعد الحذف!",
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#ef4444',
-    cancelButtonColor: '#6b7280',
-    confirmButtonText: 'نعم، احذف',
-    cancelButtonText: 'إلغاء',
-    background: '#1a1a1a',
-    color: '#fff'
-  })
-  
-  if (!result.isConfirmed) return
-  
-  try {
-    await projectService.delete(id)
-    setProjects(projects.filter(p => p.id !== id))
-    setSuccess('✅ تم حذف المشروع')
-  } catch (err) {
-    setError('❌ فشل في حذف المشروع')
-  } finally {
-    setTimeout(() => setSuccess(''), 3000)
-    setTimeout(() => setError(''), 3000)
-  }
-}
 
   // =============================================
   // ترتيب المشاريع
@@ -383,213 +377,224 @@ const checkPlanPermission = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center">
-        <div className="text-center">
-          <Loader className="w-12 h-12 animate-spin text-[#6366f1] mx-auto mb-4" />
-          <p className="text-gray-400">جاري تحميل المشاريع...</p>
+        <div className="text-center px-4">
+          <Loader className="w-10 h-10 md:w-12 md:h-12 animate-spin text-[#6366f1] mx-auto mb-4" />
+          <p className="text-sm md:text-base text-gray-400">جاري تحميل المشاريع...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-8 p-6">
-      {/* =============================================
-          الهيدر مع الإحصائيات
-      ============================================= */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6 lg:space-y-8 p-3 md:p-4 lg:p-6 max-w-full overflow-x-hidden">
+      
+      {/* =========================================
+          الهيدر مع الإحصائيات (متجاوب)
+      ========================================= */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">المشاريع</h1>
-          <p className="text-gray-400">إدارة وتنظيم مشاريعك وعرضها بشكل احترافي</p>
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-2">المشاريع</h1>
+          <p className="text-sm md:text-base text-gray-400">إدارة وتنظيم مشاريعك وعرضها بشكل احترافي</p>
         </div>
-        <div className="flex gap-4">
-          <div className="text-center px-4 py-2 bg-white/5 rounded-xl">
-            <div className="text-2xl font-bold text-[#a855f7]">{projects.length}</div>
-            <div className="text-xs text-gray-400">إجمالي</div>
+        <div className="flex gap-2 md:gap-4 w-full sm:w-auto">
+          <div className="flex-1 sm:flex-none text-center px-3 md:px-4 py-2 bg-white/5 rounded-xl">
+            <div className="text-xl md:text-2xl font-bold text-[#a855f7]">{projects.length}</div>
+            <div className="text-[10px] md:text-xs text-gray-400">إجمالي</div>
           </div>
-          <div className="text-center px-4 py-2 bg-white/5 rounded-xl">
-            <div className="text-2xl font-bold text-green-400">
+          <div className="flex-1 sm:flex-none text-center px-3 md:px-4 py-2 bg-white/5 rounded-xl">
+            <div className="text-xl md:text-2xl font-bold text-green-400">
               {projects.filter(p => p.status === 'published').length}
             </div>
-            <div className="text-xs text-gray-400">منشور</div>
+            <div className="text-[10px] md:text-xs text-gray-400">منشور</div>
           </div>
         </div>
       </div>
 
-      {/* =============================================
+      {/* =========================================
           رسائل النجاح والخطأ
-      ============================================= */}
+      ========================================= */}
       {error && (
-        <div className="flex items-center gap-2 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+        <div className="flex items-center gap-2 p-3 md:p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm md:text-base">
+          <AlertCircle className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
           <p className="flex-1">{error}</p>
           <button onClick={() => setError('')} className="hover:text-white">
-            <X className="w-4 h-4" />
+            <X className="w-3 h-3 md:w-4 md:h-4" />
           </button>
         </div>
       )}
 
       {success && (
-        <div className="flex items-center gap-2 p-4 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+        <div className="flex items-center gap-2 p-3 md:p-4 bg-green-500/10 border border-green-500/20 rounded-xl text-green-400 text-sm md:text-base">
+          <AlertCircle className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
           <p className="flex-1">{success}</p>
           <button onClick={() => setSuccess('')} className="hover:text-white">
-            <X className="w-4 h-4" />
+            <X className="w-3 h-3 md:w-4 md:h-4" />
           </button>
         </div>
       )}
 
-      {/* =============================================
-          زر إظهار/إخفاء النموذج
-      ============================================= */}
+      {/* =========================================
+          زر إظهار النموذج
+      ========================================= */}
       {!showForm && (
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-[1.02] transition-all"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 md:px-6 py-2.5 md:py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-[1.02] transition-all text-sm md:text-base"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4 md:w-5 md:h-5" />
           إضافة مشروع جديد
         </button>
       )}
 
-      {/* =============================================
-          نموذج إضافة/تعديل المشروع
-      ============================================= */}
+      {/* =========================================
+          نموذج إضافة/تعديل المشروع (متجاوب)
+      ========================================= */}
       {showForm && (
-        <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+        <div className="bg-white/5 backdrop-blur-xl rounded-xl md:rounded-2xl p-4 md:p-6 border border-white/10">
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <h2 className="text-lg md:text-xl font-semibold text-white flex items-center gap-2">
               {editingId ? (
                 <>
-                  <Edit className="w-5 h-5 text-[#6366f1]" />
+                  <Edit className="w-4 h-4 md:w-5 md:h-5 text-[#6366f1]" />
                   تعديل المشروع
                 </>
               ) : (
                 <>
-                  <Plus className="w-5 h-5 text-[#6366f1]" />
+                  <Plus className="w-4 h-4 md:w-5 md:h-5 text-[#6366f1]" />
                   إضافة مشروع جديد
                 </>
               )}
             </h2>
             <button
               onClick={resetForm}
-              className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition"
+              className="p-1.5 md:p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 md:w-5 md:h-5" />
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
-            {/* =========================================
-                العمود الأيمن - المعلومات الأساسية
-            ========================================= */}
-            <div className="space-y-4">
+          {/* على الشاشات الصغيرة: عمود واحد، على الكبيرة: عمودين */}
+          <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4 md:gap-6">
+            
+            {/* =====================================
+                العمود الأيمن (المعلومات الأساسية)
+            ===================================== */}
+            <div className="space-y-3 md:space-y-4">
+              
+              {/* عنوان المشروع */}
               <div>
-                <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-                  <Tag className="w-4 h-4" />
+                <label className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-400 mb-1 md:mb-2">
+                  <Tag className="w-3 h-3 md:w-4 md:h-4" />
                   عنوان المشروع <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
+                  className="w-full p-2 md:p-3 text-sm md:text-base bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
                   placeholder="مثال: منصة تعليمية متكاملة"
                 />
               </div>
 
+              {/* وصف مختصر */}
               <div>
-                <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-                  <ListChecks className="w-4 h-4" />
+                <label className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-400 mb-1 md:mb-2">
+                  <ListChecks className="w-3 h-3 md:w-4 md:h-4" />
                   وصف مختصر <span className="text-red-400">*</span>
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   rows="3"
-                  className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
+                  className="w-full p-2 md:p-3 text-sm md:text-base bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
                   placeholder="وصف موجز للمشروع..."
                 />
               </div>
 
+              {/* وصف تفصيلي */}
               <div>
-                <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-                  <FileText className="w-4 h-4" />
+                <label className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-400 mb-1 md:mb-2">
+                  <FileText className="w-3 h-3 md:w-4 md:h-4" />
                   وصف تفصيلي
                 </label>
                 <textarea
                   value={formData.content}
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  rows="5"
-                  className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
+                  rows="4"
+                  className="w-full p-2 md:p-3 text-sm md:text-base bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
                   placeholder="شرح مفصل للمشروع، التحديات، الحلول..."
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* روابط المشروع */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-                    <Github className="w-4 h-4" />
+                  <label className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-400 mb-1 md:mb-2">
+                    <Github className="w-3 h-3 md:w-4 md:h-4" />
                     رابط GitHub
                   </label>
                   <input
                     type="url"
                     value={formData.github_url}
                     onChange={(e) => setFormData({ ...formData, github_url: e.target.value })}
-                    className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
+                    className="w-full p-2 md:p-3 text-sm md:text-base bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
                     placeholder="https://github.com/..."
                   />
                 </div>
                 <div>
-                  <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-                    <Globe className="w-4 h-4" />
+                  <label className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-400 mb-1 md:mb-2">
+                    <Globe className="w-3 h-3 md:w-4 md:h-4" />
                     رابط المشروع
                   </label>
                   <input
                     type="url"
                     value={formData.live_url}
                     onChange={(e) => setFormData({ ...formData, live_url: e.target.value })}
-                    className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
+                    className="w-full p-2 md:p-3 text-sm md:text-base bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
                     placeholder="https://example.com"
                   />
                 </div>
               </div>
             </div>
 
-            {/* =========================================
-                العمود الأيسر - التقنيات والميزات
-            ========================================= */}
-            <div className="space-y-4">
+            {/* =====================================
+                العمود الأيسر (التقنيات والميزات)
+            ===================================== */}
+            <div className="space-y-3 md:space-y-4">
+              
+              {/* التصنيف */}
               <div>
-                <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-                  <Hash className="w-4 h-4" />
+                <label className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-400 mb-1 md:mb-2">
+                  <Hash className="w-3 h-3 md:w-4 md:h-4" />
                   التصنيف
                 </label>
                 <input
                   type="text"
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
+                  className="w-full p-2 md:p-3 text-sm md:text-base bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
                   placeholder="مثال: ويب، موبايل، ذكاء اصطناعي"
                 />
               </div>
 
+              {/* التقنيات المستخدمة */}
               <div>
-                <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-                  <Code className="w-4 h-4" />
+                <label className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-400 mb-1 md:mb-2">
+                  <Code className="w-3 h-3 md:w-4 md:h-4" />
                   التقنيات المستخدمة
                 </label>
-                <div className="flex gap-2 mb-2">
+                <div className="flex flex-col sm:flex-row gap-2 mb-2">
                   <input
                     type="text"
                     value={techInput}
                     onChange={(e) => setTechInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && addTechnology()}
-                    className="flex-1 p-3 bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
+                    className="flex-1 p-2 md:p-3 text-sm md:text-base bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
                     placeholder="مثال: React"
                   />
                   <button
                     onClick={addTechnology}
-                    className="px-4 py-2 bg-[#6366f1] text-white rounded-lg hover:bg-[#a855f7] transition-all"
+                    className="w-full sm:w-auto px-4 py-2 bg-[#6366f1] text-white rounded-lg hover:bg-[#a855f7] transition-all text-sm"
                   >
                     إضافة
                   </button>
@@ -598,7 +603,7 @@ const checkPlanPermission = () => {
                   {formData.technologies.map((tech) => (
                     <span
                       key={tech}
-                      className="flex items-center gap-1 px-3 py-1 bg-[#6366f1]/20 text-[#6366f1] rounded-lg text-sm"
+                      className="flex items-center gap-1 px-2 py-1 bg-[#6366f1]/20 text-[#6366f1] rounded-lg text-xs"
                     >
                       {tech}
                       <button onClick={() => removeTechnology(tech)} className="hover:text-white">
@@ -609,23 +614,24 @@ const checkPlanPermission = () => {
                 </div>
               </div>
 
+              {/* الميزات الرئيسية */}
               <div>
-                <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-                  <Star className="w-4 h-4" />
+                <label className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-400 mb-1 md:mb-2">
+                  <Star className="w-3 h-3 md:w-4 md:h-4" />
                   الميزات الرئيسية
                 </label>
-                <div className="flex gap-2 mb-2">
+                <div className="flex flex-col sm:flex-row gap-2 mb-2">
                   <input
                     type="text"
                     value={featureInput}
                     onChange={(e) => setFeatureInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && addFeature()}
-                    className="flex-1 p-3 bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
+                    className="flex-1 p-2 md:p-3 text-sm md:text-base bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
                     placeholder="مثال: تسجيل دخول آمن"
                   />
                   <button
                     onClick={addFeature}
-                    className="px-4 py-2 bg-[#6366f1] text-white rounded-lg hover:bg-[#a855f7] transition-all"
+                    className="w-full sm:w-auto px-4 py-2 bg-[#6366f1] text-white rounded-lg hover:bg-[#a855f7] transition-all text-sm"
                   >
                     إضافة
                   </button>
@@ -634,7 +640,7 @@ const checkPlanPermission = () => {
                   {formData.features.map((feature) => (
                     <span
                       key={feature}
-                      className="flex items-center gap-1 px-3 py-1 bg-purple-500/20 text-purple-400 rounded-lg text-sm"
+                      className="flex items-center gap-1 px-2 py-1 bg-purple-500/20 text-purple-400 rounded-lg text-xs"
                     >
                       {feature}
                       <button onClick={() => removeFeature(feature)} className="hover:text-white">
@@ -645,14 +651,15 @@ const checkPlanPermission = () => {
                 </div>
               </div>
 
+              {/* صورة المشروع */}
               <div>
-                <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-                  <ImageIcon className="w-4 h-4" />
+                <label className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-400 mb-1 md:mb-2">
+                  <ImageIcon className="w-3 h-3 md:w-4 md:h-4" />
                   صورة المشروع
                 </label>
                 <div className="relative">
                   {previewImage ? (
-                    <div className="relative w-full h-40 rounded-lg overflow-hidden">
+                    <div className="relative w-full h-32 md:h-40 rounded-lg overflow-hidden">
                       <img
                         src={previewImage}
                         alt="Preview"
@@ -665,13 +672,13 @@ const checkPlanPermission = () => {
                         }}
                         className="absolute top-2 right-2 p-1 bg-red-500/80 rounded-full hover:bg-red-600 transition"
                       >
-                        <X className="w-4 h-4 text-white" />
+                        <X className="w-3 h-3 md:w-4 md:h-4 text-white" />
                       </button>
                     </div>
                   ) : (
-                    <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-white/20 rounded-lg cursor-pointer hover:border-[#6366f1]/50 transition bg-white/5">
-                      <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                      <span className="text-sm text-gray-400">اضغط لرفع صورة</span>
+                    <label className="flex flex-col items-center justify-center w-full h-32 md:h-40 border-2 border-dashed border-white/20 rounded-lg cursor-pointer hover:border-[#6366f1]/50 transition bg-white/5">
+                      <Upload className="w-6 h-6 md:w-8 md:h-8 text-gray-400 mb-2" />
+                      <span className="text-xs md:text-sm text-gray-400">اضغط لرفع صورة</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -683,20 +690,21 @@ const checkPlanPermission = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* حالة المشروع ومميز */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
+                  <label className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-400 mb-1 md:mb-2">
                     {formData.status === 'published' ? (
-                      <Eye className="w-4 h-4 text-green-400" />
+                      <Eye className="w-3 h-3 md:w-4 md:h-4 text-green-400" />
                     ) : (
-                      <EyeOff className="w-4 h-4 text-yellow-400" />
+                      <EyeOff className="w-3 h-3 md:w-4 md:h-4 text-yellow-400" />
                     )}
                     حالة المشروع
                   </label>
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
+                    className="w-full p-2 md:p-3 text-sm md:text-base bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
                   >
                     <option value="draft">🔒 مسودة</option>
                     <option value="published">🌍 منشور</option>
@@ -704,11 +712,11 @@ const checkPlanPermission = () => {
                 </div>
 
                 <div>
-                  <label className="flex items-center gap-2 text-sm text-gray-400 mb-2">
-                    <Star className={`w-4 h-4 ${formData.is_featured ? 'text-yellow-400' : ''}`} />
+                  <label className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-400 mb-1 md:mb-2">
+                    <Star className={`w-3 h-3 md:w-4 md:h-4 ${formData.is_featured ? 'text-yellow-400' : ''}`} />
                     مشروع مميز
                   </label>
-                  <div className="flex items-center h-[50px]">
+                  <div className="flex items-center h-[42px] md:h-[50px]">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="checkbox"
@@ -718,7 +726,7 @@ const checkPlanPermission = () => {
                         }
                         className="w-4 h-4"
                       />
-                      <span className="text-sm text-gray-300">
+                      <span className="text-xs md:text-sm text-gray-300">
                         {formData.is_featured ? 'مميز' : 'عادي'}
                       </span>
                     </label>
@@ -729,27 +737,27 @@ const checkPlanPermission = () => {
           </div>
 
           {/* أزرار الحفظ والإلغاء */}
-          <div className="flex gap-4 mt-6">
+          <div className="flex flex-col sm:flex-row gap-3 mt-4 md:mt-6">
             <button
               onClick={editingId ? handleUpdateProject : handleAddProject}
               disabled={saving || !formData.title || !formData.description}
-              className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-[1.02] transition-all disabled:opacity-50"
+              className="flex-1 flex items-center justify-center gap-2 px-4 md:px-6 py-2.5 md:py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-[1.02] transition-all disabled:opacity-50 text-sm md:text-base"
             >
               {saving ? (
                 <>
-                  <Loader className="w-5 h-5 animate-spin" />
+                  <Loader className="w-4 h-4 md:w-5 md:h-5 animate-spin" />
                   جاري الحفظ...
                 </>
               ) : (
                 <>
-                  {editingId ? <Save className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                  {editingId ? <Save className="w-4 h-4 md:w-5 md:h-5" /> : <Plus className="w-4 h-4 md:w-5 md:h-5" />}
                   {editingId ? 'تحديث المشروع' : 'إضافة المشروع'}
                 </>
               )}
             </button>
             <button
               onClick={resetForm}
-              className="px-6 py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all"
+              className="px-4 md:px-6 py-2.5 md:py-3 bg-white/10 text-white rounded-xl font-semibold hover:bg-white/20 transition-all text-sm md:text-base"
             >
               إلغاء
             </button>
@@ -757,15 +765,15 @@ const checkPlanPermission = () => {
         </div>
       )}
 
-      {/* =============================================
-          فلاتر المشاريع
-      ============================================= */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-white">المشاريع الحالية</h2>
-        <div className="flex gap-2">
+      {/* =========================================
+          فلاتر المشاريع (متجاوبة)
+      ========================================= */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <h2 className="text-lg md:text-xl font-semibold text-white">المشاريع الحالية</h2>
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setSelectedCategory('all')}
-            className={`px-3 py-1 rounded-lg text-sm transition ${
+            className={`px-2 md:px-3 py-1 rounded-lg text-xs md:text-sm transition ${
               selectedCategory === 'all'
                 ? 'bg-[#6366f1] text-white'
                 : 'bg-white/5 text-gray-400 hover:bg-white/10'
@@ -775,7 +783,7 @@ const checkPlanPermission = () => {
           </button>
           <button
             onClick={() => setSelectedCategory('published')}
-            className={`px-3 py-1 rounded-lg text-sm transition ${
+            className={`px-2 md:px-3 py-1 rounded-lg text-xs md:text-sm transition ${
               selectedCategory === 'published'
                 ? 'bg-green-500/80 text-white'
                 : 'bg-white/5 text-gray-400 hover:bg-white/10'
@@ -785,7 +793,7 @@ const checkPlanPermission = () => {
           </button>
           <button
             onClick={() => setSelectedCategory('draft')}
-            className={`px-3 py-1 rounded-lg text-sm transition ${
+            className={`px-2 md:px-3 py-1 rounded-lg text-xs md:text-sm transition ${
               selectedCategory === 'draft'
                 ? 'bg-yellow-500/80 text-white'
                 : 'bg-white/5 text-gray-400 hover:bg-white/10'
@@ -796,30 +804,30 @@ const checkPlanPermission = () => {
         </div>
       </div>
 
-      {/* =============================================
-          عرض المشاريع
-      ============================================= */}
+      {/* =========================================
+          عرض المشاريع (متجاوب)
+      ========================================= */}
       {filteredProjects.length === 0 ? (
-        <div className="text-center py-12 bg-white/5 rounded-2xl">
-          <FolderKanban className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400">لا توجد مشاريع في هذا التصنيف</p>
+        <div className="text-center py-8 md:py-12 bg-white/5 rounded-xl md:rounded-2xl">
+          <FolderKanban className="w-12 h-12 md:w-16 md:h-16 text-gray-600 mx-auto mb-3 md:mb-4" />
+          <p className="text-sm md:text-base text-gray-400">لا توجد مشاريع في هذا التصنيف</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-3 md:gap-4">
           {filteredProjects.map((project, index) => (
             <div
               key={project.id}
-              className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:border-[#6366f1]/50 transition-all group relative"
+              className="bg-white/5 backdrop-blur-xl rounded-xl md:rounded-2xl p-4 md:p-6 border border-white/10 hover:border-[#6366f1]/50 transition-all group relative"
             >
-              {/* أزرار التحكم */}
-              <div className="absolute top-4 right-4 flex items-center gap-2">
+              {/* أزرار التحكم (متجاوبة) */}
+              <div className="absolute top-2 md:top-4 right-2 md:right-4 flex items-center gap-1 md:gap-2">
                 <div className="flex flex-col">
                   {projects.findIndex(p => p.id === project.id) > 0 && (
                     <button
                       onClick={() => handleMoveProject(projects.findIndex(p => p.id === project.id), 'up')}
                       className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded"
                     >
-                      <ChevronUp className="w-4 h-4" />
+                      <ChevronUp className="w-3 h-3 md:w-4 md:h-4" />
                     </button>
                   )}
                   {projects.findIndex(p => p.id === project.id) < projects.length - 1 && (
@@ -827,104 +835,106 @@ const checkPlanPermission = () => {
                       onClick={() => handleMoveProject(projects.findIndex(p => p.id === project.id), 'down')}
                       className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded"
                     >
-                      <ChevronDown className="w-4 h-4" />
+                      <ChevronDown className="w-3 h-3 md:w-4 md:h-4" />
                     </button>
                   )}
                 </div>
                 <button
                   onClick={() => handleEdit(project)}
-                  className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg"
+                  className="p-1.5 md:p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg"
                 >
-                  <Edit className="w-4 h-4" />
+                  <Edit className="w-3 h-3 md:w-4 md:h-4" />
                 </button>
+                
+                {/* زر الحذف - للباقة المدفوعة فقط */}
                 {user?.plan_id > 1 ? (
-  <button
-    onClick={() => handleDeleteProject(project.id)}
-    className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg"
-    title="حذف المشروع"
-  >
-    <Trash2 className="w-4 h-4" />
-  </button>
-) : (
-  <button
-    onClick={() => setError('❌ ميزة الحذف متاحة فقط في الباقة المدفوعة')}
-    className="p-2 text-gray-600 cursor-not-allowed relative group"
-    title="متاح فقط في الباقة المدفوعة"
-  >
-    <Trash2 className="w-4 h-4" />
-    <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 
-                     text-xs text-yellow-400 bg-black/80 px-2 py-1 rounded 
-                     opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
-      🔒 الباقة المدفوعة فقط
-    </span>
-  </button>
-)}
+                  <button
+                    onClick={() => handleDeleteProject(project.id)}
+                    className="p-1.5 md:p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg"
+                    title="حذف المشروع"
+                  >
+                    <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setError('❌ ميزة الحذف متاحة فقط في الباقة المدفوعة')}
+                    className="p-1.5 md:p-2 text-gray-600 cursor-not-allowed relative group"
+                    title="متاح فقط في الباقة المدفوعة"
+                  >
+                    <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
+                    <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 
+                                     text-[10px] md:text-xs text-yellow-400 bg-black/80 px-2 py-1 rounded 
+                                     opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-50">
+                      🔒 الباقة المدفوعة فقط
+                    </span>
+                  </button>
+                )}
               </div>
 
-              {/* حالة المشروع */}
-              <div className="absolute top-4 left-4 flex gap-2">
+              {/* حالة المشروع (متجاوبة) */}
+              <div className="absolute top-2 md:top-4 left-2 md:left-4 flex gap-1 md:gap-2">
                 {project.status === 'published' ? (
-                  <span className="flex items-center gap-1 px-2 py-1 bg-green-500/20 text-green-400 rounded-lg text-xs">
-                    <Eye className="w-3 h-3" />
+                  <span className="flex items-center gap-1 px-1.5 md:px-2 py-0.5 md:py-1 bg-green-500/20 text-green-400 rounded-lg text-[10px] md:text-xs">
+                    <Eye className="w-2 h-2 md:w-3 md:h-3" />
                     منشور
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1 px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-lg text-xs">
-                    <EyeOff className="w-3 h-3" />
+                  <span className="flex items-center gap-1 px-1.5 md:px-2 py-0.5 md:py-1 bg-yellow-500/20 text-yellow-400 rounded-lg text-[10px] md:text-xs">
+                    <EyeOff className="w-2 h-2 md:w-3 md:h-3" />
                     مسودة
                   </span>
                 )}
                 {project.is_featured && (
-                  <span className="flex items-center gap-1 px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-lg text-xs">
-                    <Star className="w-3 h-3" />
+                  <span className="flex items-center gap-1 px-1.5 md:px-2 py-0.5 md:py-1 bg-yellow-500/20 text-yellow-400 rounded-lg text-[10px] md:text-xs">
+                    <Star className="w-2 h-2 md:w-3 md:h-3" />
                     مميز
                   </span>
                 )}
               </div>
 
-              {/* محتوى المشروع */}
-              <div className="mt-12 cursor-pointer" onClick={() => navigate(`/project/${project.id}`)}>
+              {/* محتوى المشروع (متجاوب) */}
+              <div className="mt-10 md:mt-12 cursor-pointer" onClick={() => navigate(`/project/${project.id}`)}>
                 {project.image && (
                   <img
                     src={project.image}
                     alt={project.title}
-                    className="w-full h-48 object-cover rounded-lg mb-4"
+                    className="w-full h-32 md:h-48 object-cover rounded-lg mb-3 md:mb-4"
                   />
                 )}
 
-                <h3 className="text-xl font-semibold text-white mb-2 pr-24">
+                <h3 className="text-base md:text-xl font-semibold text-white mb-2 pr-16 md:pr-24">
                   {project.title}
                 </h3>
 
                 {project.category && (
-                  <span className="inline-block px-2 py-1 bg-[#6366f1]/10 text-[#6366f1] rounded-lg text-xs mb-3">
+                  <span className="inline-block px-1.5 md:px-2 py-0.5 md:py-1 bg-[#6366f1]/10 text-[#6366f1] rounded-lg text-[10px] md:text-xs mb-2 md:mb-3">
                     {project.category}
                   </span>
                 )}
 
-                <p className="text-gray-400 mb-4 line-clamp-2">
+                <p className="text-xs md:text-sm text-gray-400 mb-3 md:mb-4 line-clamp-2">
                   {project.description}
                 </p>
 
                 {project.technologies?.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {project.technologies.slice(0, 5).map((tech) => (
+                  <div className="flex flex-wrap gap-1 md:gap-2 mb-3 md:mb-4">
+                    {project.technologies.slice(0, 3).map((tech) => (
                       <span
                         key={tech}
-                        className="px-2 py-1 bg-[#6366f1]/10 text-[#6366f1] rounded-lg text-xs"
+                        className="px-1.5 md:px-2 py-0.5 md:py-1 bg-[#6366f1]/10 text-[#6366f1] rounded-lg text-[10px] md:text-xs"
                       >
                         {tech}
                       </span>
                     ))}
-                    {project.technologies.length > 5 && (
-                      <span className="px-2 py-1 bg-white/5 text-gray-400 rounded-lg text-xs">
-                        +{project.technologies.length - 5}
+                    {project.technologies.length > 3 && (
+                      <span className="px-1.5 md:px-2 py-0.5 md:py-1 bg-white/5 text-gray-400 rounded-lg text-[10px] md:text-xs">
+                        +{project.technologies.length - 3}
                       </span>
                     )}
                   </div>
                 )}
 
-                <div className="flex gap-4 text-sm">
+                <div className="flex gap-3 md:gap-4 text-xs md:text-sm">
                   {project.github_url && (
                     <a
                       href={project.github_url}
@@ -933,8 +943,8 @@ const checkPlanPermission = () => {
                       onClick={(e) => e.stopPropagation()}
                       className="flex items-center gap-1 text-gray-400 hover:text-white transition"
                     >
-                      <Github className="w-4 h-4" />
-                      <span>GitHub</span>
+                      <Github className="w-3 h-3 md:w-4 md:h-4" />
+                      <span className="hidden sm:inline">GitHub</span>
                     </a>
                   )}
                   {project.live_url && (
@@ -945,8 +955,8 @@ const checkPlanPermission = () => {
                       onClick={(e) => e.stopPropagation()}
                       className="flex items-center gap-1 text-gray-400 hover:text-white transition"
                     >
-                      <ExternalLink className="w-4 h-4" />
-                      <span>معاينة</span>
+                      <ExternalLink className="w-3 h-3 md:w-4 md:h-4" />
+                      <span className="hidden sm:inline">معاينة</span>
                     </a>
                   )}
                 </div>
