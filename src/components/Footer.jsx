@@ -25,11 +25,11 @@ const adminLinks = getAdminSocialLinks();
         
         {/* ⭐ روابط التواصل - تظهر حسب الباقة */}
         <div className="mb-6 sm:mb-8">
-          <SocialLinks 
+          {/*       <SocialLinks 
   links={socialLinks}
   isPaid={!isFree}
   isFreePlan={isFree}
-/>
+/>*/}
         </div>
 
         {/* سطر حقوق الملكية */}
