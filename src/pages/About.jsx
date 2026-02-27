@@ -5,20 +5,20 @@ import React, { useEffect, useMemo, memo } from "react";
 // =============================================
 
 // ❌ استيرادات خارجية - علقها كلها
-// import {
-//   FileText,
+ import {
+   FileText,
 //   Code,
 //   Award,
 //   Globe,
-//   Sparkles,
-//   Github,
-//   Linkedin,
-//   Instagram,
-//   Facebook,
-//   Mail,
-//   Phone,
-//   MapPin
-// } from "lucide-react";
+   Sparkles,
+   Github,
+   Linkedin,
+  Instagram,
+   Facebook,
+  Mail,
+  Phone,
+  MapPin
+ } from "lucide-react";
 
 // import AOS from "aos";
 // import "aos/dist/aos.css";
@@ -84,6 +84,8 @@ const About = ({ developer: propDeveloper }) => {
             <span>✨</span>
             Transforming ideas into digital experiences
             {/* <Sparkles className="w-5 h-5 text-purple-400" /> */}
+// بـ
+<Sparkles className="w-5 h-5 text-purple-400" />
             <span>✨</span>
           </p>
         </div>
