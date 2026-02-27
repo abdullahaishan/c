@@ -6,8 +6,8 @@ import React, { useState, useEffect, memo } from "react";
 
 // ❌ استيرادات خارجية - علقها كلها في البداية
 import { Download } from "lucide-react";
-// import AOS from "aos";
-// import "aos/dist/aos.css";
+ import AOS from "aos";
+ import "aos/dist/aos.css";
 // import { useDeveloper } from '../context/DeveloperContext';
 // import AnimatedBackground from '../components/AnimatedBackground';
 // import SocialLinks from '../components/SocialLinks';
@@ -126,13 +126,9 @@ const Home = ({ developer: propDeveloper }) => {
   const profileImage = "/Coding.gif";
 
   useEffect(() => {
-    // 🟢 مجرد setTimeout للتأثير البصري
-    const timer = setTimeout(() => {
-      setIsLoaded(true);
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, []);
+  AOS.init({ once: true, offset: 10 });
+  setIsLoaded(true);
+}, []);
 
   return (
     <div className={`relative z-10 transition-all duration-1000 ${isLoaded ? "opacity-100" : "opacity-0"}`}>
