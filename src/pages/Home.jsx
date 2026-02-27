@@ -142,11 +142,12 @@ const [isLoaded, setIsLoaded] = useState(false);
             {/* الاسم - بيانات افتراضية */}
             <div>
               <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white">
-                Abdullah
-              </h1>
-              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-gray-300 mt-1">
-                Zabin Ali Aishan
-              </h2>
+  {developer?.full_name?.split(" ")[0] || "Abdullah"}
+</h1>
+
+<h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-gray-300 mt-1">
+  {developer?.full_name?.split(" ").slice(1).join(" ") || "Zabin Ali Aishan"}
+</h2>
             </div>
 
             {/* النص المتحرك - يعمل بدون Context */}
