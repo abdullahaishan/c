@@ -65,7 +65,7 @@ const PublicPortfolio = () => {
         <About developer={developer}/>
         <Skills developer={developer} />
         <Portfolio developer={developer} />
-        <ExperiencePage developer={developer} />
+        {/* <ExperiencePage developer={developer} />*/}
       
         {/* قسم الخبرات الجديد */}
         {/*  <ExperienceSection />*/}
