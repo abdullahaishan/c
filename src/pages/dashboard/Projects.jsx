@@ -120,7 +120,13 @@ const projectData = {
 
       setSuccess('تم إضافة المشروع بنجاح')
     } catch (err) {
-      setError('فشل في إضافة المشروع')
+      if (err.message?.includes('permission')) {
+  setError('ليس لديك صلاحية لإضافة مشروع')
+} else if (err.message?.includes('quota')) {
+  setError('تم تجاوز حد التخزين المسموح')
+} else {
+  setError(err.message || 'فشل في إضافة المشروع')
+}
     } finally {
       setSaving(false)
     }
@@ -188,6 +194,17 @@ const projectData = {
       {error && <div className="text-red-400">{error}</div>}
       {success && <div className="text-green-400">{success}</div>}
 {/* Status */}
+      <label className="flex items-center gap-2 text-sm text-gray-400">
+  <input
+    type="checkbox"
+    checked={newProject.is_featured}
+    onChange={(e) =>
+      setNewProject({ ...newProject, is_featured: e.target.checked })
+    }
+    className="w-4 h-4"
+  />
+  تمييز كمشروع بارز
+</label>
 <div>
   <label className="block text-sm text-gray-400 mb-2">حالة المشروع</label>
   <select
