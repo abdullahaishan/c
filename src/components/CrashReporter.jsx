@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getErrors, clearErrors, downloadErrors, logError } from '../utils/logger';
+import { getErrors, clearErrors, downloadErrors, logError } from '../utils/Logger';
 
 const CrashReporter = () => {
   const [modalVisible, setModalVisible] = useState(false);
