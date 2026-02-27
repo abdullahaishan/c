@@ -149,7 +149,6 @@ const isFree = context.isFreePlan ? context.isFreePlan() : true;
         //      <p className="text-xs sm:text-sm md:text-base text-gray-400 leading-relaxed max-w-xl mx-auto lg:mx-0" data-aos="fade-right" data-aos-delay="600">
              //   {developer?.bio || "Passionate about technology since 2008, I started programming professionally in 2015."}
            //   </p>
-
               {/* أزرار المشاريع والتواصل */}
               <div className="flex gap-2 sm:gap-3 justify-center lg:justify-start" data-aos="fade-right" data-aos-delay="800">
                 <a
