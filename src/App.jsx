@@ -47,16 +47,25 @@ const PublicPortfolioWrapper = () => {
 }
 
 const AppRoutes = () => {
-  const [showWelcome, setShowWelcome] = useState(true)
+  // ✅ نتحقق من sessionStorage أولاً
+  const [showWelcome, setShowWelcome] = useState(() => {
+    // هل شاهد المستخدم الشاشة من قبل في هذه الجلسة؟
+    const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome')
+    return hasSeenWelcome !== 'true' // إذا لم يشاهدها، نعرضها
+  })
+  
   const { user, loading } = useAuth()
   const [redirectTo, setRedirectTo] = useState(null)
 
-  // عند انتهاء شاشة الترحيب، نقرر أين نذهب
+  // عند انتهاء شاشة الترحيب
   const handleWelcomeComplete = () => {
+    // ✅ نسجل أنه شاهد الشاشة
+    sessionStorage.setItem('hasSeenWelcome', 'true')
+    
     if (user) {
       setRedirectTo('/dashboard')
     } else {
-      setShowWelcome(false) // يظهر المحتوى العادي (LandingPage)
+      setShowWelcome(false)
     }
   }
 
@@ -65,7 +74,7 @@ const AppRoutes = () => {
     return <Navigate to={redirectTo} replace />
   }
 
-  // أثناء التحميل، نظهر شاشة الترحيب (بدون محتوى)
+  // أثناء التحميل، نظهر شاشة الترحيب فقط إذا لم يشاهدها من قبل
   if (loading && showWelcome) {
     return <WelcomeScreen onLoadingComplete={handleWelcomeComplete} />
   }
@@ -80,7 +89,7 @@ const AppRoutes = () => {
 
       {!showWelcome && (
         <Routes>
-          {/* الصفحة الرئيسية - تظهر فقط لغير المسجلين */}
+          {/* الصفحة الرئيسية */}
           <Route 
             path="/" 
             element={
