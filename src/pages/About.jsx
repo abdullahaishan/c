@@ -45,37 +45,44 @@ const {
 } = context;
 
   // ⚡ دوال مساعدة افتراضية
-  const getProfileImage = () => "/Coding.gif";
-  const getProjects = () => [];
-  const getCertificates = () => [];
-  const getSkills = () => [];
-  const getExperience = () => [];
-  const getEducation = () => [];
-  const getTotalExperienceYears = () => 5;
-  const getSocialLinks = () => ({});
-  const isFreePlan = () => true;
-  const getAdminSocialLinks = () => ({});
+  const About = ({ developer: propDeveloper }) => {
+  // داخل المكون، استبدل البيانات الافتراضية بـ:
+  const context = useDeveloper();
+  const developer = propDeveloper || context.developer;
 
-  // ⚡ الروابط الاجتماعية (آمنة)
-  const socialLinks = {};
-  const adminLinks = {};
-  const usedLinks = {};
+  // ✅ استخدم دوال context مع قيم افتراضية آمنة
+  const getProfileImage = context.getProfileImage || (() => "/Coding.gif");
+  const getProjects = context.getProjects || (() => []);
+  const getCertificates = context.getCertificates || (() => []);
+  const getSkills = context.getSkills || (() => []);
+  const getExperience = context.getExperience || (() => []);
+  const getEducation = context.getEducation || (() => []);
+  const getTotalExperienceYears = context.getTotalExperienceYears || (() => 5);
+  
+  // ✅ أضف دوال التواصل (كانت معلقة)
+//  const getSocialLinks = context.getSocialLinks || (() => ({}));
+//  const isFreePlan = context.isFreePlan || (() => true);
+//  const getAdminSocialLinks = context.getAdminSocialLinks || (() => ({}));
 
-  // ⚡ الإحصائيات
+  // ⚡ الروابط الاجتماعية (مع قيم افتراضية آمنة)
+//  const socialLinks = getSocialLinks() || {};
+//  const adminLinks = getAdminSocialLinks() || {};
+//  const usedLinks = (isFreePlan() ? adminLinks : socialLinks) || {};
+
+  // ⚡ الإحصائيات (استخدم الدوال بشكل صحيح)
   const stats = {
-    experience: 5,
-    projects: 0,
-    skills: 0,
-    certificates: 0
+    experience: getTotalExperienceYears() || 5,
+    projects: (getProjects() || []).length,
+    skills: (getSkills() || []).length,
+    certificates: (getCertificates() || []).length
   };
 
   // ⚡ معلومات الاتصال
   const contactInfo = {
-    email: "eng.abdullah.z.aishan@gmail.com",
+    email: usedLinks.email || "eng.abdullah.z.aishan@gmail.com",
     phone: "+967-771-315-459",
     location: "Sana'a, Yemen"
   };
-
   useEffect(() => {
   AOS.init({ once: true });
   console.log("AboutPage mounted - AOS active");
