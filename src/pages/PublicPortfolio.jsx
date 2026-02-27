@@ -62,7 +62,7 @@ const PublicPortfolio = () => {
 
       <main className="relative z-10">
         <Home developer={developer} />
-<Skills developer={developer} />
+        <Skills developer={developer} />
         <Portfolio developer={developer} />
         {/*     
 
@@ -73,7 +73,7 @@ const PublicPortfolio = () => {
         {/*  <ExperienceSection />*/}
 
         {/* WhyMe يظهر فقط للباقة المجانية */}
-        {/*  {!isPaidPlan() && <WhyMe developer={developer} />*/}}
+        {/*  {!isPaidPlan() && <WhyMe developer={developer} />*/}
 
       </main>
 
