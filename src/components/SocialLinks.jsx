@@ -8,7 +8,7 @@ import {
   Twitter,
   Mail,
   Globe,
-  AlertCircle
+  MessageCircle  // لإضافة أيقونة WhatsApp
 } from 'lucide-react';
 
 // مكون رابط غير متوفر
@@ -23,6 +23,7 @@ const UnavailableLink = ({ platform }) => (
       {platform === 'twitter' && <Twitter className="w-6 h-6 text-gray-600" />}
       {platform === 'email' && <Mail className="w-6 h-6 text-gray-600" />}
       {platform === 'website' && <Globe className="w-6 h-6 text-gray-600" />}
+      {platform === 'whatsapp' && <MessageCircle className="w-6 h-6 text-gray-600" />}
     </div>
     <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 
                  text-xs text-gray-500 bg-black/80 backdrop-blur-sm 
@@ -39,12 +40,8 @@ const SocialLinks = ({
   isFreePlan = false, 
   adminLinks = {} 
 }) => {
-  // ✅ التحقق من وجود الروابط بشكل آمن
-  const safeLinks = links || {};
-  const safeAdminLinks = adminLinks || {};
-  
   // تحديد الروابط المستخدمة
-  const usedLinks = isFreePlan ? safeAdminLinks : safeLinks;
+  const usedLinks = isFreePlan ? adminLinks : links;
   
   const socialIcons = [
     { icon: Github, platform: 'github', label: 'GitHub', color: 'hover:bg-[#333]' },
@@ -54,18 +51,15 @@ const SocialLinks = ({
     { icon: Youtube, platform: 'youtube', label: 'YouTube', color: 'hover:bg-[#ff0000]' },
     { icon: Twitter, platform: 'twitter', label: 'Twitter', color: 'hover:bg-[#1da1f2]' },
     { icon: Mail, platform: 'email', label: 'Email', color: 'hover:bg-[#6366f1]' },
-    { icon: Globe, platform: 'website', label: 'Website', color: 'hover:bg-[#a855f7]' }
+    { icon: Globe, platform: 'website', label: 'Website', color: 'hover:bg-[#a855f7]' },
+    { icon: MessageCircle, platform: 'whatsapp', label: 'WhatsApp', color: 'hover:bg-[#25D366]' }
   ];
 
-  // ✅ التحقق من وجود أي روابط بشكل آمن
-  const hasAnyLinks = socialIcons.some(({ platform }) => {
-    try {
-      return usedLinks && usedLinks[platform] && usedLinks[platform].trim() !== '';
-    } catch (e) {
-      return false;
-    }
-  });
-  
+  // التحقق من وجود أي روابط (بدون استخدام try/catch مع optional chaining)
+  const hasAnyLinks = socialIcons.some(({ platform }) => 
+    usedLinks?.[platform] && usedLinks[platform].trim() !== ''
+  );
+
   if (!hasAnyLinks && !isFreePlan) return null;
 
   return (
@@ -80,16 +74,11 @@ const SocialLinks = ({
       {/* الأيقونات */}
       <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
         {socialIcons.map(({ icon: Icon, platform, label, color }) => {
-          // ✅ الوصول الآمن للرابط
-          let link = '';
-          try {
-            link = usedLinks && usedLinks[platform] ? usedLinks[platform] : '';
-          } catch (e) {
-            link = '';
-          }
+          const link = usedLinks?.[platform];
+          const hasValidLink = link && typeof link === 'string' && link.trim() !== '';
           
-          // إذا كان الرابط موجوداً وصالحاً
-          if (link && typeof link === 'string' && link.trim() !== '') {
+          // إذا كان الرابط موجوداً
+          if (hasValidLink) {
             return (
               <a
                 key={platform}
@@ -129,7 +118,7 @@ const SocialLinks = ({
             );
           }
           
-          // إذا كان الرابط غير موجود أو فارغ، نعرض نسخة معتمة
+          // إذا كان الرابط غير موجود، نعرض نسخة معتمة
           return <UnavailableLink key={platform} platform={platform} />;
         })}
       </div>
