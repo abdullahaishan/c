@@ -79,7 +79,11 @@ useEffect(() => {
 
   const isFreePlan = () => developer?.plan_id === 1
 const isPaidPlan = () => developer?.plan_id > 1
-
+const getAdminSocialLinks = () => ({
+  facebook: "https://facebook.com/abdullah.aishan.2025",
+  instagram: "https://instagram.com/aishan.2025",
+  whatsapp: "https://wa.me/967771315459"
+})
 const value = {
   developer,
 
@@ -99,6 +103,7 @@ const value = {
   getExperience,
   getEducation,
   getSocialLinks,
+   getAdminSocialLinks,
   getProfileImage,
   getTotalExperienceYears
 }
