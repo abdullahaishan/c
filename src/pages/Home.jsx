@@ -9,7 +9,7 @@ import { Download } from "lucide-react";
  import AOS from "aos";
  import "aos/dist/aos.css";
  import { useDeveloper } from '../context/DeveloperContext';
-// import AnimatedBackground from '../components/AnimatedBackground';
+import AnimatedBackground from '../components/AnimatedBackground';
 // import SocialLinks from '../components/SocialLinks';
 
 // =============================================
@@ -133,6 +133,7 @@ const [isLoaded, setIsLoaded] = useState(false);
 
   return (
     <div className={`relative z-10 transition-all duration-1000 ${isLoaded ? "opacity-100" : "opacity-0"}`}>
+      <AnimatedBackground />
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 min-h-screen flex items-center">
         <div className="flex flex-col-reverse lg:flex-row items-center justify-center gap-6 sm:gap-8 lg:gap-12 w-full py-8 lg:py-0">
           
