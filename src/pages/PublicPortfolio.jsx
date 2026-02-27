@@ -5,7 +5,7 @@ import About from './About';
 import Skills from './Skills';
 import Portfolio from './Portfolio';
 import WhyMe from './WhyMe';
-import ExperienceSection from '../components/ExperienceSection';
+import ExperiencePage from './ExperiencePage';
 import AnimatedBackground from '../components/AnimatedBackground';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -65,6 +65,7 @@ const PublicPortfolio = () => {
         <About developer={developer}/>
         <Skills developer={developer} />
         <Portfolio developer={developer} />
+        <ExperiencePage developer={developer} />
       
         {/* قسم الخبرات الجديد */}
         {/*  <ExperienceSection />*/}
