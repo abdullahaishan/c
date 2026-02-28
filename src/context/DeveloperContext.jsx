@@ -25,13 +25,50 @@ export const DeveloperProvider = ({ children, username }) => {
         setLoading(true)
         setError(null)
 
-        const data = await developerService.getByUsername(username)
-
-        if (!data) {
+        // 1️⃣ جلب البيانات الأساسية (المطور + المهارات فقط)
+        const basicData = await developerService.getByUsername(username)
+        
+        if (!basicData) {
           setDeveloper(null)
           setError("Developer not found")
-        } else {
-          setDeveloper(data)
+          setLoading(false)
+          return
+        }
+
+        // 2️⃣ عرض البيانات الأساسية فوراً
+        setDeveloper(basicData)
+        
+        // 3️⃣ جلب باقي البيانات في الخلفية (فقط المعرفات)
+        if (basicData?.id) {
+          try {
+            // جلب المشاريع (فقط المعرفات)
+            const projects = await developerService.getDeveloperProjects(basicData.id)
+            
+            // جلب الشهادات (فقط المعرفات)
+            const certificates = await developerService.getDeveloperCertificates(basicData.id)
+            
+            // جلب الخبرات (فقط المعرفات)
+            const experience = await developerService.getDeveloperExperience(basicData.id)
+            
+            // جلب التعليم (فقط المعرفات)
+            const education = await developerService.getDeveloperEducation(basicData.id)
+            
+            // جلب روابط التواصل (فقط المعرفات)
+            const socialLinks = await developerService.getDeveloperSocialLinks(basicData.id)
+
+            // 4️⃣ تحديث البيانات مع المعرفات فقط
+            setDeveloper(prev => ({
+              ...prev,
+              projects: projects,
+              certificates: certificates,
+              experience: experience,
+              education: education,
+              social_links: socialLinks
+            }))
+          } catch (backgroundError) {
+            // لا تفعل شيئاً - البيانات الأساسية ظهرت بالفعل
+            console.log('Background fetch completed with some errors')
+          }
         }
 
       } catch (err) {
@@ -46,7 +83,7 @@ export const DeveloperProvider = ({ children, username }) => {
     fetchDeveloper()
   }, [username])
 
-  // دوال المساعدة (تستخدم نفس الأسماء لتوافق ملفات العرض)
+  // دوال المساعدة
   const getProjects = () => developer?.projects || []
   
   const getMainSkills = () => {
@@ -63,9 +100,22 @@ export const DeveloperProvider = ({ children, username }) => {
   
   const getSocialLinks = () => {
     const links = {}
-    ;(developer?.social_links || []).forEach(link => {
-      links[link.platform] = link.url
-    })
+    
+    // إذا كانت social_links موجودة ولها محتوى
+    if (developer?.social_links && developer.social_links.length > 0) {
+      // إذا كانت تحتوي على platform (بيانات كاملة)
+      if (developer.social_links[0]?.platform) {
+        developer.social_links.forEach(link => {
+          links[link.platform] = link.url
+        })
+      }
+    }
+    
+    // إذا لم نجد روابط، نستخدم الروابط الافتراضية
+    if (Object.keys(links).length === 0) {
+      return getAdminSocialLinks()
+    }
+    
     return links
   }
 
@@ -73,14 +123,21 @@ export const DeveloperProvider = ({ children, username }) => {
 
   const getTotalExperienceYears = () => {
     let totalYears = 0
-    ;(developer?.experience || []).forEach(exp => {
-      if (exp.start_date) {
-        const start = new Date(exp.start_date)
-        const end = exp.is_current ? new Date() : (exp.end_date ? new Date(exp.end_date) : new Date())
-        const years = (end - start) / (1000 * 60 * 60 * 24 * 365)
-        totalYears += years
+    
+    if (developer?.experience && developer.experience.length > 0) {
+      // إذا كانت تحتوي على start_date (بيانات كاملة)
+      if (developer.experience[0]?.start_date) {
+        developer.experience.forEach(exp => {
+          if (exp.start_date) {
+            const start = new Date(exp.start_date)
+            const end = exp.is_current ? new Date() : (exp.end_date ? new Date(exp.end_date) : new Date())
+            const years = (end - start) / (1000 * 60 * 60 * 24 * 365)
+            totalYears += years
+          }
+        })
       }
-    })
+    }
+    
     return Math.round(totalYears * 10) / 10 || 0
   }
 
@@ -95,17 +152,12 @@ export const DeveloperProvider = ({ children, username }) => {
 
   const value = {
     developer,
-
-    // اجعل الأسماء متوافقة مع PublicPortfolio
     publicLoading: loading,
     publicError: error,
-
     loading,
     error,
-
     isFreePlan,
     isPaidPlan,
-
     getProjects,
     getSkills,
     getMainSkills,
