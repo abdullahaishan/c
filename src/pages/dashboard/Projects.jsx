@@ -212,71 +212,79 @@ const Projects = () => {
   // إضافة مشروع جديد
   // =============================================
   const handleAddProject = async () => {
-    if (!formData.title || !formData.description) {
-      setError('العنوان والوصف مطلوبان')
-      return
-    }
-
-    setSaving(true)
-    setError('')
-    setSuccess('')
-
-    try {
-    
-
-      const slug = generateSlug(formData.title)
-// قبل رفع الصورة
-let imageData = null
-if (formData.image) {
-  imageData = await handleImageUpload(formData.image, 'temp')
-}
-
-// في projectData، استخدم imageData.url
-const projectData = {
-  title: formData.title,
-  slug,
-  description: formData.description,
-  content: formData.content || formData.description,
-  technologies: formData.technologies,
-  github_url: formData.github_url || null,
-  live_url: formData.live_url || null,
-  features: formData.features,
-  image: imageData?.url || null,  // ✅ استخدم الرابط
- display_order: projects.length,
-  status: formData.status,
-  is_featured: formData.is_featured,
-  category: formData.category || null,
-  developer_id: user.id
-}
-    
-
-      const created = await projectService.create(user.id, projectData)
-      setProjects([...projects, created])
-      // بعد إنشاء المشروع، انقل الصورة من المجلد المؤقت إلى مجلد المشروع
-if (created.id && imageData?.path) {
-  const finalImageUrl = await moveProjectImage(imageData.path, user.id, created.id)
-  if (finalImageUrl) {
-    // تحديث المشروع بالرابط الجديد
-    await projectService.update(created.id, { image: finalImageUrl })
-    created.image = finalImageUrl
+  if (!formData.title || !formData.description) {
+    setError('العنوان والوصف مطلوبان')
+    return
   }
-}
-      resetForm()
-      setSuccess('✅ تم إضافة المشروع بنجاح')
-    } catch (err) {
-      if (err.message?.includes('permission')) {
-        setError('❌ ليس لديك صلاحية لإضافة مشروع')
-      } else if (err.message?.includes('quota')) {
-        setError('❌ تم تجاوز حد التخزين المسموح')
-      } else {
-        setError(err.message || '❌ فشل في إضافة المشروع')
+
+  setSaving(true)
+  setError('')
+  setSuccess('')
+
+  try {
+    const slug = generateSlug(formData.title)
+    
+    // رفع الصورة - بدون projectId (سيستخدم 'temp')
+    let imageResult = null
+    if (formData.image) {
+      try {
+        imageResult = await storageService.uploadProjectImage(formData.image, user.id)
+        // imageResult يحتوي على: { url, path, isTemp }
+      } catch (uploadErr) {
+        console.error('خطأ في رفع الصورة:', uploadErr)
+        setError('فشل في رفع الصورة: ' + uploadErr.message)
+        setSaving(false)
+        return
       }
-    } finally {
-      setSaving(false)
-      setTimeout(() => setSuccess(''), 3000)
-      setTimeout(() => setError(''), 3000)
     }
+
+    // إنشاء المشروع
+    const projectData = {
+      title: formData.title,
+      slug,
+      description: formData.description,
+      content: formData.content || formData.description,
+      technologies: formData.technologies,
+      github_url: formData.github_url || null,
+      live_url: formData.live_url || null,
+      features: formData.features,
+      image: imageResult?.url || null,
+      display_order: projects.length,
+      status: formData.status,
+      is_featured: formData.is_featured,
+      developer_id: user.id
+    }
+
+    const created = await projectService.create(user.id, projectData)
+    
+    // إذا كانت الصورة في مجلد مؤقت، انقلها إلى مجلد المشروع الجديد
+    if (created.id && imageResult?.isTemp && imageResult?.path) {
+      const finalImageUrl = await storageService.moveProjectImage(
+        imageResult.path, 
+        user.id, 
+        created.id
+      )
+      
+      if (finalImageUrl) {
+        // تحديث المشروع بالرابط الجديد
+        await projectService.update(created.id, { image: finalImageUrl })
+        created.image = finalImageUrl
+      }
+    }
+
+    setProjects([...projects, created])
+    resetForm()
+    setSuccess('✅ تم إضافة المشروع بنجاح')
+    
+  } catch (err) {
+    console.error('خطأ في إضافة المشروع:', err)
+    setError(err.message || '❌ فشل في إضافة المشروع')
+  } finally {
+    setSaving(false)
+    setTimeout(() => setSuccess(''), 3000)
+    setTimeout(() => setError(''), 3000)
   }
+}
 
   // =============================================
   // تحديث مشروع موجود
