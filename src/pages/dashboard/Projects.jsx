@@ -247,6 +247,7 @@ const Projects = () => {
     } else {
       setError('❌ فشل في رفع الصورة: ' + (uploadErr.message || uploadErr.error?.message || JSON.stringify(uploadErr)))
     }
+      }
     
     setSaving(false)
     return // ⛔ نوقف التنفيذ
