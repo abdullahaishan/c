@@ -289,55 +289,89 @@ const Projects = () => {
   // =============================================
   // تحديث مشروع موجود
   // =============================================
-  const handleUpdateProject = async () => {
-    if (!formData.title || !formData.description) {
-      setError('العنوان والوصف مطلوبان')
-      return
-    }
+// =============================================
+// تحديث مشروع موجود (مع حذف الصورة القديمة)
+// =============================================
+const handleUpdateProject = async () => {
+  if (!formData.title || !formData.description) {
+    setError('العنوان والوصف مطلوبان')
+    return
+  }
 
-    setSaving(true)
-    setError('')
-    setSuccess('')
+  setSaving(true)
+  setError('')
+  setSuccess('')
 
-    try {
-      let imageUrl = formData.image
-      try{
-      
-if (formData.image instanceof File) {
-  imageUrl = await handleImageUpload(formData.image, editingId)  // ✅ صحح الاسم هنا
-}}catch (uploadErr) {
-    setError('❌ ' + (uploadErr.message || JSON.stringify(uploadErr)))
-        
+  try {
+    // العثور على المشروع القديم قبل التحديث
+    const oldProject = projects.find(p => p.id === editingId)
+    const oldImageUrl = oldProject?.image || null
+
+    // رفع الصورة الجديدة فقط إذا تم اختيار ملف
+    let imageUrl = formData.image // الصورة الحالية في النموذج (قد تكون رابط أو null)
+
+    if (formData.image instanceof File) {
+      try {
+        console.log('رفع صورة جديدة للمشروع:', editingId)
+        imageUrl = await storageService.uploadProjectImage(formData.image, user.id, editingId)
+        console.log('تم رفع الصورة:', imageUrl)
+      } catch (uploadErr) {
+        console.error('خطأ في رفع الصورة:', uploadErr)
+        setError('❌ ' + (uploadErr.message || JSON.stringify(uploadErr)))
         setSaving(false)
         return
       }
-
-      const updates = {
-        title: formData.title,
-        description: formData.description,
-        content: formData.content,
-        technologies: formData.technologies,
-        github_url: formData.github_url || null,
-        live_url: formData.live_url || null,
-        features: formData.features,
-        image: imageUrl,
-        status: formData.status,
-        is_featured: formData.is_featured,
-        category: formData.category
-      }
-
-      const updated = await projectService.update(editingId, updates)
-      setProjects(projects.map(p => p.id === editingId ? updated : p))
-      resetForm()
-      setSuccess('✅ تم تحديث المشروع بنجاح')
-    } catch (err) {
-      setError('❌ فشل في تحديث المشروع')
-    } finally {
-      setSaving(false)
-      setTimeout(() => setSuccess(''), 3000)
-      setTimeout(() => setError(''), 3000)
     }
+
+    // بيانات التحديث
+    const updates = {
+      title: formData.title,
+      description: formData.description,
+      content: formData.content,
+      technologies: formData.technologies,
+      github_url: formData.github_url || null,
+      live_url: formData.live_url || null,
+      features: formData.features,
+      image: imageUrl,
+      status: formData.status,
+      is_featured: formData.is_featured,
+      category: formData.category
+    }
+
+    // تحديث المشروع
+    const updated = await projectService.update(editingId, updates)
+    
+    // **حذف الصورة القديمة إذا وجدت وتم رفع صورة جديدة**
+    if (oldImageUrl && formData.image instanceof File) {
+      try {
+        // استخراج المسار من الرابط
+        const oldPath = oldImageUrl.split('/developers/')[1]
+        if (oldPath) {
+          await storageService.deleteFile(oldPath)
+          console.log('تم حذف الصورة القديمة:', oldPath)
+        }
+      } catch (deleteErr) {
+        console.error('فشل حذف الصورة القديمة:', deleteErr)
+        // لا نوقف العملية إذا فشل الحذف
+      }
+    }
+    
+    // تحديث قائمة المشاريع
+    setProjects(projects.map(p => p.id === editingId ? updated : p))
+    
+    // إعادة تعيين النموذج
+    resetForm()
+    setSuccess('✅ تم تحديث المشروع بنجاح')
+    
+  } catch (err) {
+    console.error('خطأ في تحديث المشروع:', err)
+    setError('❌ فشل في تحديث المشروع: ' + (err.message || JSON.stringify(err)))
+  } finally {
+    setSaving(false)
+    setTimeout(() => setSuccess(''), 3000)
+    setTimeout(() => setError(''), 3000)
   }
+}
 
   // =============================================
   // حذف مشروع (للباقة المدفوعة فقط)
