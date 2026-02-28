@@ -150,6 +150,42 @@ async getExperienceData(username) {
     throw error;
   }
 },
+  // ===========================================
+// جلب بيانات التعليم فقط (Education)
+// ===========================================
+async getEducationData(username) {
+  try {
+    // 1️⃣ جلب ID المطور أولاً
+    const { data: developer, error: devError } = await supabase
+      .from('developers')
+      .select('id')
+      .eq('username', username)
+      .eq('is_active', true)
+      .single();
+
+    if (devError) throw devError;
+    if (!developer) throw new Error('Developer not found');
+
+    // 2️⃣ جلب جميع المؤهلات التعليمية
+    const { data: education, error: eduError } = await supabase
+      .from('education')
+      .select('*')
+      .eq('developer_id', developer.id)
+      .order('display_order', { ascending: true })
+      .order('start_date', { ascending: false });
+
+    if (eduError) throw eduError;
+
+    return {
+      education: education || [],
+      total: education?.length || 0
+    };
+
+  } catch (error) {
+    console.error('Error fetching education data:', error);
+    throw error;
+  }
+},
 // ===========================================
 // جلب بيانات صفحة About (مكتملة مع الزوار واللايكات)
 // ===========================================
