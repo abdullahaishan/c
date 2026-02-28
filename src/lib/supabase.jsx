@@ -290,15 +290,31 @@ export const projectService = {
     }
     return data || []
   },
-
+// ✅ جلب المشاريع المنشورة فقط (للعرض العام)
+async getPublishedByDeveloperId(developerId) {
+  const { data, error } = await supabase
+    .from('projects')
+    .select('*')
+    .eq('developer_id', developerId)
+    .eq('status', 'published')  // ✅ فقط المنشور
+    .order('display_order', { ascending: true })
+  
+  if (error) {
+    console.error('Error fetching published projects:', error)
+    throw error
+  }
+  return data || []
+},
   // ===========================================
 // جلب مشروع واحد (بـ ID أو Slug)
 // ===========================================
+// ✅ جلب مشروع واحد (بـ ID أو Slug) - للمنشور فقط
 async getProjectByIdOrSlug(identifier) {
   try {
     let query = supabase
       .from('projects')
-      .select('*');
+      .select('*')
+      .eq('status', 'published');  // ✅ أضف هذا السطر
     
     // التحقق إذا كان المعرف هو UUID أو Slug
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
@@ -322,6 +338,50 @@ async getProjectByIdOrSlug(identifier) {
     
   } catch (error) {
     console.error('Failed to fetch project:', error);
+    throw error;
+  }
+},
+  // ===========================================
+// جلب جميع محتوى المطور (لصفحة Portfolio)
+// ===========================================
+async getDeveloperContent(developerId) {
+  try {
+    // جلب المشاريع المنشورة فقط
+    const { data: projects, error: projectsError } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('developer_id', developerId)
+      .eq('status', 'published')
+      .order('display_order', { ascending: true });
+    
+    if (projectsError) throw projectsError;
+
+    // جلب جميع الشهادات
+    const { data: certificates, error: certError } = await supabase
+      .from('certificates')
+      .select('*')
+      .eq('developer_id', developerId)
+      .order('display_order', { ascending: true });
+    
+    if (certError) throw certError;
+
+    // جلب جميع المهارات
+    const { data: skills, error: skillsError } = await supabase
+      .from('skills')
+      .select('*')
+      .eq('developer_id', developerId)
+      .order('display_order', { ascending: true });
+    
+    if (skillsError) throw skillsError;
+
+    return {
+      projects: projects || [],
+      certificates: certificates || [],
+      skills: skills || []
+    };
+    
+  } catch (error) {
+    console.error('Error fetching developer content:', error);
     throw error;
   }
 },
