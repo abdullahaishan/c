@@ -310,18 +310,21 @@ const handleUpdateProject = async () => {
     // رفع الصورة الجديدة فقط إذا تم اختيار ملف
     let imageUrl = formData.image // الصورة الحالية في النموذج (قد تكون رابط أو null)
 
-    if (formData.image instanceof File) {
-      try {
-        console.log('رفع صورة جديدة للمشروع:', editingId)
-        imageUrl = await storageService.uploadProjectImage(formData.image, user.id, editingId)
-        console.log('تم رفع الصورة:', imageUrl)
-      } catch (uploadErr) {
-        console.error('خطأ في رفع الصورة:', uploadErr)
-        setError('❌ ' + (uploadErr.message || JSON.stringify(uploadErr)))
-        setSaving(false)
-        return
-      }
-    }
+    // في handleUpdateProject، عند رفع الصورة
+if (formData.image instanceof File) {
+  try {
+    console.log('رفع صورة جديدة للمشروع:', editingId)
+    const uploadResult = await storageService.uploadProjectImage(formData.image, user.id, editingId)
+    // ✅ استخدم uploadResult.url وليس النتيجة مباشرة
+    imageUrl = uploadResult.url
+    console.log('تم رفع الصورة:', imageUrl)
+  } catch (uploadErr) {
+    console.error('خطأ في رفع الصورة:', uploadErr)
+    setError('❌ ' + (uploadErr.message || JSON.stringify(uploadErr)))
+    setSaving(false)
+    return
+  }
+}
 
     // بيانات التحديث
     const updates = {
