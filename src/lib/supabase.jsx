@@ -86,19 +86,15 @@ export const likeService = {
 // ===========================================
 
 export const developerService = {
+  // الدالة الرئيسية - تجلب المطور + المهارات فقط (باقي الجداول تجلب مصفوفات فارغة)
   async getByUsername(username) {
     try {
-      // استعلام واحد يجلب المطور + العلاقات
+      // 1️⃣ أولاً: جلب المطور والمهارات فقط (البيانات الأساسية)
       const { data, error } = await supabase
         .from('developers')
         .select(`
           *,
-          skills:skills(*),
-          projects:projects(developer_id),
-          certificates:certificates(developer_id),
-          experience:experience(developer_id),
-          education:education(developer_id),
-          social_links:social_links(developer_id)
+          skills:skills(*)
         `)
         .eq('username', username)
         .eq('is_active', true)
@@ -111,20 +107,146 @@ export const developerService = {
 
       if (!data) throw new Error('Developer not found')
       
-      // تأكد من وجود المصفوفات
+      // 2️⃣ تأكد من وجود skills
       data.skills = data.skills || []
-      data.projects = data.projects || []
-      data.certificates = data.certificates || []
-      data.experience = data.experience || []
-      data.education = data.education || []
-      data.social_links = data.social_links || []
+      
+      // 3️⃣ أضف مصفوفات فارغة للباقي (بدون جلبها من قاعدة البيانات)
+      data.projects = []          // مصفوفة فارغة - سيتم جلب المعرفات لاحقاً
+      data.certificates = []      // مصفوفة فارغة - سيتم جلب المعرفات لاحقاً
+      data.experience = []        // مصفوفة فارغة - سيتم جلب المعرفات لاحقاً
+      data.education = []         // مصفوفة فارغة - سيتم جلب المعرفات لاحقاً
+      data.social_links = []      // مصفوفة فارغة - سيتم جلب المعرفات لاحقاً
 
       return data
     } catch (err) {
+      console.error('Error in getByUsername:', err)
       throw err
     }
   },
 
+  // ===========================================
+  // دوال منفصلة لجلب المعرفات فقط (ID) من باقي الجداول
+  // ===========================================
+
+  // جلب المشاريع - فقط المعرفات (id, developer_id)
+  async getDeveloperProjects(developerId) {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id, developer_id')  // ✅ فقط id و developer_id
+        .eq('developer_id', developerId)
+      
+      if (error) {
+        console.log('Projects table not available:', error.message)
+        return [] // إذا failed، أرجع مصفوفة فارغة
+      }
+      return data || []
+    } catch (error) {
+      console.log('Error fetching projects:', error.message)
+      return []
+    }
+  },
+
+  // جلب الشهادات - فقط المعرفات (id, developer_id)
+  async getDeveloperCertificates(developerId) {
+    try {
+      const { data, error } = await supabase
+        .from('certificates')
+        .select('id, developer_id')  // ✅ فقط id و developer_id
+        .eq('developer_id', developerId)
+      
+      if (error) {
+        console.log('Certificates table not available:', error.message)
+        return []
+      }
+      return data || []
+    } catch (error) {
+      console.log('Error fetching certificates:', error.message)
+      return []
+    }
+  },
+
+  // جلب الخبرات - فقط المعرفات (id, developer_id)
+  async getDeveloperExperience(developerId) {
+    try {
+      const { data, error } = await supabase
+        .from('experience')
+        .select('id, developer_id')  // ✅ فقط id و developer_id
+        .eq('developer_id', developerId)
+      
+      if (error) {
+        console.log('Experience table not available:', error.message)
+        return []
+      }
+      return data || []
+    } catch (error) {
+      console.log('Error fetching experience:', error.message)
+      return []
+    }
+  },
+
+  // جلب التعليم - فقط المعرفات (id, developer_id)
+  async getDeveloperEducation(developerId) {
+    try {
+      const { data, error } = await supabase
+        .from('education')
+        .select('id, developer_id')  // ✅ فقط id و developer_id
+        .eq('developer_id', developerId)
+      
+      if (error) {
+        console.log('Education table not available:', error.message)
+        return []
+      }
+      return data || []
+    } catch (error) {
+      console.log('Error fetching education:', error.message)
+      return []
+    }
+  },
+
+  // جلب روابط التواصل - فقط المعرفات (id, developer_id, platform)
+  async getDeveloperSocialLinks(developerId) {
+    try {
+      const { data, error } = await supabase
+        .from('social_links')
+        .select('id, developer_id, platform')  // ✅ id, developer_id, platform
+        .eq('developer_id', developerId)
+      
+      if (error) {
+        console.log('Social links table not available:', error.message)
+        return []
+      }
+      return data || []
+    } catch (error) {
+      console.log('Error fetching social links:', error.message)
+      return []
+    }
+        },
+
+  // دوال إضافية - لجلب البيانات الكاملة عند الحاجة (اختياري)
+  async getFullProjects(developerId) {
+    try {
+      const { data } = await supabase
+        .from('projects')
+        .select('*')  // ✅ كل الحقول
+        .eq('developer_id', developerId)
+      return data || []
+    } catch (error) {
+      return []
+    }
+  },
+
+  async getFullCertificates(developerId) {
+    try {
+      const { data } = await supabase
+        .from('certificates')
+        .select('*')
+        .eq('developer_id', developerId)
+      return data || []
+    } catch (error) {
+      return []
+    }
+  },
   // زيادة عدد الزيارات (fire-and-forget لتقليل التأخير)
   async incrementViews(id) {
     // لا ننتظر النتيجة هنا (لا نستخدم await) لكي لا نبطئ العرض
