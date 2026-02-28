@@ -47,7 +47,7 @@ import AOS from 'aos'
 import 'aos/dist/aos.css'
 import { developerService, likeService } from '../lib/supabase'
 import Swal from 'sweetalert2'
-import Komentar from '../components/Commenter'
+import Komentar from '../components/Commentar'
 
 // مكون الرقم المتحرك
 const AnimatedNumber = ({ value }) => {
