@@ -1069,7 +1069,7 @@ async moveProjectImage(tempPath, userId, projectId) {
     console.error('فشل نقل الصورة:', error)
     return null
   }
-}
+},
 
   // ✅ دالة جديدة لرفع صور الشهادات
   async uploadCertificateImage(file, userId, oldImageUrl = null) {
