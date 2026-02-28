@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
-import { MessageCircle, UserCircle2, Loader2, AlertCircle, Send, ImagePlus, X } from 'lucide-react'
+import { MessageCircle, UserCircle2, Loader2, AlertCircle, Send, ImagePlus, X, Crown } from 'lucide-react'
 import AOS from "aos"
 import "aos/dist/aos.css"
 
@@ -15,7 +15,7 @@ const Comment = memo(({ comment, formatDate, index }) => (
       {comment.profile_image ? (
         <img
           src={comment.profile_image}
-          alt={`${comment.sender_name}'s profile`}
+          alt={`${comment.user_name}'s profile`}
           className="w-10 h-10 rounded-full object-cover border-2 border-indigo-500/30"
           loading="lazy"
         />
@@ -26,21 +26,22 @@ const Comment = memo(({ comment, formatDate, index }) => (
       )}
       <div className="flex-grow min-w-0">
         <div className="flex items-center justify-between gap-4 mb-2">
-          <h4 className="font-medium text-white truncate">{comment.sender_name}</h4>
+          <h4 className="font-medium text-white truncate">
+            {comment.user_name}
+          </h4>
           <span className="text-xs text-gray-400 whitespace-nowrap">
             {formatDate(comment.created_at)}
           </span>
         </div>
-        <p className="text-gray-300 text-sm break-words leading-relaxed">{comment.message}</p>
+        <p className="text-gray-300 text-sm break-words leading-relaxed">{comment.content}</p>
       </div>
     </div>
   </div>
 ))
 
-const CommentForm = memo(({ developerId, onSubmit, isSubmitting, error }) => {
+const CommentForm = memo(({ onSubmit, isSubmitting, error }) => {
   const [newComment, setNewComment] = useState('')
   const [userName, setUserName] = useState('')
-  const [userEmail, setUserEmail] = useState('')
   const [imagePreview, setImagePreview] = useState(null)
   const [imageFile, setImageFile] = useState(null)
   const textareaRef = useRef(null)
@@ -50,7 +51,7 @@ const CommentForm = memo(({ developerId, onSubmit, isSubmitting, error }) => {
     const file = e.target.files[0]
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        alert('حجم الملف يجب أن يكون أقل من 5 ميجابايت')
+        alert('Image size must be less than 5MB')
         return
       }
       setImageFile(file)
@@ -70,31 +71,31 @@ const CommentForm = memo(({ developerId, onSubmit, isSubmitting, error }) => {
 
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault()
-    if (!newComment.trim() || !userName.trim() || !userEmail.trim()) return
+    if (!newComment.trim() || !userName.trim()) return
     
     await onSubmit({ 
-      newComment, 
-      userName, 
-      userEmail,
+      content: newComment, 
+      user_name: userName, 
       imageFile 
     })
     
     setNewComment('')
+    setUserName('')
     setImagePreview(null)
     setImageFile(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
-  }, [newComment, userName, userEmail, imageFile, onSubmit])
+  }, [newComment, userName, imageFile, onSubmit])
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <p className="text-sm text-gray-400 italic mb-2 text-center border-b border-white/10 pb-2">
-        💬 Your name to get source code in Your DM
+        💬 Share your thoughts about the platform
       </p>
       
-      <div className="space-y-2" data-aos="fade-up" data-aos-duration="1000">
+      <div className="space-y-2">
         <label className="block text-sm font-medium text-white">
-          Name <span className="text-red-400">*</span>
+          Your Name <span className="text-red-400">*</span>
         </label>
         <input
           type="text"
@@ -106,35 +107,21 @@ const CommentForm = memo(({ developerId, onSubmit, isSubmitting, error }) => {
         />
       </div>
 
-      <div className="space-y-2" data-aos="fade-up" data-aos-duration="1200">
+      <div className="space-y-2">
         <label className="block text-sm font-medium text-white">
-          Email <span className="text-red-400">*</span>
-        </label>
-        <input
-          type="email"
-          value={userEmail}
-          onChange={(e) => setUserEmail(e.target.value)}
-          placeholder="Enter your email"
-          className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
-          required
-        />
-      </div>
-
-      <div className="space-y-2" data-aos="fade-up" data-aos-duration="1400">
-        <label className="block text-sm font-medium text-white">
-          Message <span className="text-red-400">*</span>
+          Your Comment <span className="text-red-400">*</span>
         </label>
         <textarea
           ref={textareaRef}
           value={newComment}
           onChange={handleTextareaChange}
-          placeholder="Write your message here..."
+          placeholder="Write your comment here..."
           className="w-full p-4 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all resize-none min-h-[120px]"
           required
         />
       </div>
 
-      <div className="space-y-2" data-aos="fade-up" data-aos-duration="1600">
+      <div className="space-y-2">
         <label className="block text-sm font-medium text-white">
           Profile Photo <span className="text-gray-400">(optional)</span>
         </label>
@@ -187,7 +174,7 @@ const CommentForm = memo(({ developerId, onSubmit, isSubmitting, error }) => {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="relative w-full h-12 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-xl font-medium text-white overflow-hidden group transition-all duration-300 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
+        className="relative w-full h-12 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl font-medium text-white overflow-hidden group transition-all duration-300 hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
       >
         <div className="absolute inset-0 bg-white/20 translate-y-12 group-hover:translate-y-0 transition-transform duration-300" />
         <div className="relative flex items-center justify-center gap-2">
@@ -208,11 +195,10 @@ const CommentForm = memo(({ developerId, onSubmit, isSubmitting, error }) => {
   )
 })
 
-const Komentar = ({ developerId }) => {
+const Komentar = () => {
   const [comments, setComments] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const { user } = useAuth()
 
   useEffect(() => {
     AOS.init({
@@ -221,16 +207,13 @@ const Komentar = ({ developerId }) => {
     })
   }, [])
 
-  // جلب التعليقات من Supabase
+  // جلب التعليقات من جدول comments
   useEffect(() => {
-    if (!developerId) return
-
     const fetchComments = async () => {
       try {
         const { data, error } = await supabase
-          .from('messages')
+          .from('comments')
           .select('*')
-          .eq('developer_id', developerId)
           .order('created_at', { ascending: false })
           .limit(50)
 
@@ -238,17 +221,17 @@ const Komentar = ({ developerId }) => {
         setComments(data || [])
       } catch (err) {
         console.error('Error fetching comments:', err)
-        setError('فشل في تحميل التعليقات')
+        setError('Failed to load comments')
       }
     }
 
     fetchComments()
 
-    // استماع للتحديثات الجديدة (اختياري)
+    // استماع للتحديثات الجديدة
     const subscription = supabase
-      .channel('messages_channel')
+      .channel('comments_channel')
       .on('postgres_changes', 
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `developer_id=eq.${developerId}` },
+        { event: 'INSERT', schema: 'public', table: 'comments' },
         (payload) => {
           setComments(prev => [payload.new, ...prev])
         }
@@ -258,7 +241,7 @@ const Komentar = ({ developerId }) => {
     return () => {
       subscription.unsubscribe()
     }
-  }, [developerId])
+  }, [])
 
   // رفع الصورة إلى Supabase Storage
   const uploadImage = useCallback(async (imageFile) => {
@@ -280,12 +263,7 @@ const Komentar = ({ developerId }) => {
   }, [])
 
   // إضافة تعليق جديد
-  const handleCommentSubmit = useCallback(async ({ newComment, userName, userEmail, imageFile }) => {
-    if (!developerId) {
-      setError('معرف المطور غير موجود')
-      return
-    }
-
+  const handleCommentSubmit = useCallback(async ({ content, user_name, imageFile }) => {
     setError('')
     setIsSubmitting(true)
     
@@ -296,14 +274,11 @@ const Komentar = ({ developerId }) => {
       }
 
       const { error: insertError } = await supabase
-        .from('messages')
+        .from('comments')
         .insert([{
-          developer_id: developerId,
-          sender_name: userName,
-          sender_email: userEmail,
-          message: newComment,
+          content,
+          user_name,
           profile_image: profileImageUrl,
-          is_read: false,
           created_at: new Date()
         }])
 
@@ -311,11 +286,11 @@ const Komentar = ({ developerId }) => {
 
     } catch (err) {
       console.error('Error adding comment:', err)
-      setError('فشل في إضافة التعليق. الرجاء المحاولة مرة أخرى.')
+      setError('Failed to add comment. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
-  }, [developerId, uploadImage])
+  }, [uploadImage])
 
   const formatDate = useCallback((timestamp) => {
     if (!timestamp) return ''
@@ -338,8 +313,8 @@ const Komentar = ({ developerId }) => {
   }, [])
 
   return (
-    <div className="w-full bg-gradient-to-b from-white/10 to-white/5 rounded-2xl overflow-hidden backdrop-blur-xl shadow-xl" data-aos="fade-up" data-aos-duration="1000">
-      <div className="p-6 border-b border-white/10" data-aos="fade-down" data-aos-duration="800">
+    <div className="w-full bg-gradient-to-b from-white/10 to-white/5 rounded-2xl overflow-hidden backdrop-blur-xl shadow-xl">
+      <div className="p-6 border-b border-white/10">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-indigo-500/20">
             <MessageCircle className="w-6 h-6 text-indigo-400" />
@@ -352,7 +327,7 @@ const Komentar = ({ developerId }) => {
       
       <div className="p-6 space-y-6">
         {error && (
-          <div className="flex items-center gap-2 p-4 text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl" data-aos="fade-in">
+          <div className="flex items-center gap-2 p-4 text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl">
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <p className="text-sm">{error}</p>
           </div>
@@ -360,19 +335,17 @@ const Komentar = ({ developerId }) => {
         
         <div>
           <CommentForm 
-            developerId={developerId}
             onSubmit={handleCommentSubmit} 
             isSubmitting={isSubmitting} 
             error={error} 
           />
         </div>
 
-        <div className="space-y-4 h-[300px] overflow-y-auto custom-scrollbar" data-aos="fade-up" data-aos-delay="200">
+        <div className="space-y-4 h-[300px] overflow-y-auto custom-scrollbar">
           {comments.length === 0 ? (
-            <div className="text-center py-8" data-aos="fade-in">
+            <div className="text-center py-8">
               <UserCircle2 className="w-12 h-12 text-indigo-400 mx-auto mb-3 opacity-50" />
-              <p className="text-gray-400">No comments yet. Start the conversation!</p>
-              <p className="text-xs text-gray-500 mt-2">💬 Your name to get source code in Your DM</p>
+              <p className="text-gray-400">No comments yet. Be the first to comment!</p>
             </div>
           ) : (
             comments.map((comment, index) => (
