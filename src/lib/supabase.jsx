@@ -94,9 +94,7 @@ export const developerService = {
       .select(`
         *,
         portfolios (*),
-        projects (*),
         skills (*),
-        certificates (*),
         experience (*),
         education (*),
         social_links (*)
