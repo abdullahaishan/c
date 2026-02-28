@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { projectService } from "../lib/supabase";
+import AnimatedBackground from "./AnimatedBackground";
+import Lottie from "lottie-web";
 import {
   ArrowLeft,
   ExternalLink,
@@ -13,12 +15,16 @@ import {
   Tag,
   Calendar,
   Info,
-  AlertCircle,
   Eye,
   EyeOff,
   Loader,
   XCircle,
-  CheckCircle2
+  Share2,
+  Twitter,
+  Linkedin,
+  Facebook,
+  Link2,
+  Check
 } from "lucide-react";
 import Swal from "sweetalert2";
 
@@ -65,6 +71,44 @@ const TECH_ICONS = {
   default: Package,
 };
 
+// مكون شاشة التحميل المتحركة
+const LoadingAnimation = () => {
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      const anim = Lottie.loadAnimation({
+        container: containerRef.current,
+        renderer: 'svg',
+        loop: true,
+        autoplay: true,
+        path: 'https://assets2.lottiefiles.com/packages/lf20_p8bfn5do.json' // أنيميشن تحميل جميل
+      });
+
+      return () => anim.destroy();
+    }
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-[#030014] flex items-center justify-center">
+      <div className="text-center">
+        <div ref={containerRef} className="w-48 h-48 mx-auto mb-6" />
+        <p className="text-white text-lg font-light tracking-wider">
+          جاري تحميل المشروع
+          <span className="inline-flex animate-pulse">...</span>
+        </p>
+        <button
+          onClick={() => window.history.back()}
+          className="mt-8 text-gray-400 hover:text-white transition flex items-center gap-2 mx-auto text-sm"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          العودة
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // مكون شارة التقنية
 const TechBadge = ({ tech }) => {
   const Icon = TECH_ICONS[tech] || TECH_ICONS["default"];
@@ -100,6 +144,79 @@ const EmptySection = ({ icon: Icon, title, message }) => (
   </div>
 );
 
+// مكون أزرار المشاركة
+const ShareButtons = ({ project }) => {
+  const [copied, setCopied] = useState(false);
+  
+  const projectUrl = project.slug 
+    ? `${window.location.origin}/project/${project.slug}`
+    : `${window.location.origin}/project/${project.id}`;
+  
+  const shareTitle = project.title;
+  
+  const copyLink = () => {
+    navigator.clipboard.writeText(projectUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    
+    Swal.fire({
+      icon: "success",
+      title: "تم النسخ!",
+      text: "رابط المشروع تم نسخه إلى الحافظة",
+      timer: 2000,
+      showConfirmButton: false,
+      background: "#030014",
+      color: "#ffffff"
+    });
+  };
+  
+  const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareTitle)}&url=${encodeURIComponent(projectUrl)}`;
+  const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(projectUrl)}`;
+  const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(projectUrl)}`;
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareTitle + ' ' + projectUrl)}`;
+  
+  return (
+    <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+      <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+        <Share2 className="w-4 h-4" />
+        مشاركة المشروع
+      </h3>
+      
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={copyLink}
+          className="flex items-center gap-1 px-3 py-2 bg-white/10 rounded-lg hover:bg-white/15 transition group"
+          title="نسخ الرابط"
+        >
+          {copied ? (
+            <Check className="w-4 h-4 text-green-400" />
+          ) : (
+            <Link2 className="w-4 h-4 text-gray-400 group-hover:text-white" />
+          )}
+          <span className="text-xs text-gray-400 group-hover:text-white hidden sm:inline">
+            {copied ? "تم النسخ" : "نسخ الرابط"}
+          </span>
+        </button>
+        
+        <a href={twitterUrl} target="_blank" rel="noopener noreferrer" className="p-2 bg-[#1DA1F2]/10 rounded-lg hover:bg-[#1DA1F2]/20 transition" title="Twitter">
+          <Twitter className="w-4 h-4 text-[#1DA1F2]" />
+        </a>
+        <a href={linkedinUrl} target="_blank" rel="noopener noreferrer" className="p-2 bg-[#0A66C2]/10 rounded-lg hover:bg-[#0A66C2]/20 transition" title="LinkedIn">
+          <Linkedin className="w-4 h-4 text-[#0A66C2]" />
+        </a>
+        <a href={facebookUrl} target="_blank" rel="noopener noreferrer" className="p-2 bg-[#1877F2]/10 rounded-lg hover:bg-[#1877F2]/20 transition" title="Facebook">
+          <Facebook className="w-4 h-4 text-[#1877F2]" />
+        </a>
+        <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="p-2 bg-[#25D366]/10 rounded-lg hover:bg-[#25D366]/20 transition" title="WhatsApp">
+          <svg className="w-4 h-4 text-[#25D366]" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12.032 21.97c-1.808 0-3.57-.44-5.103-1.28l-5.062 1.33 1.354-4.94C2.57 15.49 2.03 13.77 2.03 11.96c0-5.52 4.48-10 10-10s10 4.48 10 10-4.48 10-10 10zm0-18c-4.41 0-8 3.59-8 8 0 1.66.46 3.26 1.33 4.66l-.87 3.18 3.28-.86c1.37.79 2.92 1.22 4.56 1.22 4.41 0 8-3.59 8-8s-3.59-8-8-8z"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  );
+};
+
 // معالج رابط GitHub
 const handleGithubClick = (githubLink) => {
   if (!githubLink || githubLink === "Private") {
@@ -117,7 +234,7 @@ const handleGithubClick = (githubLink) => {
 };
 
 const ProjectDetails = () => {
-  const { id } = useParams();
+  const { id, slug } = useParams();
   const navigate = useNavigate();
 
   const [project, setProject] = useState(null);
@@ -134,10 +251,10 @@ const ProjectDetails = () => {
         setLoading(true);
         setError(null);
         
-        console.log("🔍 جلب المشروع بـ ID:", id);
+        console.log("🔍 جلب المشروع:", id || slug);
         
-        // جلب المشروع من قاعدة البيانات مباشرة
-        const projectData = await projectService.getById(id);
+      
+        const projectData = await projectService.getProjectByIdOrSlug(id || slug);
         
         if (!projectData) {
           setError("المشروع غير موجود");
@@ -146,9 +263,9 @@ const ProjectDetails = () => {
         
         console.log("✅ تم جلب المشروع:", projectData);
         
-        // تجهيز البيانات
         setProject({
           id: projectData.id,
+          slug: projectData.slug,
           title: projectData.title || "بدون عنوان",
           description: projectData.description || "لا يوجد وصف لهذا المشروع",
           content: projectData.content || projectData.description || "لا يوجد محتوى تفصيلي",
@@ -172,12 +289,11 @@ const ProjectDetails = () => {
       }
     };
     
-    if (id) {
+    if (id || slug) {
       fetchProject();
     }
-  }, [id]);
+  }, [id, slug]);
 
-  // العودة للخلف
   const handleGoBack = () => {
     if (window.history.length > 2) {
       navigate(-1);
@@ -186,31 +302,16 @@ const ProjectDetails = () => {
     }
   };
 
-  // حالة التحميل
+  // حالة التحميل مع Lottie
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#030014] flex items-center justify-center">
-        <div className="text-center">
-          <Loader className="w-12 h-12 animate-spin text-purple-500 mx-auto mb-4" />
-          <p className="text-white text-lg">جاري تحميل المشروع...</p>
-          <button
-            onClick={handleGoBack}
-            className="mt-8 text-gray-400 hover:text-white transition flex items-center gap-2 mx-auto"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            العودة
-          </button>
-        </div>
-      </div>
-    );
+    return <LoadingAnimation />;
   }
 
-  // حالة الخطأ أو عدم وجود المشروع
   if (error || !project) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center px-4">
         <div className="text-center max-w-md">
-          <AlertCircle className="w-20 h-20 text-red-500/50 mx-auto mb-6" />
+          <XCircle className="w-20 h-20 text-red-500/50 mx-auto mb-6" />
           <h2 className="text-2xl text-white mb-3">المشروع غير موجود</h2>
           <p className="text-gray-400 mb-8">
             {error || "عذراً، لم نتمكن من العثور على المشروع الذي تبحث عنه."}
@@ -227,10 +328,10 @@ const ProjectDetails = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#030014] text-white px-4 md:px-6 py-12">
-      <div className="max-w-7xl mx-auto">
-
-        {/* زر العودة */}
+    <div className="relative min-h-screen bg-[#030014] overflow-hidden">
+      <AnimatedBackground />
+      
+      <div className="relative z-10 max-w-7xl mx-auto px-4 md:px-6 py-12">
         <button
           onClick={handleGoBack}
           className="flex items-center gap-2 mb-8 text-gray-400 hover:text-white transition group"
@@ -239,13 +340,11 @@ const ProjectDetails = () => {
           العودة
         </button>
 
-        {/* مسار التصفح والحالة */}
         <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 mb-8">
           <span>المشاريع</span>
           <ChevronRight className="w-4 h-4" />
           <span className="text-white truncate max-w-[200px] md:max-w-md">{project.title}</span>
           
-          {/* شارة الحالة */}
           {project.status === "draft" ? (
             <span className="flex items-center gap-1 px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded-lg">
               <EyeOff className="w-3 h-3" />
@@ -258,7 +357,6 @@ const ProjectDetails = () => {
             </span>
           )}
           
-          {/* شارة مميز */}
           {project.is_featured && (
             <span className="flex items-center gap-1 px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded-lg">
               <Star className="w-3 h-3" />
@@ -267,19 +365,16 @@ const ProjectDetails = () => {
           )}
         </div>
 
-        {/* المحتوى الرئيسي - شبكة 2 عمود على الشاشات الكبيرة */}
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
           
-          {/* ========== الجزء الأيمن - النصوص ========== */}
+          {/* الجزء الأيمن */}
           <div className="space-y-8">
             
-            {/* العنوان */}
             <div>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-blue-200 via-purple-200 to-pink-200 bg-clip-text text-transparent mb-4">
                 {project.title}
               </h1>
 
-              {/* التصنيف وتاريخ الإضافة */}
               <div className="flex flex-wrap items-center gap-4 text-sm">
                 {project.category ? (
                   <div className="flex items-center gap-1 text-purple-400 bg-purple-500/10 px-3 py-1 rounded-full">
@@ -302,7 +397,8 @@ const ProjectDetails = () => {
               </div>
             </div>
 
-            {/* الوصف المختصر */}
+            <ShareButtons project={project} />
+
             <div className="bg-white/5 rounded-xl p-6 border border-white/10">
               <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                 <Info className="w-4 h-4 text-blue-400" />
@@ -313,7 +409,6 @@ const ProjectDetails = () => {
               </p>
             </div>
 
-            {/* المحتوى التفصيلي (إذا وجد) */}
             {project.content && project.content !== project.description && (
               <div className="bg-white/5 rounded-xl p-6 border border-white/10">
                 <h2 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
@@ -326,7 +421,6 @@ const ProjectDetails = () => {
               </div>
             )}
 
-            {/* أزرار الإجراءات */}
             <div className="flex flex-wrap gap-4 pt-4">
               {project.live_url ? (
                 <a
@@ -364,7 +458,6 @@ const ProjectDetails = () => {
               )}
             </div>
 
-            {/* التقنيات المستخدمة */}
             <div className="pt-4">
               <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <Code2 className="w-5 h-5 text-purple-400" />
@@ -386,7 +479,6 @@ const ProjectDetails = () => {
               )}
             </div>
 
-            {/* الميزات الرئيسية */}
             <div className="pt-4">
               <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <Star className="w-5 h-5 text-yellow-400" />
@@ -409,12 +501,11 @@ const ProjectDetails = () => {
             </div>
           </div>
 
-          {/* ========== الجزء الأيسر - الصورة ========== */}
+          {/* الجزء الأيسر - الصورة */}
           <div className="lg:col-span-1">
             {project.image ? (
               <div className="sticky top-24">
                 <div className="relative rounded-2xl overflow-hidden border border-white/10 group bg-white/5">
-                  {/* حاوية الصورة مع تحكم كامل في الأبعاد */}
                   <div className="flex items-center justify-center p-4 min-h-[300px] md:min-h-[400px]">
                     {!imageLoaded && !imageError && (
                       <div className="absolute inset-0 flex items-center justify-center">
@@ -432,22 +523,18 @@ const ProjectDetails = () => {
                       onLoad={() => {
                         setImageLoaded(true);
                         setImageError(false);
-                        console.log('✅ تم تحميل الصورة بنجاح');
                       }}
                       onError={() => {
                         setImageError(true);
                         setImageLoaded(true);
-                        console.log('❌ فشل تحميل الصورة');
                       }}
                     />
                   </div>
                   
-                  {/* شارة الصورة */}
                   <div className="absolute bottom-2 right-2 px-2 py-1 bg-black/50 backdrop-blur rounded text-xs text-gray-300">
-                    <span className="opacity-75">صورة المشروع</span>
+                    صورة المشروع
                   </div>
 
-                  {/* رسالة خطأ الصورة */}
                   {imageError && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/80">
                       <div className="text-center">
@@ -455,13 +542,6 @@ const ProjectDetails = () => {
                         <p className="text-sm text-gray-400">فشل تحميل الصورة</p>
                       </div>
                     </div>
-                  )}
-                </div>
-
-                {/* معلومات الصورة */}
-                <div className="mt-4 text-xs text-gray-500 text-center">
-                  {imageLoaded && !imageError && (
-                    <span>✓ تم تحميل الصورة بنجاح</span>
                   )}
                 </div>
               </div>
@@ -476,7 +556,6 @@ const ProjectDetails = () => {
           </div>
         </div>
 
-        {/* تذييل - آخر تحديث */}
         {project.updated_at && (
           <div className="mt-12 pt-6 border-t border-white/10 text-center text-xs text-gray-500">
             آخر تحديث: {new Date(project.updated_at).toLocaleDateString('ar-SA')}
