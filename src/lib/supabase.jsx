@@ -10,7 +10,77 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// ===========================================
+// خدمات الإعجابات (Likes)
+// ===========================================
+export const likeService = {
+  // التحقق مما إذا كان الزائر قد أعجب بالفعل
+  async hasLiked(developerId, visitorIp) {
+    try {
+      const { data, error } = await supabase
+        .from('likes')
+        .select('id')
+        .eq('developer_id', developerId)
+        .eq('visitor_ip', visitorIp)
+        .maybeSingle();
 
+      if (error) throw error;
+      return !!data;
+    } catch (error) {
+      console.error('Error checking like:', error);
+      return false;
+    }
+  },
+
+  // إضافة إعجاب جديد
+  async addLike(developerId, visitorIp) {
+    try {
+      // التحقق أولاً
+      const alreadyLiked = await this.hasLiked(developerId, visitorIp);
+      if (alreadyLiked) {
+        throw new Error('Already liked');
+      }
+
+      // إضافة الإعجاب
+      const { error: insertError } = await supabase
+        .from('likes')
+        .insert([{
+          developer_id: developerId,
+          visitor_ip: visitorIp
+        }]);
+
+      if (insertError) throw insertError;
+
+      // تحديث عدد الإعجابات في جدول المطورين
+      const { error: updateError } = await supabase.rpc('increment_likes', {
+        developer_id: developerId
+      });
+
+      if (updateError) throw updateError;
+
+      return true;
+    } catch (error) {
+      console.error('Error adding like:', error);
+      throw error;
+    }
+  },
+
+  // جلب عدد الإعجابات
+  async getLikesCount(developerId) {
+    try {
+      const { count, error } = await supabase
+        .from('likes')
+        .select('*', { count: 'exact', head: true })
+        .eq('developer_id', developerId);
+
+      if (error) throw error;
+      return count || 0;
+    } catch (error) {
+      console.error('Error getting likes count:', error);
+      return 0;
+    }
+  }
+};
 // ===========================================
 // خدمات المطورين (Developers)
 // ===========================================
