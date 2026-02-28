@@ -12,7 +12,6 @@ import AOS from 'aos'
 import 'aos/dist/aos.css'
 import { useParams } from 'react-router-dom'
 import { developerService } from '../lib/supabase'
-import AnimatedBackground from '../components/AnimatedBackground'
 
 const ExperiencePage = () => {
   const { username } = useParams()
@@ -59,7 +58,7 @@ const ExperiencePage = () => {
   if (loading) {
     return (
       <div className="relative min-h-screen bg-[#030014] overflow-hidden">
-        <AnimatedBackground />
+        
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="text-center">
             <Loader className="w-12 h-12 animate-spin text-purple-500 mx-auto mb-4" />
