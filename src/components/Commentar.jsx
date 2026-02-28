@@ -1,47 +1,73 @@
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
-import { MessageCircle, UserCircle2, Loader2, AlertCircle, Send, ImagePlus, X, Crown } from 'lucide-react'
+import { MessageCircle, UserCircle2, Loader2, AlertCircle, Send, ImagePlus, X, Crown, Shield } from 'lucide-react'
 import AOS from "aos"
 import "aos/dist/aos.css"
 
-const Comment = memo(({ comment, formatDate, index }) => (
-  <div 
-    className="px-4 pt-4 pb-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all group hover:shadow-lg hover:-translate-y-0.5"
-    data-aos="fade-up"
-    data-aos-delay={index * 100}
-  >
-    <div className="flex items-start gap-3">
-      {comment.profile_image ? (
-        <img
-          src={comment.profile_image}
-          alt={`${comment.user_name}'s profile`}
-          className="w-10 h-10 rounded-full object-cover border-2 border-indigo-500/30"
-          loading="lazy"
-        />
-      ) : (
-        <div className="p-2 rounded-full bg-indigo-500/20 text-indigo-400 group-hover:bg-indigo-500/30 transition-colors">
-          <UserCircle2 className="w-5 h-5" />
+// ثابت لتحديد هوية صاحب المنصة
+const PLATFORM_OWNER_EMAIL = "eng.abdullah.z.aishan@gmail.com" // بريد صاحب المنصة
+const PLATFORM_OWNER_NAME = "Abdullah Aishan" // اسم صاحب المنصة
+
+const Comment = memo(({ comment, formatDate, index }) => {
+  // التحقق مما إذا كان هذا التعليق لصاحب المنصة
+  const isOwner = comment.user_email === PLATFORM_OWNER_EMAIL || comment.user_name === PLATFORM_OWNER_NAME
+
+  return (
+    <div 
+      className={`px-4 pt-4 pb-2 rounded-xl border transition-all group hover:shadow-lg hover:-translate-y-0.5 ${
+        isOwner 
+          ? 'bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/30 hover:bg-amber-500/20' 
+          : 'bg-white/5 border-white/10 hover:bg-white/10'
+      }`}
+      data-aos="fade-up"
+      data-aos-delay={index * 100}
+    >
+      <div className="flex items-start gap-3">
+        {comment.profile_image ? (
+          <img
+            src={comment.profile_image}
+            alt={`${comment.user_name}'s profile`}
+            className="w-10 h-10 rounded-full object-cover border-2 border-indigo-500/30"
+            loading="lazy"
+          />
+        ) : (
+          <div className={`p-2 rounded-full ${
+            isOwner ? 'bg-amber-500/30' : 'bg-indigo-500/20'
+          } text-indigo-400 group-hover:bg-indigo-500/30 transition-colors`}>
+            <UserCircle2 className="w-5 h-5" />
+          </div>
+        )}
+        <div className="flex-grow min-w-0">
+          <div className="flex items-center justify-between gap-4 mb-2">
+            <div className="flex items-center gap-2">
+              <h4 className={`font-medium truncate ${
+                isOwner ? 'text-amber-300' : 'text-white'
+              }`}>
+                {comment.user_name}
+              </h4>
+              {isOwner && (
+                <span className="flex items-center gap-1 text-xs bg-gradient-to-r from-amber-500 to-orange-500 text-white px-2 py-0.5 rounded-full shadow-lg">
+                  <Crown className="w-3 h-3" />
+                  Founder
+                </span>
+              )}
+            </div>
+            <span className="text-xs text-gray-400 whitespace-nowrap">
+              {formatDate(comment.created_at)}
+            </span>
+          </div>
+          <p className="text-gray-300 text-sm break-words leading-relaxed">{comment.content}</p>
         </div>
-      )}
-      <div className="flex-grow min-w-0">
-        <div className="flex items-center justify-between gap-4 mb-2">
-          <h4 className="font-medium text-white truncate">
-            {comment.user_name}
-          </h4>
-          <span className="text-xs text-gray-400 whitespace-nowrap">
-            {formatDate(comment.created_at)}
-          </span>
-        </div>
-        <p className="text-gray-300 text-sm break-words leading-relaxed">{comment.content}</p>
       </div>
     </div>
-  </div>
-))
+  )
+})
 
 const CommentForm = memo(({ onSubmit, isSubmitting, error }) => {
   const [newComment, setNewComment] = useState('')
   const [userName, setUserName] = useState('')
+  const [userEmail, setUserEmail] = useState('')
   const [imagePreview, setImagePreview] = useState(null)
   const [imageFile, setImageFile] = useState(null)
   const textareaRef = useRef(null)
@@ -71,21 +97,23 @@ const CommentForm = memo(({ onSubmit, isSubmitting, error }) => {
 
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault()
-    if (!newComment.trim() || !userName.trim()) return
+    if (!newComment.trim() || !userName.trim() || !userEmail.trim()) return
     
     await onSubmit({ 
       content: newComment, 
       user_name: userName, 
+      user_email: userEmail,
       imageFile 
     })
     
     setNewComment('')
     setUserName('')
+    setUserEmail('')
     setImagePreview(null)
     setImageFile(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
-  }, [newComment, userName, imageFile, onSubmit])
+  }, [newComment, userName, userEmail, imageFile, onSubmit])
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -102,6 +130,20 @@ const CommentForm = memo(({ onSubmit, isSubmitting, error }) => {
           value={userName}
           onChange={(e) => setUserName(e.target.value)}
           placeholder="Enter your name"
+          className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-white">
+          Your Email <span className="text-red-400">*</span>
+        </label>
+        <input
+          type="email"
+          value={userEmail}
+          onChange={(e) => setUserEmail(e.target.value)}
+          placeholder="Enter your email"
           className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
           required
         />
@@ -263,7 +305,7 @@ const Komentar = () => {
   }, [])
 
   // إضافة تعليق جديد
-  const handleCommentSubmit = useCallback(async ({ content, user_name, imageFile }) => {
+  const handleCommentSubmit = useCallback(async ({ content, user_name, user_email, imageFile }) => {
     setError('')
     setIsSubmitting(true)
     
@@ -278,6 +320,7 @@ const Komentar = () => {
         .insert([{
           content,
           user_name,
+          user_email, // إضافة البريد الإلكتروني للتعرف على صاحب المنصة
           profile_image: profileImageUrl,
           created_at: new Date()
         }])
@@ -320,7 +363,7 @@ const Komentar = () => {
             <MessageCircle className="w-6 h-6 text-indigo-400" />
           </div>
           <h3 className="text-xl font-semibold text-white">
-            Comments <span className="text-indigo-400">({comments.length})</span>
+            Community Comments <span className="text-indigo-400">({comments.length})</span>
           </h3>
         </div>
       </div>
@@ -341,7 +384,7 @@ const Komentar = () => {
           />
         </div>
 
-        <div className="space-y-4 h-[300px] overflow-y-auto custom-scrollbar">
+        <div className="space-y-4 h-[400px] overflow-y-auto custom-scrollbar pr-2">
           {comments.length === 0 ? (
             <div className="text-center py-8">
               <UserCircle2 className="w-12 h-12 text-indigo-400 mx-auto mb-3 opacity-50" />
