@@ -105,7 +105,12 @@ export const developerService = {
       }
 
       if (!data) throw new Error('Developer not found')
-      data.skills = data.skills || []
+       data.skills = data.skills || []
+      data.projects = [] // لا يوجد جدول مشاريع
+      data.certificates = [] // لا يوجد جدول شهادات
+      data.experience = [] // لا يوجد جدول خبرات
+      data.education = [] // لا يوجد جدول تعليم
+      data.social_links = [] // لا يوجد جدول روابط تواصل
 
       return data
     } catch (err) {
