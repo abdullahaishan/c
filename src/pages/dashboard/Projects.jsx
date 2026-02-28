@@ -231,11 +231,25 @@ const Projects = () => {
         imageResult = await storageService.uploadProjectImage(formData.image, user.id)
         // imageResult يحتوي على: { url, path, isTemp }
       } catch (uploadErr) {
-        console.error('خطأ في رفع الصورة:', uploadErr)
-        setError('فشل في رفع الصورة: ' + uploadErr.message)
-        setSaving(false)
-        return
-      }
+    console.error('❌ خطأ تفصيلي في رفع الصورة:', uploadErr)
+    
+    // رسائل واضحة حسب نوع الخطأ
+    if (uploadErr.message?.includes('size')) {
+      setError('❌ الصورة أكبر من 5 ميجابايت')
+    } else if (uploadErr.message?.includes('type')) {
+      setError('❌ نوع الملف غير مدعوم. استخدم JPG أو PNG')
+    } else if (uploadErr.message?.includes('permission')) {
+      setError('❌ ليس لديك صلاحية للرفع. تحقق من تسجيل الدخول')
+    } else if (uploadErr.message?.includes('bucket')) {
+      setError('❌ خطأ في التخزين. تأكد من وجود مجلد developers')
+    } else if (uploadErr.message?.includes('network')) {
+      setError('❌ مشكلة في الاتصال. تحقق من اتصالك بالإنترنت')
+    } else {
+      setError('❌ فشل في رفع الصورة: ' + (uploadErr.message || uploadErr.error?.message || JSON.stringify(uploadErr)))
+    }
+    
+    setSaving(false)
+    return // ⛔ نوقف التنفيذ
     }
 
     // إنشاء المشروع
