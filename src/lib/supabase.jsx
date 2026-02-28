@@ -997,14 +997,15 @@ export const storageService = {
 
   // ✅ دالة جديدة لرفع صور المشاريع
   // ✅ دالة جديدة لرفع صور المشاريع (مصححة)
-async uploadProjectImage(file, userId, projectId = 'temp', oldImageUrl = null) {
+// ✅ دالة رفع صور المشاريع (مصححة بالكامل)
+async uploadProjectImage(file, userId, projectId = null) {
   try {
     if (!file) throw new Error('لا يوجد ملف')
     if (!file.type.startsWith('image/')) throw new Error('الملف ليس صورة')
     if (file.size > 5 * 1024 * 1024) throw new Error('الصورة أكبر من 5 ميجابايت')
 
-    // استخدام مسار مؤقت إذا كان projectId = 'new'
-    const folder = projectId === 'new' || projectId === 'temp' ? 'temp' : projectId
+    // إذا كان المشروع جديد (projectId = null) -> استخدم مجلد مؤقت
+    const folder = projectId || 'temp'
     const fileName = `${userId}/projects/${folder}/${uuidv4()}-${file.name}`
 
     const { error: uploadError } = await supabase.storage
@@ -1020,32 +1021,24 @@ async uploadProjectImage(file, userId, projectId = 'temp', oldImageUrl = null) {
       .from('developers')
       .getPublicUrl(fileName)
 
-    // حذف الصورة القديمة إذا وجدت
-    if (oldImageUrl) {
-      try {
-        const oldPath = oldImageUrl.split('/developers/')[1]
-        if (oldPath) {
-          await supabase.storage.from('developers').remove([oldPath])
-        }
-      } catch (e) {}
-    }
-
     return {
       url: data.publicUrl,
-      path: fileName // حفظ المسار لاستخدامه لاحقاً
+      path: fileName,  // حفظ المسار لنقله لاحقاً
+      isTemp: !projectId // هل هو في مجلد مؤقت؟
     }
+
   } catch (error) {
     console.error('فشل رفع صورة المشروع:', error)
     throw error
   }
 },
 
-// ✅ دالة جديدة لنقل الصور من المجلد المؤقت إلى المجلد النهائي
+// ✅ دالة نقل الصورة من المجلد المؤقت إلى المجلد النهائي
 async moveProjectImage(tempPath, userId, projectId) {
   try {
-    if (!tempPath || !projectId || projectId === 'new') return null
+    if (!tempPath || !projectId) return null
 
-    // استخراج اسم الملف من المسار المؤقت
+    // استخراج اسم الملف
     const fileName = tempPath.split('/').pop()
     const newPath = `${userId}/projects/${projectId}/${fileName}`
 
@@ -1070,7 +1063,6 @@ async moveProjectImage(tempPath, userId, projectId) {
     return null
   }
 },
-
   // ✅ دالة جديدة لرفع صور الشهادات
   async uploadCertificateImage(file, userId, oldImageUrl = null) {
     try {
