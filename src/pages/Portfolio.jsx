@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useDeveloper } from '../context/DeveloperContext';
+import { projectService } from '../lib/supabase';
 import CardProject from "../components/CardProject";
 import TechStackIcon from "../components/TechStackIcon";
 import Certificate from "../components/Certificate";
-import { Code, Award, Boxes, Filter, X, Globe, Server, Database, Cloud, Cpu, Smartphone, Palette } from "lucide-react";
+import { Code, Award, Boxes, Filter, X, Globe, Server, Database, Cloud, Cpu, Smartphone, Palette, Loader } from "lucide-react";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import LoadingScreen from "../components/LoadingScreen";
@@ -320,17 +321,41 @@ const ToggleButton = ({ onClick, isShowingMore, count }) => (
 const Portfolio = ({ developer: propDeveloper }) => {
   const context = useDeveloper();
   const developer = propDeveloper || context.publicDeveloper;
-  const { getProjects, getCertificates, getSkills, loading, isFreePlan } = context;
+  const { loading: contextLoading, isFreePlan } = context;
+
+  // ✅ دالة واحدة تجلب كل المحتوى
+  const [content, setContent] = useState({
+    projects: [],
+    certificates: [],
+    skills: []
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!developer?.id) return;
+
+    const loadAllContent = async () => {
+      try {
+        setLoading(true);
+        const data = await projectService.getDeveloperContent(developer.id);
+        setContent(data);
+      } catch (error) {
+        console.error('Error loading portfolio content:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAllContent();
+  }, [developer?.id]);
+
+  const { projects, certificates, skills } = content;
 
   const [activeTab, setActiveTab] = useState(0);
   const [showAllProjects, setShowAllProjects] = useState(false);
   const [showAllCertificates, setShowAllCertificates] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [initialItems, setInitialItems] = useState(6);
-
-  const projects = getProjects();
-  const certificates = getCertificates();
-  const skills = getSkills();
 
   // تنظيم المهارات حسب التصنيف
   const categorizedSkills = useMemo(() => {
@@ -398,7 +423,8 @@ const Portfolio = ({ developer: propDeveloper }) => {
     AOS.init({ once: false });
   }, []);
 
-  if (loading) {
+  // إذا كان السياق لا يزال يحمّل
+  if (contextLoading) {
     return <LoadingScreen />;
   }
 
@@ -416,7 +442,7 @@ const Portfolio = ({ developer: propDeveloper }) => {
           </p>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs مع عرض الأعداد */}
         <div className="flex justify-center gap-4 mb-8" data-aos="fade-up">
           <button
             onClick={() => setActiveTab(0)}
@@ -458,143 +484,180 @@ const Portfolio = ({ developer: propDeveloper }) => {
           {/* Projects Tab */}
           {activeTab === 0 && (
             <div>
-              {projectCategories.length > 0 && (
-                <FilterBar
-                  categories={projectCategories}
-                  selectedCategory={selectedCategory}
-                  onSelectCategory={setSelectedCategory}
-                />
-              )}
-
-              {filteredProjects.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-gray-400">No projects yet</p>
+              {loading ? (
+                <div className="flex justify-center items-center py-20">
+                  <div className="w-12 h-12 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
+                  <p className="text-gray-400 mr-3">جاري تحميل المشاريع...</p>
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {displayedProjects.map((project, index) => (
-                      <div
-                        key={project.id}
-                        data-aos="fade-up"
-                        data-aos-delay={index * 100}
-                      >
-                        <CardProject
-                          Img={project.image || "/default-project.jpg"}
-                          Title={project.title}
-                          Description={project.description}
-                          Link={project.live_url}
-                          Github={project.github_url}
-                          id={project.id}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {filteredProjects.length > initialItems && (
-                    <div className="mt-8">
-                      <ToggleButton
-                        onClick={() => setShowAllProjects(!showAllProjects)}
-                        isShowingMore={showAllProjects}
-                        count={filteredProjects.length}
-                      />
+                  {projectCategories.length > 0 && (
+                    <FilterBar
+                      categories={projectCategories}
+                      selectedCategory={selectedCategory}
+                      onSelectCategory={setSelectedCategory}
+                    />
+                  )}
+
+                  {projects.length === 0 ? (
+                    <div className="text-center py-12">
+                      <p className="text-gray-400">No projects yet</p>
                     </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {displayedProjects.map((project, index) => (
+                          <div
+                            key={project.id}
+                            data-aos="fade-up"
+                            data-aos-delay={index * 100}
+                          >
+                            <CardProject
+                              Img={project.image || "/default-project.jpg"}
+                              Title={project.title}
+                              Description={project.description}
+                              Link={project.live_url}
+                              Github={project.github_url}
+                              id={project.id}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {projects.length > initialItems && (
+                        <div className="mt-8">
+                          <ToggleButton
+                            onClick={() => setShowAllProjects(!showAllProjects)}
+                            isShowingMore={showAllProjects}
+                            count={projects.length}
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
                 </>
               )}
             </div>
           )}
 
-          {/* Certificates Tab - محسّن */}
+          {/* Certificates Tab */}
           {activeTab === 1 && (
             <div>
-              {certificates.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-gray-400">No certificates yet</p>
+              {loading ? (
+                <div className="flex justify-center items-center py-20">
+                  <div className="w-12 h-12 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
+                  <p className="text-gray-400 mr-3">جاري تحميل الشهادات...</p>
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {displayedCertificates.map((cert, index) => (
-                      <div
-                        key={cert.id}
-                        data-aos="fade-up"
-                        data-aos-delay={index * 100}
-                      >
-                        <EnhancedCertificate certificate={cert} />
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {certificates.length > initialItems && (
-                    <div className="mt-8">
-                      <ToggleButton
-                        onClick={() => setShowAllCertificates(!showAllCertificates)}
-                        isShowingMore={showAllCertificates}
-                        count={certificates.length}
-                      />
+                  {certificates.length === 0 ? (
+                    <div className="text-center py-12">
+                      <p className="text-gray-400">No certificates yet</p>
                     </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {displayedCertificates.map((cert, index) => (
+                          <div
+                            key={cert.id}
+                            data-aos="fade-up"
+                            data-aos-delay={index * 100}
+                          >
+                            <EnhancedCertificate certificate={cert} />
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {certificates.length > initialItems && (
+                        <div className="mt-8">
+                          <ToggleButton
+                            onClick={() => setShowAllCertificates(!showAllCertificates)}
+                            isShowingMore={showAllCertificates}
+                            count={certificates.length}
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
                 </>
               )}
             </div>
           )}
 
-          {/* Tech Stack Tab - محسّن مع تصنيفات */}
+          {/* Tech Stack Tab */}
           {activeTab === 2 && (
             <div className="space-y-8">
-              {skills.length === 0 ? (
-                <p className="text-center text-gray-400">No skills added yet</p>
+              {loading ? (
+                <div className="flex justify-center items-center py-20">
+                  <div className="w-12 h-12 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" />
+                  <p className="text-gray-400 mr-3">جاري تحميل المهارات...</p>
+                </div>
               ) : (
                 <>
-                  {/* Frontend Skills */}
-                  <SkillCategory
-                    title="Frontend Development"
-                    skills={categorizedSkills.frontend}
-                    icon={Palette}
-                    color="from-blue-500 to-cyan-500"
-                  />
-                  
-                  {/* Backend Skills */}
-                  <SkillCategory
-                    title="Backend Development"
-                    skills={categorizedSkills.backend}
-                    icon={Server}
-                    color="from-green-500 to-emerald-500"
-                  />
-                  
-                  {/* Database Skills */}
-                  <SkillCategory
-                    title="Databases"
-                    skills={categorizedSkills.database}
-                    icon={Database}
-                    color="from-yellow-500 to-orange-500"
-                  />
-                  
-                  {/* Cloud & DevOps */}
-                  <SkillCategory
-                    title="Cloud & DevOps"
-                    skills={categorizedSkills.cloud}
-                    icon={Cloud}
-                    color="from-purple-500 to-pink-500"
-                  />
-                  
-                  {/* Mobile Development */}
-                  <SkillCategory
-                    title="Mobile Development"
-                    skills={categorizedSkills.mobile}
-                    icon={Smartphone}
-                    color="from-indigo-500 to-purple-500"
-                  />
-                  
-                  {/* Other Skills */}
-                  {categorizedSkills.other.length > 0 && (
-                    <SkillCategory
-                      title="Other Skills"
-                      skills={categorizedSkills.other}
-                      icon={Code}
-                      color="from-gray-500 to-slate-500"
-                    />
+                  {skills.length === 0 ? (
+                    <p className="text-center text-gray-400">No skills added yet</p>
+                  ) : (
+                    <>
+                      {/* Frontend Skills */}
+                      {categorizedSkills.frontend.length > 0 && (
+                        <SkillCategory
+                          title="Frontend Development"
+                          skills={categorizedSkills.frontend}
+                          icon={Palette}
+                          color="from-blue-500 to-cyan-500"
+                        />
+                      )}
+                      
+                      {/* Backend Skills */}
+                      {categorizedSkills.backend.length > 0 && (
+                        <SkillCategory
+                          title="Backend Development"
+                          skills={categorizedSkills.backend}
+                          icon={Server}
+                          color="from-green-500 to-emerald-500"
+                        />
+                      )}
+                      
+                      {/* Database Skills */}
+                      {categorizedSkills.database.length > 0 && (
+                        <SkillCategory
+                          title="Databases"
+                          skills={categorizedSkills.database}
+                          icon={Database}
+                          color="from-yellow-500 to-orange-500"
+                        />
+                      )}
+                      
+                      {/* Cloud & DevOps */}
+                      {categorizedSkills.cloud.length > 0 && (
+                        <SkillCategory
+                          title="Cloud & DevOps"
+                          skills={categorizedSkills.cloud}
+                          icon={Cloud}
+                          color="from-purple-500 to-pink-500"
+                        />
+                      )}
+                      
+                      {/* Mobile Development */}
+                      {categorizedSkills.mobile.length > 0 && (
+                        <SkillCategory
+                          title="Mobile Development"
+                          skills={categorizedSkills.mobile}
+                          icon={Smartphone}
+                          color="from-indigo-500 to-purple-500"
+                        />
+                      )}
+                      
+                      {/* Other Skills */}
+                      {categorizedSkills.other.length > 0 && (
+                        <SkillCategory
+                          title="Other Skills"
+                          skills={categorizedSkills.other}
+                          icon={Code}
+                          color="from-gray-500 to-slate-500"
+                        />
+                      )}
+                    </>
                   )}
                 </>
               )}
