@@ -105,7 +105,113 @@ export const developerService = {
     if (error) throw error
     return data
   },
+// ===========================================
+// جلب بيانات صفحة About (مكتملة مع الزوار واللايكات)
+// ===========================================
+async getAboutData(username) {
+  try {
+    // 1️⃣ جلب المطور الأساسي مع views_count و likes_count
+    const { data: developer, error: devError } = await supabase
+      .from('developers')
+      .select(`
+        id,
+        username,
+        full_name,
+        bio,
+        email,
+        phone,
+        location,
+        profile_image,
+        resume_file,
+        views_count,
+        likes_count
+      `)
+      .eq('username', username)
+      .eq('is_active', true)
+      .single();
 
+    if (devError) throw devError;
+    if (!developer) throw new Error('Developer not found');
+
+    // 2️⃣ جلب روابط التواصل من جدول social_links
+    const { data: socialLinks, error: socialError } = await supabase
+      .from('social_links')
+      .select('platform, url')
+      .eq('developer_id', developer.id);
+
+    if (socialError) throw socialError;
+
+    // 3️⃣ جلب سنوات الخبرة من جدول experience
+    const { data: experience, error: expError } = await supabase
+      .from('experience')
+      .select('start_date, end_date, is_current')
+      .eq('developer_id', developer.id);
+
+    if (expError) throw expError;
+
+    // 4️⃣ جلب عدد المشاريع المنشورة
+    const { count: projectsCount, error: projectsError } = await supabase
+      .from('projects')
+      .select('*', { count: 'exact', head: true })
+      .eq('developer_id', developer.id)
+      .eq('status', 'published');
+
+    if (projectsError) throw projectsError;
+
+    // 5️⃣ جلب عدد المهارات
+    const { count: skillsCount, error: skillsError } = await supabase
+      .from('skills')
+      .select('*', { count: 'exact', head: true })
+      .eq('developer_id', developer.id);
+
+    if (skillsError) throw skillsError;
+
+    // 6️⃣ جلب عدد الشهادات
+    const { count: certificatesCount, error: certError } = await supabase
+      .from('certificates')
+      .select('*', { count: 'exact', head: true })
+      .eq('developer_id', developer.id);
+
+    if (certError) throw certError;
+
+    // حساب سنوات الخبرة
+    let totalYears = 0;
+    experience?.forEach(exp => {
+      if (exp.start_date) {
+        const start = new Date(exp.start_date);
+        const end = exp.is_current ? new Date() : (exp.end_date ? new Date(exp.end_date) : new Date());
+        const years = (end - start) / (1000 * 60 * 60 * 24 * 365);
+        totalYears += years;
+      }
+    });
+
+    // تنسيق روابط التواصل
+    const formattedSocialLinks = {};
+    socialLinks?.forEach(link => {
+      formattedSocialLinks[link.platform] = link.url;
+    });
+
+    return {
+      developer: {
+        ...developer,
+        // views_count و likes_count موجودة بالفعل في developer
+      },
+      socialLinks: formattedSocialLinks,
+      stats: {
+        experience: Math.round(totalYears * 10) / 10 || 0,
+        projects: projectsCount || 0,
+        skills: skillsCount || 0,
+        certificates: certificatesCount || 0,
+        views: developer.views_count || 0,     // ✅ إضافة عدد الزوار
+        likes: developer.likes_count || 0      // ✅ إضافة عدد اللايكات
+      }
+    };
+
+  } catch (error) {
+    console.error('Error fetching about data:', error);
+    throw error;
+  }
+},
   // تحديث بيانات المطور
   async update(id, updates) {
     const { data, error } = await supabase
