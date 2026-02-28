@@ -302,9 +302,10 @@ const Projects = () => {
     try {
       let imageUrl = formData.image
       try{
-      if (formData.image instanceof File) {
-        imageUrl = await handleImageUpload(formData.image, editingId)
-      }}catch (uploadErr) {
+      
+if (formData.image instanceof File) {
+  imageUrl = await handleImageUpload(formData.image, editingId)  // ✅ صحح الاسم هنا
+}}catch (uploadErr) {
     setError('❌ ' + (uploadErr.message || JSON.stringify(uploadErr)))
         
         setSaving(false)
