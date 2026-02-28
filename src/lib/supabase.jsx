@@ -94,6 +94,11 @@ export const developerService = {
         .select(`
           *,
           skills:skills(*),
+          projects:projects(developer_id),
+          certificates:certificates(developer_id),
+          experience:experience(developer_id),
+          education:education(developer_id),
+          social_links:social_links(developer_id)
         `)
         .eq('username', username)
         .eq('is_active', true)
@@ -105,12 +110,14 @@ export const developerService = {
       }
 
       if (!data) throw new Error('Developer not found')
-       data.skills = data.skills || []
-      data.projects = [] // لا يوجد جدول مشاريع
-      data.certificates = [] // لا يوجد جدول شهادات
-      data.experience = [] // لا يوجد جدول خبرات
-      data.education = [] // لا يوجد جدول تعليم
-      data.social_links = [] // لا يوجد جدول روابط تواصل
+      
+      // تأكد من وجود المصفوفات
+      data.skills = data.skills || []
+      data.projects = data.projects || []
+      data.certificates = data.certificates || []
+      data.experience = data.experience || []
+      data.education = data.education || []
+      data.social_links = data.social_links || []
 
       return data
     } catch (err) {
