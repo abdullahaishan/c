@@ -245,7 +245,7 @@ const Projects = () => {
     } else if (uploadErr.message?.includes('network')) {
       setError('❌ مشكلة في الاتصال. تحقق من اتصالك بالإنترنت')
     } else {
-      setError('❌ فشل في رفع الصورة: ' + (uploadErr.message || uploadErr.error?.message || JSON.stringify(uploadErr)))
+    setError('❌ ' + JSON.stringify(uploadErr))  //setError('❌ فشل في رفع الصورة: ' + (uploadErr.message || uploadErr.error?.message || JSON.stringify(uploadErr)))
     }
       }
     
