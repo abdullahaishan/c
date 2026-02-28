@@ -242,8 +242,7 @@ const projectData = {
   live_url: formData.live_url || null,
   features: formData.features,
   image: imageData?.url || null,  // ✅ استخدم الرابط
-  image_path: imageData?.path || null,  // ✅ احفظ المسار لنقله لاحقاً
-  display_order: projects.length,
+ display_order: projects.length,
   status: formData.status,
   is_featured: formData.is_featured,
   category: formData.category || null,
