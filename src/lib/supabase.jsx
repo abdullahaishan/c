@@ -95,9 +95,7 @@ export const developerService = {
         *,
         portfolios (*),
         skills (*),
-        experience (*),
-        education (*),
-        social_links (*)
+
       `)
       .eq('id', id)
       .single()
