@@ -93,12 +93,7 @@ export const developerService = {
         .from('developers')
         .select(`
           *,
-          projects:projects(*),
           skills:skills(*),
-          experience:experience(*),
-          education:education(*),
-          certificates:certificates(*),
-          social_links:social_links(*)
         `)
         .eq('username', username)
         .eq('is_active', true)
@@ -110,36 +105,7 @@ export const developerService = {
       }
 
       if (!data) throw new Error('Developer not found')
-
-      // تحضيرات: تأكد أن الحقول المصفوفية ليست undefined
-      data.projects = data.projects || []
       data.skills = data.skills || []
-      data.experience = data.experience || []
-      data.education = data.education || []
-      data.certificates = data.certificates || []
-      data.social_links = data.social_links || []
-
-      // معالجة profile_image إذا كان مخزناً كمسار داخل الـ storage (وليس URL كامل)
-      const img = data.profile_image
-      if (img && !/^https?:\/\//i.test(img)) {
-        // نعتبره مسار في bucket 'developers'
-        try {
-          const { data: urlObj } = supabase.storage.from('developers').getPublicUrl(img)
-          if (urlObj?.publicUrl) {
-            data.profile_image = urlObj.publicUrl
-          }
-        } catch (e) {
-          console.warn('Failed to get public URL for profile_image', e)
-        }
-      }
-
-      // نفس الشيء للـ cover_image و resume_file إن رغبت (اختياري)
-      if (data.cover_image && !/^https?:\/\//i.test(data.cover_image)) {
-        try {
-          const { data: urlObj } = supabase.storage.from('developers').getPublicUrl(data.cover_image)
-          if (urlObj?.publicUrl) data.cover_image = urlObj.publicUrl
-        } catch (e) {}
-      }
 
       return data
     } catch (err) {
