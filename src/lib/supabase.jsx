@@ -291,6 +291,40 @@ export const projectService = {
     return data || []
   },
 
+  // ===========================================
+// جلب مشروع واحد (بـ ID أو Slug)
+// ===========================================
+async getProjectByIdOrSlug(identifier) {
+  try {
+    let query = supabase
+      .from('projects')
+      .select('*');
+    
+    // التحقق إذا كان المعرف هو UUID أو Slug
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+    
+    if (isUUID) {
+      // إذا كان UUID -> ابحث بـ id
+      query = query.eq('id', identifier);
+    } else {
+      // إذا كان نص عادي -> ابحث بـ slug
+      query = query.eq('slug', identifier);
+    }
+    
+    const { data, error } = await query.single();
+    
+    if (error) {
+      console.error('Error fetching project:', error);
+      throw error;
+    }
+    
+    return data;
+    
+  } catch (error) {
+    console.error('Failed to fetch project:', error);
+    throw error;
+  }
+},
   // ✅ إنشاء مشروع جديد
   async create(developerId, projectData) {
     // التحقق من وجود المشاريع الحالية
