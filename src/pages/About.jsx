@@ -22,7 +22,6 @@ import AOS from "aos";
 import "aos/dist/aos.css";
 import { developerService } from '../lib/supabase';
 import { useParams } from 'react-router-dom';
-import AnimatedBackground from "../components/AnimatedBackground";
 
 const About = () => {
   const { username } = useParams();
@@ -60,7 +59,7 @@ const About = () => {
   if (loading) {
     return (
       <div className="relative min-h-screen bg-[#030014] overflow-hidden">
-        <AnimatedBackground />
+        
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="text-center">
             <div className="relative">
