@@ -46,8 +46,8 @@ export const DeveloperProvider = ({ children, username }) => {
     fetchDeveloper()
   }, [username])
 
-  // دوال المساعدة - معدلة للتعامل مع البيانات غير الموجودة
-  const getProjects = () => [] // لا يوجد مشاريع بعد
+  // دوال المساعدة (تستخدم نفس الأسماء لتوافق ملفات العرض)
+  const getProjects = () => developer?.projects || []
   
   const getMainSkills = () => {
     if (!Array.isArray(developer?.skills)) return [];
@@ -57,22 +57,32 @@ export const DeveloperProvider = ({ children, username }) => {
   }
   
   const getSkills = () => developer?.skills || []
-  const getCertificates = () => [] // لا يوجد شهادات بعد
-  const getExperience = () => [] // لا يوجد خبرات بعد
-  const getEducation = () => [] // لا يوجد تعليم بعد
+  const getCertificates = () => developer?.certificates || []
+  const getExperience = () => developer?.experience || []
+  const getEducation = () => developer?.education || []
   
   const getSocialLinks = () => {
-    // روابط التواصل الافتراضية من الإعدادات
-    return {
-      facebook: "https://facebook.com/abdullah.aishan.2025",
-      instagram: "https://instagram.com/aishan.2025",
-      whatsapp: "https://wa.me/967771315459"
-    }
+    const links = {}
+    ;(developer?.social_links || []).forEach(link => {
+      links[link.platform] = link.url
+    })
+    return links
   }
 
   const getProfileImage = () => developer?.profile_image || '/Coding.gif'
 
-  const getTotalExperienceYears = () => 0 // لا توجد خبرات بعد
+  const getTotalExperienceYears = () => {
+    let totalYears = 0
+    ;(developer?.experience || []).forEach(exp => {
+      if (exp.start_date) {
+        const start = new Date(exp.start_date)
+        const end = exp.is_current ? new Date() : (exp.end_date ? new Date(exp.end_date) : new Date())
+        const years = (end - start) / (1000 * 60 * 60 * 24 * 365)
+        totalYears += years
+      }
+    })
+    return Math.round(totalYears * 10) / 10 || 0
+  }
 
   const isFreePlan = () => developer?.plan_id === 1
   const isPaidPlan = () => developer?.plan_id > 1
@@ -85,12 +95,17 @@ export const DeveloperProvider = ({ children, username }) => {
 
   const value = {
     developer,
+
+    // اجعل الأسماء متوافقة مع PublicPortfolio
     publicLoading: loading,
     publicError: error,
+
     loading,
     error,
+
     isFreePlan,
     isPaidPlan,
+
     getProjects,
     getSkills,
     getMainSkills,
