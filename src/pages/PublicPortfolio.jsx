@@ -6,6 +6,7 @@ import Skills from './Skills';
 import Portfolio from './Portfolio';
 import WhyMe from './WhyMe';
 import ExperiencePage from './ExperiencePage';
+import EducationPage from './EducationPage';
 import AnimatedBackground from '../components/AnimatedBackground';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -66,6 +67,7 @@ const PublicPortfolio = () => {
         <Skills developer={developer} />
         <Portfolio developer={developer} />
          <ExperiencePage developer={developer} />
+        <EducationPage developer={developer} />
       
         {/* قسم الخبرات الجديد */}
         {/*  <ExperienceSection />*/}
