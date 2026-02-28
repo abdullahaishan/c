@@ -103,6 +103,53 @@ export const developerService = {
     if (error) throw error
     return data
   },
+  // ===========================================
+// جلب بيانات الخبرات فقط (Experience)
+// ===========================================
+async getExperienceData(username) {
+  try {
+    // 1️⃣ جلب ID المطور أولاً
+    const { data: developer, error: devError } = await supabase
+      .from('developers')
+      .select('id')
+      .eq('username', username)
+      .eq('is_active', true)
+      .single();
+
+    if (devError) throw devError;
+    if (!developer) throw new Error('Developer not found');
+
+    // 2️⃣ جلب جميع الخبرات
+    const { data: experience, error: expError } = await supabase
+      .from('experience')
+      .select('*')
+      .eq('developer_id', developer.id)
+      .order('display_order', { ascending: true })
+      .order('start_date', { ascending: false });
+
+    if (expError) throw expError;
+
+    // 3️⃣ حساب إجمالي سنوات الخبرة
+    let totalYears = 0;
+    experience?.forEach(exp => {
+      if (exp.start_date) {
+        const start = new Date(exp.start_date);
+        const end = exp.is_current ? new Date() : (exp.end_date ? new Date(exp.end_date) : new Date());
+        const years = (end - start) / (1000 * 60 * 60 * 24 * 365);
+        totalYears += years;
+      }
+    });
+
+    return {
+      experience: experience || [],
+      totalYears: Math.round(totalYears * 10) / 10 || 0
+    };
+
+  } catch (error) {
+    console.error('Error fetching experience data:', error);
+    throw error;
+  }
+},
 // ===========================================
 // جلب بيانات صفحة About (مكتملة مع الزوار واللايكات)
 // ===========================================
