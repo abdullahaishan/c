@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react'
+ 
+    import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useInView } from 'react-intersection-observer'
@@ -34,9 +35,9 @@ import {
   Cloud,
   Droplet,
   Leaf,
-  Flower,
-  Tree,
-  Mountain
+  Flower2,
+  Box,
+  MountainSnow
 } from 'lucide-react'
 import AOS from 'aos'
 import 'aos/dist/aos.css'
@@ -94,7 +95,7 @@ const AnimatedCard = ({ children, delay = 0, className = "" }) => {
   )
 }
 
-// مكون الصورة الشخصية المتحركة (بدون Confetti)
+// مكون الصورة الشخصية المتحركة
 const ProfileCard = ({ profile, index }) => {
   const emojis = [
     <Star className="w-4 h-4 text-yellow-400" />,
@@ -111,9 +112,9 @@ const ProfileCard = ({ profile, index }) => {
     <Cloud className="w-4 h-4 text-blue-300" />,
     <Droplet className="w-4 h-4 text-blue-500" />,
     <Leaf className="w-4 h-4 text-green-500" />,
-    <Flower className="w-4 h-4 text-pink-400" />,
-    <Tree className="w-4 h-4 text-green-600" />,
-    <Mountain className="w-4 h-4 text-gray-500" />
+    <Flower2 className="w-4 h-4 text-pink-400" />,
+    <Box className="w-4 h-4 text-green-600" />,
+    <MountainSnow className="w-4 h-4 text-gray-500" />
   ]
 
   return (
@@ -242,6 +243,8 @@ const ProfileCard = ({ profile, index }) => {
     </motion.div>
   )
 }
+
+// باقي الكود كما هو من الرد السابق ...
 
 const LandingPage = () => {
   const [stats, setStats] = useState({
