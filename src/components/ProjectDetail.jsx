@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { projectService } from "../../lib/supabase";
+import { projectService } from "../lib/supabase";
 import {
   ArrowLeft,
   ExternalLink,
