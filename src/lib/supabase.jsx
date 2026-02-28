@@ -994,6 +994,22 @@ export const storageService = {
       throw error
     }
   },
+  // دالة حذف ملف من التخزين
+async deleteFile(filePath) {
+  try {
+    if (!filePath) return
+    const { error } = await supabase.storage
+      .from('developers')
+      .remove([filePath])
+    
+    if (error) throw error
+    console.log('تم حذف الملف:', filePath)
+    return true
+  } catch (error) {
+    console.error('فشل حذف الملف:', error)
+    return false
+  }
+}
 
   // ✅ دالة جديدة لرفع صور المشاريع
   // ✅ دالة جديدة لرفع صور المشاريع (مصححة)
