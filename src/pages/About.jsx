@@ -16,11 +16,38 @@ import { useDeveloper } from '../context/DeveloperContext';
 
 const About = ({ developer: propDeveloper }) => {
   const context = useDeveloper();
+  
+  // ✅ التحقق من حالة التحميل والخطأ
+  if (context.loading) {
+    return (
+      <div className="min-h-screen bg-[#030014] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-400">جاري تحميل المعلومات...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (context.error) {
+    return (
+      <div className="min-h-screen bg-[#030014] flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-400 mb-4">حدث خطأ في تحميل المعلومات</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 bg-purple-600 rounded-lg text-white"
+          >
+            إعادة المحاولة
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const developer = propDeveloper || context.developer || {};
 
-  // =====================================================
-  // ✅ الطريقة الصحيحة: تعريف الدوال المساعدة بشكل آمن
-  // =====================================================
+  // ✅ استخدام الدوال بأمان
   const getProfileImage = context.getProfileImage || (() => "/Coding.gif");
   const getProjects = context.getProjects || (() => []);
   const getCertificates = context.getCertificates || (() => []);
@@ -32,14 +59,10 @@ const About = ({ developer: propDeveloper }) => {
   const isFreePlan = context.isFreePlan || (() => true);
   const getAdminSocialLinks = context.getAdminSocialLinks || (() => ({}));
 
-  // =====================================================
-  // ✅ استخدام الدوال للحصول على البيانات
-  // =====================================================
   const socialLinks = getSocialLinks() || {};
   const adminLinks = getAdminSocialLinks() || {};
   const usedLinks = (isFreePlan() ? adminLinks : socialLinks) || {};
 
-  // الإحصائيات
   const stats = {
     experience: getTotalExperienceYears() || 5,
     projects: (getProjects() || []).length,
@@ -47,11 +70,10 @@ const About = ({ developer: propDeveloper }) => {
     certificates: (getCertificates() || []).length
   };
 
-  // معلومات الاتصال
   const contactInfo = {
-    email: usedLinks.email || "eng.abdullah.z.aishan@gmail.com",
-    phone: "+967-771-315-459",
-    location: "Sana'a, Yemen"
+    email: usedLinks.email || developer.email || "eng.abdullah.z.aishan@gmail.com",
+    phone: developer.phone || "+967-771-315-459",
+    location: developer.location || "Sana'a, Yemen"
   };
 
   useEffect(() => {
@@ -81,7 +103,7 @@ const About = ({ developer: propDeveloper }) => {
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#6366f1] to-[#a855f7]">
                 Hello, I'm
               </span>
-              <span className="block mt-2">{developer.full_name || developer.username}</span>
+              <span className="block mt-2">{developer.full_name || developer.username || "Developer"}</span>
             </h3>
             <p className="text-gray-300 leading-relaxed">{developer.bio || "Passionate developer building smart digital solutions."}</p>
 
@@ -136,6 +158,9 @@ const About = ({ developer: propDeveloper }) => {
                 src={getProfileImage()}
                 alt="Profile"
                 className="relative w-full h-full object-cover rounded-full border-4 border-white/10"
+                onError={(e) => {
+                  e.target.src = "/Coding.gif";
+                }}
               />
             </div>
           </div>
