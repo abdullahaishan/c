@@ -222,32 +222,46 @@ const Projects = () => {
     setSuccess('')
 
     try {
-      let imageUrl = null
-      if (formData.image) {
-        imageUrl = await handleImageUpload(formData.image)
-      }
+    
 
       const slug = generateSlug(formData.title)
+// قبل رفع الصورة
+let imageData = null
+if (formData.image) {
+  imageData = await handleImageUpload(formData.image, 'temp')
+}
 
-      const projectData = {
-        title: formData.title,
-        slug,
-        description: formData.description,
-        content: formData.content || formData.description,
-        technologies: formData.technologies,
-        github_url: formData.github_url || null,
-        live_url: formData.live_url || null,
-        features: formData.features,
-        image: imageUrl,
-        display_order: projects.length,
-        status: formData.status,
-        is_featured: formData.is_featured,
-        category: formData.category || null,
-        developer_id: user.id
-      }
+// في projectData، استخدم imageData.url
+const projectData = {
+  title: formData.title,
+  slug,
+  description: formData.description,
+  content: formData.content || formData.description,
+  technologies: formData.technologies,
+  github_url: formData.github_url || null,
+  live_url: formData.live_url || null,
+  features: formData.features,
+  image: imageData?.url || null,  // ✅ استخدم الرابط
+  image_path: imageData?.path || null,  // ✅ احفظ المسار لنقله لاحقاً
+  display_order: projects.length,
+  status: formData.status,
+  is_featured: formData.is_featured,
+  category: formData.category || null,
+  developer_id: user.id
+}
+    
 
       const created = await projectService.create(user.id, projectData)
       setProjects([...projects, created])
+      // بعد إنشاء المشروع، انقل الصورة من المجلد المؤقت إلى مجلد المشروع
+if (created.id && imageData?.path) {
+  const finalImageUrl = await moveProjectImage(imageData.path, user.id, created.id)
+  if (finalImageUrl) {
+    // تحديث المشروع بالرابط الجديد
+    await projectService.update(created.id, { image: finalImageUrl })
+    created.image = finalImageUrl
+  }
+}
       resetForm()
       setSuccess('✅ تم إضافة المشروع بنجاح')
     } catch (err) {
