@@ -173,6 +173,104 @@ export const developerService = {
     if (error) throw error
     return data
   },
+
+  // ===========================================
+// إحصائيات المنصة (حسب هيكل قاعدة البيانات الفعلي)
+// ===========================================
+async getPlatformStats() {
+  try {
+    // 1️⃣ عدد المستخدمين النشطين
+    const { count: usersCount } = await supabase
+      .from('developers')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_active', true);
+
+    // 2️⃣ عدد البورتفليوهات المنشورة
+    const { count: portfoliosCount } = await supabase
+      .from('portfolios')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_published', true);
+
+    // 3️⃣ عدد المشاريع المنشورة
+    const { count: projectsCount } = await supabase
+      .from('projects')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'published');
+
+    // 4️⃣ جلب بيانات المطور abdullah_aishan
+    const { data: featuredDeveloper } = await supabase
+      .from('developers')
+      .select(`
+        id,
+        full_name,
+        username,
+        profile_image,
+        title,
+        views_count,
+        likes_count,
+        plan_id
+      `)
+      .eq('username', 'abdullah_aishan')
+      .eq('is_active', true)
+      .single();
+
+    // 5️⃣ الملفات الشخصية المميزة الأخرى (للمستخدمين المدفوعين)
+    const { data: otherProfiles } = await supabase
+      .from('developers')
+      .select(`
+        id,
+        full_name,
+        username,
+        profile_image,
+        title,
+        views_count,
+        likes_count,
+        plan_id
+      `)
+      .eq('is_active', true)
+      .not('plan_id', 'eq', 1)
+      .neq('username', 'abdullah_aishan') // استثناء الحساب الرئيسي
+      .order('views_count', { ascending: false })
+      .limit(5);
+
+    // 6️⃣ إجمالي عدد الزيارات للمنصة
+    const { data: developers } = await supabase
+      .from('developers')
+      .select('views_count');
+    
+    const totalViews = developers?.reduce((acc, curr) => acc + (curr.views_count || 0), 0) || 0;
+
+    // 7️⃣ إجمالي عدد الإعجابات للمنصة
+    const { count: likesCount } = await supabase
+      .from('likes')
+      .select('*', { count: 'exact', head: true });
+
+    return {
+      users: usersCount || 0,
+      portfolios: portfoliosCount || 0,
+      projects: projectsCount || 0,
+      templates: 50,
+      satisfaction: 95,
+      featuredDeveloper: featuredDeveloper || null,
+      featuredProfiles: otherProfiles || [],
+      totalViews: totalViews,
+      totalLikes: likesCount || 0
+    };
+  } catch (error) {
+    console.error('Error fetching platform stats:', error);
+    return {
+      users: 0,
+      portfolios: 0,
+      projects: 0,
+      templates: 50,
+      satisfaction: 95,
+      featuredDeveloper: null,
+      featuredProfiles: [],
+      totalViews: 0,
+      totalLikes: 0
+    };
+  }
+},
   // ===========================================
 // جلب بيانات الخبرات فقط (Experience)
 // ===========================================
