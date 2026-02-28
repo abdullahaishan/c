@@ -117,7 +117,7 @@ const DashboardLayout = () => {
             <div className="w-8 h-8 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-lg flex items-center justify-center">
               <span className="text-white font-bold">P</span>
             </div>
-            <span className="text-xl font-bold text-white">Portfolio<span className="text-[#a855f7]">AI</span></span>
+            <span className="text-xl font-bold text-white">Portfolio<span className="text-[#a855f7]">-V5</span></span>
           </Link>
         </div>
 
