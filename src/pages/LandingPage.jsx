@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import Tilt from 'react-parallax-tilt'
 import Confetti from 'react-confetti'
 import { useInView } from 'react-intersection-observer'
 import Typewriter from 'typewriter-effect'
@@ -26,7 +25,6 @@ import {
   Crown,
   Gem,
   Flame,
-  Coffee,
   Brain,
   Target,
   Compass,
@@ -132,142 +130,131 @@ const ProfileCard = ({ profile, index }) => {
         stiffness: 100
       }}
       whileHover={{ 
-        scale: 1.1, 
-        rotate: 2,
+        scale: 1.05, 
+        rotate: 1,
         transition: { duration: 0.3 }
       }}
       viewport={{ once: true }}
     >
-      <Tilt
-        tiltMaxAngleX={15}
-        tiltMaxAngleY={15}
-        perspective={1000}
-        scale={1}
-        transitionSpeed={2000}
-        glareEnable={true}
-        glareMaxOpacity={0.3}
-        glareColor="#a855f7"
+      <Link
+        to={`/u/${profile.username}`}
+        className="group relative block bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/20 overflow-hidden"
+        onMouseEnter={() => setShowConfetti(true)}
+        onMouseLeave={() => setShowConfetti(false)}
       >
-        <Link
-          to={`/u/${profile.username}`}
-          className="group relative block bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/20 overflow-hidden"
-          onMouseEnter={() => setShowConfetti(true)}
-          onMouseLeave={() => setShowConfetti(false)}
-        >
-          {/* خلفية متحركة */}
-          <motion.div
-            className="absolute inset-0 bg-gradient-to-r from-[#6366f1]/20 to-[#a855f7]/20"
-            animate={{
-              scale: [1, 1.2, 1],
-              rotate: [0, 90, 0],
-            }}
-            transition={{
-              duration: 10,
-              repeat: Infinity,
-              repeatType: "reverse"
-            }}
+        {/* خلفية متحركة */}
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-r from-[#6366f1]/20 to-[#a855f7]/20"
+          animate={{
+            scale: [1, 1.2, 1],
+            rotate: [0, 90, 0],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            repeatType: "reverse"
+          }}
+        />
+        
+        {/* تأثير الكونفيتي عند التحويم */}
+        {showConfetti && (
+          <Confetti
+            width={300}
+            height={300}
+            numberOfPieces={20}
+            recycle={false}
+            colors={['#6366f1', '#a855f7', '#f59e0b', '#10b981']}
           />
-          
-          {/* تأثير الكونفيتي عند التحويم */}
-          {showConfetti && (
-            <Confetti
-              width={300}
-              height={300}
-              numberOfPieces={20}
-              recycle={false}
-              colors={['#6366f1', '#a855f7', '#f59e0b', '#10b981']}
-            />
-          )}
+        )}
 
-          <div className="relative z-10">
-            <div className="flex items-start gap-4">
-              {/* الصورة مع تأثيرات */}
-              <motion.div
-                className="relative"
-                whileHover={{ rotate: 360 }}
-                transition={{ duration: 1 }}
-              >
-                <div className="w-16 h-16 rounded-xl overflow-hidden bg-gradient-to-r from-[#6366f1] to-[#a855f7] p-0.5">
-                  <img
-                    src={profile.profile_image || "/default-avatar.png"}
-                    alt={profile.full_name}
-                    className="w-full h-full object-cover rounded-xl"
-                    onError={(e) => {
-                      e.target.src = "/default-avatar.png"
-                    }}
-                  />
-                </div>
-                
-                {/* أيقونة عائمة */}
-                <motion.div
-                  className="absolute -top-2 -right-2"
-                  animate={{
-                    y: [0, -5, 0],
-                    rotate: [0, 10, 0]
+        <div className="relative z-10">
+          <div className="flex items-start gap-4">
+            {/* الصورة مع تأثيرات */}
+            <motion.div
+              className="relative"
+              whileHover={{ rotate: 360 }}
+              transition={{ duration: 1 }}
+            >
+              <div className="w-16 h-16 rounded-xl overflow-hidden bg-gradient-to-r from-[#6366f1] to-[#a855f7] p-0.5">
+                <img
+                  src={profile.profile_image || "/default-avatar.png"}
+                  alt={profile.full_name}
+                  className="w-full h-full object-cover rounded-xl"
+                  onError={(e) => {
+                    e.target.src = "/default-avatar.png"
                   }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity
-                  }}
-                >
-                  <div className="w-6 h-6 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg">
-                    {emojis[index % emojis.length]}
-                  </div>
-                </motion.div>
-              </motion.div>
-
-              {/* معلومات الملف */}
-              <div className="flex-1 min-w-0">
-                <motion.h3 
-                  className="text-lg font-semibold text-white mb-1 truncate"
-                  whileHover={{ x: 5 }}
-                >
-                  {profile.full_name}
-                </motion.h3>
-                
-                {profile.title && (
-                  <motion.p 
-                    className="text-sm text-gray-400 mb-2 truncate"
-                    animate={{ opacity: [0.7, 1, 0.7] }}
-                    transition={{ duration: 3, repeat: Infinity }}
-                  >
-                    {profile.title}
-                  </motion.p>
-                )}
-                
-                {/* إحصائيات متحركة */}
-                <motion.div 
-                  className="flex items-center gap-3 text-xs text-gray-500"
-                  whileHover={{ scale: 1.1 }}
-                >
-                  <motion.div 
-                    className="flex items-center gap-1"
-                    whileHover={{ color: '#6366f1' }}
-                  >
-                    <Eye className="w-3 h-3" />
-                    <span>{profile.views_count || 0}</span>
-                  </motion.div>
-                  <motion.div 
-                    className="flex items-center gap-1"
-                    whileHover={{ color: '#a855f7' }}
-                  >
-                    <Heart className="w-3 h-3" />
-                    <span>{profile.likes_count || 0}</span>
-                  </motion.div>
-                </motion.div>
+                />
               </div>
-
-              {/* سهم متحرك */}
+              
+              {/* أيقونة عائمة */}
               <motion.div
-                animate={{ x: [0, 5, 0] }}
-                transition={{ duration: 2, repeat: Infinity }}
+                className="absolute -top-2 -right-2"
+                animate={{
+                  y: [0, -5, 0],
+                  rotate: [0, 10, 0]
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity
+                }}
               >
-                <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-[#a855f7]" />
+                <div className="w-6 h-6 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-lg">
+                  {emojis[index % emojis.length]}
+                </div>
+              </motion.div>
+            </motion.div>
+
+            {/* معلومات الملف */}
+            <div className="flex-1 min-w-0">
+              <motion.h3 
+                className="text-lg font-semibold text-white mb-1 truncate"
+                whileHover={{ x: 5 }}
+              >
+                {profile.full_name}
+              </motion.h3>
+              
+              {profile.title && (
+                <motion.p 
+                  className="text-sm text-gray-400 mb-2 truncate"
+                  animate={{ opacity: [0.7, 1, 0.7] }}
+                  transition={{ duration: 3, repeat: Infinity }}
+                >
+                  {profile.title}
+                </motion.p>
+              )}
+              
+              {/* إحصائيات متحركة */}
+              <motion.div 
+                className="flex items-center gap-3 text-xs text-gray-500"
+                whileHover={{ scale: 1.1 }}
+              >
+                <motion.div 
+                  className="flex items-center gap-1"
+                  whileHover={{ color: '#6366f1' }}
+                >
+                  <Eye className="w-3 h-3" />
+                  <span>{profile.views_count || 0}</span>
+                </motion.div>
+                <motion.div 
+                  className="flex items-center gap-1"
+                  whileHover={{ color: '#a855f7' }}
+                >
+                  <Heart className="w-3 h-3" />
+                  <span>{profile.likes_count || 0}</span>
+                </motion.div>
               </motion.div>
             </div>
+
+            {/* سهم متحرك */}
+            <motion.div
+              animate={{ x: [0, 5, 0] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-[#a855f7]" />
+            </motion.div>
           </div>
-        </Link>
-      </Tilt>
+        </div>
+      </Link>
     </motion.div>
   )
 }
@@ -574,9 +561,167 @@ const LandingPage = () => {
         </div>
       )}
 
-      {/* باقي الأقسام مع إضافة تأثيرات مشابهة... */}
-      {/* يمكن إضافة نفس التأثيرات لبقية الأقسام بنفس النمط */}
+      {/* How It Works Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+        <div className="text-center mb-12">
+          <motion.h2 
+            className="text-3xl sm:text-4xl font-bold text-white mb-4"
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+          >
+            كيف <span className="text-[#a855f7]">يعمل</span>؟
+          </motion.h2>
+          <motion.p 
+            className="text-gray-400 max-w-2xl mx-auto"
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            viewport={{ once: true }}
+          >
+            ثلاث خطوات بسيطة تفصلك عن بورتفليو احترافي
+          </motion.p>
+        </div>
 
+        <div className="grid md:grid-cols-3 gap-8">
+          {[
+            { icon: FileText, title: 'أنشئ حسابك', desc: 'سجل مجاناً وأضف معلوماتك الأساسية في دقائق', color: 'from-[#6366f1] to-[#a855f7]' },
+            { icon: Code, title: 'أضف مشاريعك', desc: 'أضف مشاريعك ومهاراتك وشهاداتك بسهولة', color: 'from-[#a855f7] to-[#f59e0b]' },
+            { icon: Globe, title: 'انشر موقعك', desc: 'احصل على رابط خاص بك وشاركه مع العالم', color: 'from-[#10b981] to-[#6366f1]' }
+          ].map((step, index) => (
+            <AnimatedCard key={index} delay={index * 0.2}>
+              <div className="text-center p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 hover:border-[#a855f7]/50 transition-all">
+                <div className="relative mb-6 inline-block">
+                  <div className={`w-20 h-20 bg-gradient-to-r ${step.color} rounded-2xl flex items-center justify-center mx-auto`}>
+                    <step.icon className="w-10 h-10 text-white" />
+                  </div>
+                  <motion.div 
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-white rounded-full flex items-center justify-center text-[#6366f1] font-bold text-sm"
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    {index + 1}
+                  </motion.div>
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-3">{step.title}</h3>
+                <p className="text-gray-400 leading-relaxed">{step.desc}</p>
+              </div>
+            </AnimatedCard>
+          ))}
+        </div>
+      </div>
+
+      {/* Features Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+        <div className="text-center mb-12">
+          <motion.h2 
+            className="text-3xl sm:text-4xl font-bold text-white mb-4"
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+          >
+            لماذا <span className="text-[#a855f7]">Portfolio-v5</span>؟
+          </motion.h2>
+          <motion.p 
+            className="text-gray-400 max-w-2xl mx-auto"
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            viewport={{ once: true }}
+          >
+            كل ما تحتاجه لبناء هويتك المهنية في مكان واحد
+          </motion.p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[
+            { icon: Zap, title: 'سرعة فائقة', desc: 'أنشئ موقعك الشخصي في دقائق معدودة' },
+            { icon: Shield, title: 'خصوصية وأمان', desc: 'بياناتك مشفرة وآمنة - أنت من تتحكم في نشرها' },
+            { icon: Globe, title: 'نطاق مخصص', desc: 'اربط نطاقك الخاص أو استخدم نطاقنا الفرعي مجاناً' },
+            { icon: Users, title: 'مجتمع نشط', desc: 'انضم لآلاف المطورين الذين يبنون هويتهم المهنية' },
+            { icon: Award, title: 'عرض احترافي', desc: 'قوالب مصممة خصيصاً لعرض مشاريعك وخبراتك' },
+            { icon: Rocket, title: 'تحديثات مستمرة', desc: 'نضيف باستمرار ميزات وقوالب جديدة' }
+          ].map((feature, index) => (
+            <AnimatedCard key={index} delay={index * 0.1}>
+              <div className="group bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:border-[#a855f7]/50 transition-all hover:scale-105 hover:shadow-xl">
+                <motion.div 
+                  className="w-12 h-12 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-xl flex items-center justify-center mb-4"
+                  whileHover={{ rotate: 360 }}
+                  transition={{ duration: 0.6 }}
+                >
+                  <feature.icon className="w-6 h-6 text-white" />
+                </motion.div>
+                <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
+                <p className="text-sm text-gray-400 leading-relaxed">{feature.desc}</p>
+              </div>
+            </AnimatedCard>
+          ))}
+        </div>
+      </div>
+
+      {/* CTA Section */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
+        <motion.div
+          className="bg-gradient-to-r from-[#6366f1]/20 to-[#a855f7]/20 rounded-2xl sm:rounded-3xl p-8 sm:p-12 text-center border border-white/10"
+          initial={{ opacity: 0, scale: 0.9 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+        >
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3 sm:mb-4">
+            ابدأ رحلتك الاحترافية اليوم
+          </h2>
+          <p className="text-base sm:text-lg text-gray-400 mb-6 sm:mb-8 max-w-2xl mx-auto">
+            انضم إلى آلاف المطورين والمبدعين الذين يبنون هويتهم المهنية معنا
+          </p>
+          <motion.div
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Link
+              to="/register"
+              className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold text-base sm:text-lg"
+            >
+              <span>أنشئ حسابك مجاناً</span>
+              <Rocket className="w-4 h-4 sm:w-5 sm:h-5" />
+            </Link>
+          </motion.div>
+        </motion.div>
+      </div>
+
+      {/* Footer */}
+      <footer className="border-t border-white/10 py-6 sm:py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">P</span>
+              </div>
+              <span className="text-sm sm:text-base text-white">Portfolio-v5 © 2025</span>
+            </div>
+            
+            <div className="flex gap-4 sm:gap-6">
+              <a href="#" className="text-xs sm:text-sm text-gray-400 hover:text-white transition-colors">الخصوصية</a>
+              <a href="#" className="text-xs sm:text-sm text-gray-400 hover:text-white transition-colors">الشروط</a>
+              <a href="#" className="text-xs sm:text-sm text-gray-400 hover:text-white transition-colors">اتصل بنا</a>
+            </div>
+
+            <div className="flex gap-3 sm:gap-4">
+              <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <Github className="w-4 h-4 sm:w-5 sm:h-5" />
+              </a>
+              <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <Twitter className="w-4 h-4 sm:w-5 sm:h-5" />
+              </a>
+              <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <Linkedin className="w-4 h-4 sm:w-5 sm:h-5" />
+              </a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
