@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useDeveloper } from "../context/DeveloperContext";
+import { projectService } from "../../lib/supabase";
 import {
   ArrowLeft,
   ExternalLink,
@@ -14,10 +14,11 @@ import {
   Calendar,
   Info,
   AlertCircle,
-  CheckCircle2,
-  XCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  Loader,
+  XCircle,
+  CheckCircle2
 } from "lucide-react";
 import Swal from "sweetalert2";
 
@@ -118,78 +119,107 @@ const handleGithubClick = (githubLink) => {
 const ProjectDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { getProjects } = useDeveloper();
 
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
-
-    // جلب المشاريع من Context
-    const projects = getProjects() || [];
-    console.log("📁 جميع المشاريع:", projects);
-    console.log("🔍 البحث عن مشروع بـ ID:", id);
-
-    // البحث عن المشروع المطلوب
-    const selected = projects.find((p) => String(p.id) === String(id));
-
-    if (selected) {
-      console.log("✅ تم العثور على المشروع:", selected);
-      
-      // تجهيز البيانات مع قيم افتراضية
-      setProject({
-        id: selected.id,
-        title: selected.title || "بدون عنوان",
-        description: selected.description || "لا يوجد وصف لهذا المشروع",
-        content: selected.content || selected.description || "لا يوجد محتوى تفصيلي",
-        image: selected.image || null,
-        technologies: Array.isArray(selected.technologies) ? selected.technologies : [],
-        features: Array.isArray(selected.features) ? selected.features : [],
-        live_url: selected.live_url || null,
-        github_url: selected.github_url || null,
-        status: selected.status || "draft",
-        is_featured: selected.is_featured || false,
-        category: selected.category || null,
-        created_at: selected.created_at || null,
-        updated_at: selected.updated_at || null
-      });
-    } else {
-      console.log("❌ لم يتم العثور على مشروع بهذا ID:", id);
+    
+    const fetchProject = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        console.log("🔍 جلب المشروع بـ ID:", id);
+        
+        // جلب المشروع من قاعدة البيانات مباشرة
+        const projectData = await projectService.getById(id);
+        
+        if (!projectData) {
+          setError("المشروع غير موجود");
+          return;
+        }
+        
+        console.log("✅ تم جلب المشروع:", projectData);
+        
+        // تجهيز البيانات
+        setProject({
+          id: projectData.id,
+          title: projectData.title || "بدون عنوان",
+          description: projectData.description || "لا يوجد وصف لهذا المشروع",
+          content: projectData.content || projectData.description || "لا يوجد محتوى تفصيلي",
+          image: projectData.image || null,
+          technologies: Array.isArray(projectData.technologies) ? projectData.technologies : [],
+          features: Array.isArray(projectData.features) ? projectData.features : [],
+          live_url: projectData.live_url || null,
+          github_url: projectData.github_url || null,
+          status: projectData.status || "draft",
+          is_featured: projectData.is_featured || false,
+          category: projectData.category || null,
+          created_at: projectData.created_at || null,
+          updated_at: projectData.updated_at || null
+        });
+        
+      } catch (err) {
+        console.error("❌ خطأ في جلب المشروع:", err);
+        setError(err.message || "فشل في تحميل المشروع");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    if (id) {
+      fetchProject();
     }
+  }, [id]);
 
-    setLoading(false);
-  }, [id, getProjects]);
+  // العودة للخلف
+  const handleGoBack = () => {
+    if (window.history.length > 2) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
 
   // حالة التحميل
   if (loading) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4" />
+          <Loader className="w-12 h-12 animate-spin text-purple-500 mx-auto mb-4" />
           <p className="text-white text-lg">جاري تحميل المشروع...</p>
+          <button
+            onClick={handleGoBack}
+            className="mt-8 text-gray-400 hover:text-white transition flex items-center gap-2 mx-auto"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            العودة
+          </button>
         </div>
       </div>
     );
   }
 
-  // حالة عدم وجود المشروع
-  if (!project) {
+  // حالة الخطأ أو عدم وجود المشروع
+  if (error || !project) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center px-4">
         <div className="text-center max-w-md">
           <AlertCircle className="w-20 h-20 text-red-500/50 mx-auto mb-6" />
           <h2 className="text-2xl text-white mb-3">المشروع غير موجود</h2>
           <p className="text-gray-400 mb-8">
-            عذراً، لم نتمكن من العثور على المشروع الذي تبحث عنه. قد يكون قد تم حذفه أو أن الرابط غير صحيح.
+            {error || "عذراً، لم نتمكن من العثور على المشروع الذي تبحث عنه."}
           </p>
           <button
-            onClick={() => navigate(-1)}
+            onClick={handleGoBack}
             className="px-8 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-105 transition"
           >
-            العودة للصفحة السابقة
+            العودة للصفحة الرئيسية
           </button>
         </div>
       </div>
@@ -202,7 +232,7 @@ const ProjectDetails = () => {
 
         {/* زر العودة */}
         <button
-          onClick={() => navigate(-1)}
+          onClick={handleGoBack}
           className="flex items-center gap-2 mb-8 text-gray-400 hover:text-white transition group"
         >
           <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition" />
