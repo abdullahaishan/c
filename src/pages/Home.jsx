@@ -1,134 +1,142 @@
 import React, { useState, useEffect, memo } from "react";
+import { Download, Heart } from "lucide-react";
+import AOS from "aos";
+import "aos/dist/aos.css";
+import { useDeveloper } from '../context/DeveloperContext';
+import { likeService } from '../lib/supabase';
+import AnimatedBackground from '../components/AnimatedBackground';
+import SocialLinks from '../components/SocialLinks';
+import Swal from 'sweetalert2';
 
-// =============================================
-// 🔴 جميع الاستيرادات الخارجية مُعلقة - لن تسبب انهيار
-// =============================================
-
-// ❌ استيرادات خارجية - علقها كلها في البداية
-import { Download } from "lucide-react";
- import AOS from "aos";
- import "aos/dist/aos.css";
- import { useDeveloper } from '../context/DeveloperContext';
-import AnimatedBackground from '../components/AnimatedBackground'; import SocialLinks from '../components/SocialLinks';
-
-// =============================================
-// مكون النص المتحرك - هذا آمن لأنه يعتمد على React فقط
-// =============================================
+// مكون النص المتحرك (كما هو)
 const AnimatedText = memo(({ skills }) => {
-  const [text, setText] = useState("");
-  const [isTyping, setIsTyping] = useState(true);
-  const [wordIndex, setWordIndex] = useState(0);
-  const [charIndex, setCharIndex] = useState(0);
+  // ... (نفس الكود السابق)
+});
 
-  const words = skills && skills.length > 0 ? skills : [
+// مكون الصورة (كما هو)
+const ProfileImage = memo(({ image }) => {
+  // ... (نفس الكود السابق)
+});
+
+// مكون زر الإعجاب
+const LikeButton = ({ developerId, initialLikes }) => {
+  const [likes, setLikes] = useState(initialLikes || 0);
+  const [liked, setLiked] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // التحقق مما إذا كان الزائر قد أعجب سابقاً
+    const checkLike = async () => {
+      const visitorIp = await fetch('https://api.ipify.org?format=json')
+        .then(res => res.json())
+        .then(data => data.ip)
+        .catch(() => 'unknown');
+
+      const hasLiked = await likeService.hasLiked(developerId, visitorIp);
+      setLiked(hasLiked);
+    };
+
+    if (developerId) {
+      checkLike();
+    }
+  }, [developerId]);
+
+  const handleLike = async () => {
+    if (liked) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Already Liked',
+        text: 'You have already liked this profile.',
+        timer: 2000,
+        showConfirmButton: false,
+        background: '#030014',
+        color: '#ffffff'
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const visitorIp = await fetch('https://api.ipify.org?format=json')
+        .then(res => res.json())
+        .then(data => data.ip)
+        .catch(() => 'unknown');
+
+      await likeService.addLike(developerId, visitorIp);
+      setLiked(true);
+      setLikes(prev => prev + 1);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Thank You!',
+        text: 'Your like has been recorded.',
+        timer: 2000,
+        showConfirmButton: false,
+        background: '#030014',
+        color: '#ffffff'
+      });
+    } catch (error) {
+      console.error('Error liking:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.message === 'Already liked' 
+          ? 'You have already liked this profile.' 
+          : 'Failed to record your like.',
+        background: '#030014',
+        color: '#ffffff'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleLike}
+      disabled={loading || liked}
+      className={`group relative flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+        liked 
+          ? 'bg-pink-500/20 text-pink-400 cursor-not-allowed' 
+          : 'bg-white/5 text-gray-400 hover:bg-pink-500/20 hover:text-pink-400'
+      }`}
+    >
+      <Heart 
+        className={`w-5 h-5 transition-all ${liked ? 'fill-pink-400' : ''}`} 
+      />
+      <span className="text-sm font-medium">{likes}</span>
+      
+      {/* Tooltip */}
+      <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/90 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
+        {liked ? 'Already liked' : 'Like this profile'}
+      </span>
+    </button>
+  );
+};
+
+const Home = ({ developer: propDeveloper }) => {
+  const context = useDeveloper();
+  const developer = propDeveloper || context.developer || {};
+
+  const mainSkills = context.getMainSkills ? context.getMainSkills() : [
     "Flutter Developer",
     "MySQL Expert",
     "PHP Developer",
     "Firebase Specialist"
   ];
 
-  useEffect(() => {
-    const TYPING_SPEED = 100;
-    const ERASING_SPEED = 50;
-    const PAUSE_DURATION = 2000;
+  const socialLinks = context.getSocialLinks ? context.getSocialLinks() : {};
+  const adminLinks = context.getAdminSocialLinks ? context.getAdminSocialLinks() : {};
+  const profileImage = context.getProfileImage ? context.getProfileImage() : "/Coding.gif";
+  const isFree = context.isFreePlan ? context.isFreePlan() : true;
+  const likesCount = developer.likes_count || 0;
 
-    const handleTyping = () => {
-      if (isTyping) {
-        if (charIndex < words[wordIndex].length) {
-          setText(prev => prev + words[wordIndex][charIndex]);
-          setCharIndex(prev => prev + 1);
-        } else {
-          setTimeout(() => setIsTyping(false), PAUSE_DURATION);
-        }
-      } else {
-        if (charIndex > 0) {
-          setText(prev => prev.slice(0, -1));
-          setCharIndex(prev => prev - 1);
-        } else {
-          setWordIndex(prev => (prev + 1) % words.length);
-          setIsTyping(true);
-        }
-      }
-    };
-
-    const timeout = setTimeout(handleTyping, isTyping ? TYPING_SPEED : ERASING_SPEED);
-    return () => clearTimeout(timeout);
-  }, [charIndex, isTyping, wordIndex, words]);
-
-  return (
-    <div className="h-8 flex items-center">
-      <span className="text-lg sm:text-xl md:text-2xl text-gray-300 font-light">
-        <span className="text-[#a855f7] font-semibold">{text}</span>
-      </span>
-      <span className="w-[3px] h-5 sm:h-6 bg-[#a855f7] ml-1 animate-blink"></span>
-    </div>
-  );
-});
-
-// =============================================
-// مكون الصورة - هذا آمن أيضاً
-// =============================================
-const ProfileImage = memo(({ image }) => {
-  const [imageError, setImageError] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+    AOS.init({ once: true, offset: 10 });
+    setIsLoaded(true);
   }, []);
-
-  const imageSource = imageError ? "/Coding.gif" : image;
-
-  return (
-    <div className="relative group">
-      <div
-        className={`absolute inset-0 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-full blur-3xl transition-all duration-700 ${
-          isMobile
-            ? "opacity-10"
-            : "opacity-20 group-hover:opacity-30"
-        }`}
-      ></div>
-
-      <img
-        src={imageSource}
-        alt="Profile"
-        onError={() => setImageError(true)}
-        className={`relative object-cover rounded-full border-4 border-white/10 transition-all duration-700 ${
-          isMobile
-            ? "w-40 h-40 sm:w-48 sm:h-48"
-            : "w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 group-hover:scale-105"
-        }`}
-      />
-    </div>
-  );
-});
-
-// =============================================
-// المكون الرئيسي - مع بيانات افتراضية آمنة
-// =============================================
-const Home = ({ developer: propDeveloper }) => {
-const context = useDeveloper();   // <-- أضف هذا السطر
-const developer = propDeveloper || context.developer || {};
-
-const mainSkills = context.getMainSkills ? context.getMainSkills() : [
-  "Flutter Developer",
-  "MySQL Expert",
-  "PHP Developer",
-  "Firebase Specialist"
-];
-
-const profileImage = context.getProfileImage ? context.getProfileImage() : "/Coding.gif";
-
-const [isLoaded, setIsLoaded] = useState(false);
-
-  useEffect(() => {
-  AOS.init({ once: true, offset: 10 });
-  setIsLoaded(true);
-}, []);
 
   return (
     <div className={`relative z-10 transition-all duration-1000 ${isLoaded ? "opacity-100" : "opacity-0"}`}>
@@ -139,21 +147,35 @@ const [isLoaded, setIsLoaded] = useState(false);
           {/* القسم الأيسر */}
           <div className="w-full lg:w-1/2 space-y-4 sm:space-y-5 lg:space-y-6 text-center lg:text-left order-2 lg:order-1">
             
-            {/* الاسم - بيانات افتراضية */}
-            <div>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white">
-  {developer?.full_name?.split(" ")[0] || "Abdullah"}
-</h1>
-
-<h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-gray-300 mt-1">
-  {developer?.full_name?.split(" ").slice(1).join(" ") || "Zabin Ali Aishan"}
-</h2>
+            {/* Header with Like Button */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white">
+                  {developer?.full_name?.split(" ")[0] || "Abdullah"}
+                </h1>
+                <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-gray-300 mt-1">
+                  {developer?.full_name?.split(" ").slice(1).join(" ") || "Zabin Ali Aishan"}
+                </h2>
+              </div>
+              
+              {/* Like Button */}
+              <LikeButton 
+                developerId={developer.id} 
+                initialLikes={likesCount}
+              />
             </div>
 
-            {/* النص المتحرك - يعمل بدون Context */}
+            {/* النص المتحرك */}
             <div>
               <AnimatedText skills={mainSkills} />
             </div>
+
+            {/* الوصف (إذا كان موجوداً) */}
+            {developer.bio && (
+              <p className="text-gray-400 text-sm leading-relaxed">
+                {developer.bio}
+              </p>
+            )}
 
             {/* أزرار المشاريع والتواصل */}
             <div className="flex gap-2 sm:gap-3 justify-center lg:justify-start">
@@ -172,20 +194,14 @@ const [isLoaded, setIsLoaded] = useState(false);
               </a>
             </div>
 
-            {/* 🟢 روابط التواصل - معطلة حالياً */}
+            {/* روابط التواصل */}
             <div data-aos="fade-right" data-aos-delay="1000">
-             {/*<SocialLinks 
-  links={socialLinks || {}}        // تأكد من تمرير كائن حتى لو كان فارغاً
-  isPaid={!isFree} 
-  isFreePlan={isFree || false} 
-  adminLinks={adminLinks || {}} 
-/>*/}
-</div>
-            {/* رسالة تشخيصية */}
-            <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-              <p className="text-yellow-500 text-sm">
-                🔧 وضع التشخيص: جميع الاستيرادات الخارجية معطلة
-              </p>
+              <SocialLinks 
+                links={socialLinks || {}}
+                isPaid={!isFree}
+                isFreePlan={isFree || false}
+                adminLinks={adminLinks || {}}
+              />
             </div>
           </div>
 
