@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import Confetti from 'react-confetti'
 import { useInView } from 'react-intersection-observer'
 import Typewriter from 'typewriter-effect'
 import { 
@@ -95,10 +94,8 @@ const AnimatedCard = ({ children, delay = 0, className = "" }) => {
   )
 }
 
-// مكون الصورة الشخصية المتحركة
+// مكون الصورة الشخصية المتحركة (بدون Confetti)
 const ProfileCard = ({ profile, index }) => {
-  const [showConfetti, setShowConfetti] = useState(false)
-  
   const emojis = [
     <Star className="w-4 h-4 text-yellow-400" />,
     <Crown className="w-4 h-4 text-yellow-500" />,
@@ -139,8 +136,6 @@ const ProfileCard = ({ profile, index }) => {
       <Link
         to={`/u/${profile.username}`}
         className="group relative block bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/20 overflow-hidden"
-        onMouseEnter={() => setShowConfetti(true)}
-        onMouseLeave={() => setShowConfetti(false)}
       >
         {/* خلفية متحركة */}
         <motion.div
@@ -155,17 +150,6 @@ const ProfileCard = ({ profile, index }) => {
             repeatType: "reverse"
           }}
         />
-        
-        {/* تأثير الكونفيتي عند التحويم */}
-        {showConfetti && (
-          <Confetti
-            width={300}
-            height={300}
-            numberOfPieces={20}
-            recycle={false}
-            colors={['#6366f1', '#a855f7', '#f59e0b', '#10b981']}
-          />
-        )}
 
         <div className="relative z-10">
           <div className="flex items-start gap-4">
