@@ -1590,7 +1590,7 @@ export const authService = {
   },
 
   // تسجيل مستخدم جديد
-  async register(userData) {
+  {/*  async register(userData) {
     // 1. إنشاء المستخدم في Supabase Auth
     const { data, error } = await supabase.auth.signUp({
       email: userData.email,
@@ -1622,7 +1622,32 @@ export const authService = {
     
     if (insertError) throw insertError
     return developer
-  },
+  },*/}
+// تسجيل مستخدم جديد
+async register(userData) {
+  // 1. إنشاء المستخدم في Supabase Auth فقط
+  const { data, error } = await supabase.auth.signUp({
+    email: userData.email,
+    password: userData.password,
+    options: {
+      data: {
+        full_name: userData.full_name
+      }
+    }
+  })
+  
+  if (error) throw error
+
+  // 2. تخزين البريد في sessionStorage للتأكيد
+  sessionStorage.setItem('pendingVerification', userData.email)
+  sessionStorage.setItem('pendingUserData', JSON.stringify({
+    full_name: userData.full_name,
+    email: userData.email
+  }))
+
+  // ✅ لا تخزن في developers بعد - انتظر التأكيد
+  return { user: data.user }
+}
 
   // تسجيل الخروج
   async logout() {
