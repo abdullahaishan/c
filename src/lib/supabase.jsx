@@ -193,60 +193,59 @@ export const developerService = {
         .select('id, developer_id')  // ✅ فقط id و developer_id
         .eq('developer_id', developerId)
       
-      if (error) {
-        console.log('Education table not available:', error.message)
-        return []
-      }
-      return data || []
-    } catch (error) {
-      console.log('Error fetching education:', error.message)
-      return []
-    }
-  },
+async getByUsername(username) {
+  try {
+    // استعلام يجلب المطور + فقط id و developer_id من كل جدول
+    const { data, error } = await supabase
+      .from('developers')
+      .select(`
+        *,
+        projects (
+          id,
+          developer_id
+        ),
+        skills (*),
+        experience (
+          id,
+          developer_id
+        ),
+        education (
+          id,
+          developer_id
+        ),
+        certificates (
+          id,
+          developer_id
+        ),
+        social_links (
+          id,
+          developer_id
+        )
+      `)
+      .eq('username', username)
+      .eq('is_active', true)
+      .single()
 
-  // جلب روابط التواصل - فقط المعرفات (id, developer_id, platform)
-  async getDeveloperSocialLinks(developerId) {
-    try {
-      const { data, error } = await supabase
-        .from('social_links')
-        .select('id, developer_id, platform')  // ✅ id, developer_id, platform
-        .eq('developer_id', developerId)
-      
-      if (error) {
-        console.log('Social links table not available:', error.message)
-        return []
-      }
-      return data || []
-    } catch (error) {
-      console.log('Error fetching social links:', error.message)
-      return []
+    if (error) {
+      console.error('developerService.getByUsername error:', error)
+      throw error
     }
-        },
 
-  // دوال إضافية - لجلب البيانات الكاملة عند الحاجة (اختياري)
-  async getFullProjects(developerId) {
-    try {
-      const { data } = await supabase
-        .from('projects')
-        .select('*')  // ✅ كل الحقول
-        .eq('developer_id', developerId)
-      return data || []
-    } catch (error) {
-      return []
-    }
-  },
+    if (!data) throw new Error('Developer not found')
 
-  async getFullCertificates(developerId) {
-    try {
-      const { data } = await supabase
-        .from('certificates')
-        .select('*')
-        .eq('developer_id', developerId)
-      return data || []
-    } catch (error) {
-      return []
-    }
-  },
+    // ✅ تأكد أن الحقول المصفوفية ليست undefined
+    data.projects = data.projects || []
+    data.skills = data.skills || []
+    data.experience = data.experience || []
+    data.education = data.education || []
+    data.certificates = data.certificates || []
+    data.social_links = data.social_links || []
+
+    return data
+  } catch (err) {
+    throw err
+  }
+},
   // زيادة عدد الزيارات (fire-and-forget لتقليل التأخير)
   async incrementViews(id) {
     // لا ننتظر النتيجة هنا (لا نستخدم await) لكي لا نبطئ العرض
