@@ -24,7 +24,6 @@ export const DeveloperProvider = ({ children, username }) => {
         setLoading(true)
         setError(null)
 
-        // ✅ استخدام developerService.getByUsername الذي يجلب جميع الجداول
         const data = await developerService.getByUsername(username)
 
         if (!data) {
@@ -46,7 +45,7 @@ export const DeveloperProvider = ({ children, username }) => {
     fetchDeveloper()
   }, [username])
 
-  // ✅ دوال المساعدة لاستخراج البيانات من الكائن الرئيسي
+  // دوال المساعدة (تستخدم نفس الأسماء لتوافق ملفات العرض)
   const getProjects = () => developer?.projects || []
   
   const getMainSkills = () => {
@@ -63,7 +62,7 @@ export const DeveloperProvider = ({ children, username }) => {
   
   const getSocialLinks = () => {
     const links = {}
-    // ✅ social_links منفصلة عن developer
+    // social_links منفصلة عن developer
     (developer?.social_links || []).forEach(link => {
       links[link.platform] = link.url
     })
@@ -96,6 +95,8 @@ export const DeveloperProvider = ({ children, username }) => {
 
   const value = {
     developer,
+    publicLoading: loading,
+    publicError: error,
     loading,
     error,
     isFreePlan,
