@@ -1,18 +1,29 @@
 import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useAdminAuth } from '../hooks/useAdminAuth'
 import LoadingScreen from './LoadingScreen'
 
-const ProtectedRoute = ({ children }) => {
-  const { user, loading, isAuthenticated } = useAuth()
+const ProtectedRoute = ({ children, adminOnly = false }) => {
+  const { user, loading } = useAuth()
+  const { admin, loading: adminLoading } = useAdminAuth()
   const location = useLocation()
 
-  if (loading) {
+  // حالة التحميل
+  if (loading || (adminOnly && adminLoading)) {
     return <LoadingScreen />
   }
 
-  if (!isAuthenticated) {
-    // حفظ المسار الحالي للعودة إليه بعد تسجيل الدخول
+  // إذا كان المسار خاص بالأدمن
+  if (adminOnly) {
+    if (!admin) {
+      return <Navigate to="/login" state={{ from: location }} replace />
+    }
+    return children
+  }
+
+  // إذا كان مسار عادي (للمستخدمين العاديين)
+  if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
