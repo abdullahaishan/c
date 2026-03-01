@@ -13,64 +13,66 @@ const ConfirmEmail = () => {
   useEffect(() => {
     const confirmEmail = async () => {
       try {
-        // 1. الحصول على رمز التأكيد من الرابط
-        const token = searchParams.get('token')
-        const type = searchParams.get('type')
+        // 1. انتظر حتى يتم تحديث حالة المستخدم في Auth
+        // هذا مهم لأن Supabase قد يحتاج لحظة بعد التأكيد
+        await new Promise(resolve => setTimeout(resolve, 1000))
 
-        if (type === 'signup' && token) {
-          // تأكيد البريد عبر Supabase
-          const { error } = await supabase.auth.verifyOtp({
-            token_hash: token,
-            type: 'signup'
-          })
-
-          if (error) throw error
-
-          // 2. جلب بيانات المستخدم المؤكدة
-          const { data: { user } } = await supabase.auth.getUser()
-
-          if (!user) throw new Error('User not found')
-
-          // 3. استرجاع البيانات المؤقتة
-          const pendingData = sessionStorage.getItem('pendingUserData')
-          const userData = pendingData ? JSON.parse(pendingData) : {
-            full_name: user.user_metadata?.full_name || 'User',
-            email: user.email
-          }
-
-          // 4. الآن فقط أنشئ سجل في جدول developers
-          const username = userData.full_name
-            .toLowerCase()
-            .replace(/[^a-z0-9]/g, '-') + 
-            '-' + Math.random().toString(36).substring(2, 6)
-
-          const { error: insertError } = await supabase
-            .from('developers')
-            .insert([{
-              id: user.id,
-              username,
-              email: user.email,
-              full_name: userData.full_name,
-              plan_id: 1,
-              role: 'user',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }])
-
-          if (insertError) throw insertError
-
-          // 5. تنظيف التخزين المؤقت
-          sessionStorage.removeItem('pendingVerification')
-          sessionStorage.removeItem('pendingUserData')
-
-          setStatus('success')
-          setMessage('تم تأكيد بريدك الإلكتروني بنجاح!')
-
-          // التوجيه إلى dashboard بعد 3 ثوان
-          setTimeout(() => navigate('/dashboard'), 3000)
-        } else {
-          throw new Error('Invalid confirmation link')
+        // 2. جلب المستخدم الحالي
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
+        
+        if (userError || !user) {
+          throw new Error('لم يتم العثور على المستخدم')
         }
+
+        // 3. التحقق من تأكيد البريد
+        if (!user.email_confirmed_at) {
+          setStatus('error')
+          setMessage('لم يتم تأكيد بريدك الإلكتروني بعد')
+          return
+        }
+
+        // 4. جلب البيانات من الجدول المؤقت
+        const { data: pending, error: pendingError } = await supabase
+          .from('pending_developers')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+
+        if (pendingError || !pending) {
+          throw new Error('لم يتم العثور على بياناتك المؤقتة')
+        }
+
+        // 5. نقل البيانات إلى جدول developers
+        const { error: insertError } = await supabase
+          .from('developers')
+          .insert([{
+            id: pending.id,
+            username: pending.username,
+            email: pending.email,
+            full_name: pending.full_name,
+            plan_id: pending.plan_id,
+            role: pending.role,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }])
+
+        if (insertError) throw insertError
+
+        // 6. حذف البيانات من الجدول المؤقت
+        await supabase
+          .from('pending_developers')
+          .delete()
+          .eq('id', user.id)
+
+        // 7. تنظيف sessionStorage
+        sessionStorage.removeItem('pendingVerification')
+
+        setStatus('success')
+        setMessage('تم تأكيد بريدك الإلكتروني وتفعيل حسابك بنجاح!')
+
+        // التوجيه إلى dashboard بعد 3 ثوان
+        setTimeout(() => navigate('/dashboard'), 3000)
+
       } catch (error) {
         console.error('Confirmation error:', error)
         setStatus('error')
@@ -79,7 +81,7 @@ const ConfirmEmail = () => {
     }
 
     confirmEmail()
-  }, [searchParams, navigate])
+  }, [navigate])
 
   return (
     <div className="relative min-h-screen bg-[#030014] overflow-hidden">
@@ -109,12 +111,20 @@ const ConfirmEmail = () => {
               <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
               <h2 className="text-2xl font-bold text-white mb-2">فشل التأكيد</h2>
               <p className="text-red-400 mb-6">{message}</p>
-              <button
-                onClick={() => navigate('/login')}
-                className="px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl"
-              >
-                العودة لتسجيل الدخول
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => navigate('/login')}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl"
+                >
+                  تسجيل الدخول
+                </button>
+                <button
+                  onClick={() => navigate('/register')}
+                  className="flex-1 px-6 py-3 bg-white/10 text-white rounded-xl"
+                >
+                  إنشاء حساب جديد
+                </button>
+              </div>
             </>
           )}
         </div>
