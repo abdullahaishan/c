@@ -61,10 +61,12 @@ const PublicPortfolioWrapper = () => {
 }
 
 const AppRoutes = () => {
-  const [showWelcome, setShowWelcome] = useState(() => {
-    const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome')
-    return hasSeenWelcome !== 'true'
-  })
+  const location = useLocation()
+  
+  // لا تظهر شاشة الترحيب في صفحات معينة
+  const noWelcomePaths = ['/confirm', '/verify-email']
+  const shouldShowWelcome = !noWelcomePaths.includes(location.pathname)
+
   
   const { user, loading } = useAuth()
   const [redirectTo, setRedirectTo] = useState(null)
@@ -98,6 +100,9 @@ const AppRoutes = () => {
       {!showWelcome && (
         <Routes>
           {/* ========== الصفحات العامة ========== */}
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/confirm" element={<ConfirmEmail />} />
+          
           <Route 
             path="/" 
             element={
@@ -112,8 +117,6 @@ const AppRoutes = () => {
           <Route path="/project/:id" element={<ProjectDetail />} />
           
           {/* ========== صفحات التأكيد ========== */}
-          <Route path="/verify-email" element={<VerifyEmail />} />
-          <Route path="/confirm" element={<ConfirmEmail />} />
           
           {/* ========== AI Builder ========== */}
           <Route 
