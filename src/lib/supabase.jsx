@@ -1625,29 +1625,54 @@ export const authService = {
   },*/}
 // تسجيل مستخدم جديد
 async register(userData) {
-  // 1. إنشاء المستخدم في Supabase Auth فقط
-  const { data, error } = await supabase.auth.signUp({
-    email: userData.email,
-    password: userData.password,
-    options: {
-      data: {
-        full_name: userData.full_name
+  try {
+    // 1. إنشاء المستخدم في Supabase Auth
+    const { data, error } = await supabase.auth.signUp({
+      email: userData.email,
+      password: userData.password,
+      options: {
+        data: {
+          full_name: userData.full_name
+        },
+        emailRedirectTo: `${window.location.origin}/confirm`
       }
+    })
+    
+    if (error) throw error
+
+    // 2. إنشاء اسم مستخدم فريد
+    const username = userData.full_name
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '-') + 
+      '-' + Math.random().toString(36).substring(2, 6)
+
+    // 3. تخزين البيانات في الجدول المؤقت
+    const { error: insertError } = await supabase
+      .from('pending_developers')
+      .insert([{
+        id: data.user.id,
+        username,
+        email: userData.email,
+        full_name: userData.full_name,
+        plan_id: 1,
+        role: 'user'
+      }])
+
+    if (insertError) throw insertError
+
+    // 4. تخزين البريد في sessionStorage للتوجيه
+    sessionStorage.setItem('pendingVerification', userData.email)
+
+    return { 
+      success: true, 
+      user: data.user,
+      message: 'تم إرسال رابط التأكيد إلى بريدك الإلكتروني'
     }
-  })
-  
-  if (error) throw error
-
-  // 2. تخزين البريد في sessionStorage للتأكيد
-  sessionStorage.setItem('pendingVerification', userData.email)
-  sessionStorage.setItem('pendingUserData', JSON.stringify({
-    full_name: userData.full_name,
-    email: userData.email
-  }))
-
-  // ✅ لا تخزن في developers بعد - انتظر التأكيد
-  return { user: data.user }
-}
+  } catch (error) {
+    console.error('Registration error:', error)
+    throw error
+  }
+},
 
   // تسجيل الخروج
   async logout() {
