@@ -24,21 +24,25 @@ const ProtectedRoute = ({ children }) => {
 
         // إذا كان مؤكداً، تحقق من وجوده في جدول developers
         if (userData?.email_confirmed_at) {
+          // ✅ استخدم maybeSingle بدلاً من single
           const { data: developer } = await supabase
             .from('developers')
             .select('id')
             .eq('id', user.id)
-            .single()
+            .maybeSingle()
 
           // إذا لم يكن في developers، حاول نقله من pending
           if (!developer) {
+            // ✅ استخدم maybeSingle هنا أيضاً
             const { data: pending } = await supabase
               .from('pending_developers')
               .select('*')
               .eq('id', user.id)
-              .single()
+              .maybeSingle()
 
             if (pending) {
+              console.log('Moving user from pending to developers:', pending)
+              
               // نقل البيانات تلقائياً
               await supabase
                 .from('developers')
