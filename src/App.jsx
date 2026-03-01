@@ -42,6 +42,11 @@ import AdminPlans from './pages/admin/Plans'
 import AdminPayments from './pages/admin/Payments'
 import AdminMessages from './pages/admin/Messages' // إذا كان لديك
 import AdminUpgradeRequests from './pages/admin/UpgradeRequests' // إذا كان لدي
+
+import ConfirmEmail from './pages/auth/ConfirmEmail'
+import VerifyEmail from './pages/auth/VerifyEmail'
+
+
 // Provider
 import { DeveloperProvider } from './context/DeveloperContext'
 import { useAuth } from './hooks/useAuth'
@@ -125,6 +130,10 @@ const AppRoutes = () => {
               </ProtectedRoute>
             }
           >
+            
+// ضمن Routes
+<Route path="/confirm" element={<ConfirmEmail />} />
+<Route path="/verify-email" element={<VerifyEmail />} />
             <Route index element={<Overview />} />
             <Route path="projects" element={<Projects />} />
             <Route path="skills" element={<Skills />} />
