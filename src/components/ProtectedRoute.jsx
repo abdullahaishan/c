@@ -1,30 +1,83 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
-import { useAdminAuth } from '../hooks/useAdminAuth'
+import { supabase } from '../lib/supabase'
 import LoadingScreen from './LoadingScreen'
 
-const ProtectedRoute = ({ children, adminOnly = false }) => {
+const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth()
-  const { admin, loading: adminLoading } = useAdminAuth()
   const location = useLocation()
+  const [checking, setChecking] = useState(true)
+  const [isConfirmed, setIsConfirmed] = useState(false)
 
-  // حالة التحميل
-  if (loading || (adminOnly && adminLoading)) {
+  useEffect(() => {
+    const checkConfirmation = async () => {
+      if (!user) {
+        setChecking(false)
+        return
+      }
+
+      try {
+        // التحقق من تأكيد البريد
+        const { data: { user: userData } } = await supabase.auth.getUser()
+        setIsConfirmed(!!userData?.email_confirmed_at)
+
+        // إذا كان مؤكداً، تحقق من وجوده في جدول developers
+        if (userData?.email_confirmed_at) {
+          const { data: developer } = await supabase
+            .from('developers')
+            .select('id')
+            .eq('id', user.id)
+            .single()
+
+          // إذا لم يكن في developers، حاول نقله من pending
+          if (!developer) {
+            const { data: pending } = await supabase
+              .from('pending_developers')
+              .select('*')
+              .eq('id', user.id)
+              .single()
+
+            if (pending) {
+              // نقل البيانات تلقائياً
+              await supabase
+                .from('developers')
+                .insert([{
+                  id: pending.id,
+                  username: pending.username,
+                  email: pending.email,
+                  full_name: pending.full_name,
+                  plan_id: pending.plan_id,
+                  role: pending.role
+                }])
+
+              await supabase
+                .from('pending_developers')
+                .delete()
+                .eq('id', user.id)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error checking confirmation:', error)
+      } finally {
+        setChecking(false)
+      }
+    }
+
+    checkConfirmation()
+  }, [user])
+
+  if (loading || checking) {
     return <LoadingScreen />
   }
 
-  // إذا كان المسار خاص بالأدمن
-  if (adminOnly) {
-    if (!admin) {
-      return <Navigate to="/admin/login" state={{ from: location }} replace />
-    }
-    return children
-  }
-
-  // إذا كان مسار عادي (للمستخدمين العاديين)
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />
+  }
+
+  if (!isConfirmed) {
+    return <Navigate to="/verify-email" replace />
   }
 
   return children
