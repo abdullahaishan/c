@@ -34,18 +34,18 @@ import NotFound from './pages/NotFound'
 import ProjectDetail from './components/ProjectDetail'
 
 // صفحات الأدمن
-import AdminLogin from './pages/admin/Login'
+import AdminLogin from './pages/admin/Login' // ✅ تأكد من وجود هذا الملف
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminOverview from './pages/admin/Overview'
 import AdminDevelopers from './pages/admin/Developers'
 import AdminPlans from './pages/admin/Plans'
 import AdminPayments from './pages/admin/Payments'
-import AdminMessages from './pages/admin/Messages' // إذا كان لديك
-import AdminUpgradeRequests from './pages/admin/UpgradeRequests' // إذا كان لدي
+import AdminMessages from './pages/admin/Messages'
+import AdminUpgradeRequests from './pages/admin/UpgradeRequests'
 
-import ConfirmEmail from './pages/auth/ConfirmEmail'
+// صفحات التأكيد
 import VerifyEmail from './pages/auth/VerifyEmail'
-
+import ConfirmEmail from './pages/auth/ConfirmEmail'
 
 // Provider
 import { DeveloperProvider } from './context/DeveloperContext'
@@ -111,6 +111,10 @@ const AppRoutes = () => {
           <Route path="/u/:username" element={<PublicPortfolioWrapper />} />
           <Route path="/project/:id" element={<ProjectDetail />} />
           
+          {/* ========== صفحات التأكيد ========== */}
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/confirm" element={<ConfirmEmail />} />
+          
           {/* ========== AI Builder ========== */}
           <Route 
             path="/app/builder" 
@@ -130,10 +134,6 @@ const AppRoutes = () => {
               </ProtectedRoute>
             }
           >
-            
-// ضمن Routes
-<Route path="/confirm" element={<ConfirmEmail />} />
-<Route path="/verify-email" element={<VerifyEmail />} />
             <Route index element={<Overview />} />
             <Route path="projects" element={<Projects />} />
             <Route path="skills" element={<Skills />} />
