@@ -1590,7 +1590,7 @@ export const authService = {
   },
 
   // تسجيل مستخدم جديد
-  {/*  async register(userData) {
+  /*  async register(userData) {
     // 1. إنشاء المستخدم في Supabase Auth
     const { data, error } = await supabase.auth.signUp({
       email: userData.email,
@@ -1622,7 +1622,7 @@ export const authService = {
     
     if (insertError) throw insertError
     return developer
-  },*/},
+  },*/
 // تسجيل مستخدم جديد
 async register(userData) {
   try {
