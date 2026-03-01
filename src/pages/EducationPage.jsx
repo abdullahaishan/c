@@ -97,7 +97,7 @@ const EducationPage = () => {
 
   return (
     <div className="relative min-h-screen bg-[#030014] overflow-hidden">
-      <AnimatedBackground />
+      
       
       <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-20">
 
