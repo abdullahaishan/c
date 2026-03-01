@@ -33,6 +33,17 @@ import NotFound from './pages/NotFound'
 // صفحات المشروع
 import ProjectDetail from './components/ProjectDetail'
 
+import AdminLayout from './pages/admin/AdminLayout'
+import AdminOverview from './pages/admin/Overview'
+import AdminDevelopers from './pages/admin/Developers'
+import AdminPlans from './pages/admin/Plans'
+import AdminPayments from './pages/admin/Payments'
+
+  <Route index element={<AdminOverview />} />
+  <Route path="developers" element={<AdminDevelopers />} />
+  <Route path="plans" element={<AdminPlans />} />
+  <Route path="payments" element={<AdminPayments />} />
+</Route>
 // Provider
 import { DeveloperProvider } from './context/DeveloperContext'
 import { useAuth } from './hooks/useAuth'
@@ -96,7 +107,14 @@ const AppRoutes = () => {
               user ? <Navigate to="/dashboard" replace /> : <LandingPage />
             } 
           />
-          
+          <Route 
+  path="/admin" 
+  element={
+    <ProtectedRoute adminOnly>
+      <AdminLayout />
+    </ProtectedRoute>
+  }
+>
           {/* المصادقة */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
