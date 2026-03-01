@@ -41,6 +41,7 @@ import AdminDevelopers from './pages/admin/Developers'
 import AdminPlans from './pages/admin/Plans'
 import AdminPayments from './pages/admin/Payments'
 import AdminMessages from './pages/admin/Messages' // إذا كان لديك
+import AdminUpgradeRequests from './pages/admin/UpgradeRequests' // إذا كان لديك
 
 // Provider
 import { DeveloperProvider } from './context/DeveloperContext'
