@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom"
+import { useParams, useLocation } from "react-router-dom" // ✅ أضف useLocation هنا
 import React, { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { AnimatePresence } from 'framer-motion'
@@ -34,7 +34,7 @@ import NotFound from './pages/NotFound'
 import ProjectDetail from './components/ProjectDetail'
 
 // صفحات الأدمن
-import AdminLogin from './pages/admin/Login' // ✅ تأكد من وجود هذا الملف
+import AdminLogin from './pages/admin/Login'
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminOverview from './pages/admin/Overview'
 import AdminDevelopers from './pages/admin/Developers'
@@ -62,14 +62,20 @@ const PublicPortfolioWrapper = () => {
 
 const AppRoutes = () => {
   const location = useLocation()
-  
-  // لا تظهر شاشة الترحيب في صفحات معينة
-  const noWelcomePaths = ['/confirm', '/verify-email']
-  const shouldShowWelcome = !noWelcomePaths.includes(location.pathname)
-
-  
   const { user, loading } = useAuth()
   const [redirectTo, setRedirectTo] = useState(null)
+  
+  // ✅ تعريف showWelcome بشكل صحيح
+  const [showWelcome, setShowWelcome] = useState(() => {
+    // لا تظهر شاشة الترحيب في صفحات معينة
+    const noWelcomePaths = ['/confirm', '/verify-email', '/login', '/register']
+    if (noWelcomePaths.includes(location.pathname)) {
+      return false
+    }
+    
+    const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome')
+    return hasSeenWelcome !== 'true'
+  })
 
   const handleWelcomeComplete = () => {
     sessionStorage.setItem('hasSeenWelcome', 'true')
@@ -83,6 +89,16 @@ const AppRoutes = () => {
 
   if (redirectTo) {
     return <Navigate to={redirectTo} replace />
+  }
+
+  // ✅ صفحات التأكيد تظهر دائماً حتى أثناء التحميل
+  if (location.pathname === '/confirm' || location.pathname === '/verify-email') {
+    return (
+      <Routes>
+        <Route path="/verify-email" element={<VerifyEmail />} />
+        <Route path="/confirm" element={<ConfirmEmail />} />
+      </Routes>
+    )
   }
 
   if (loading && showWelcome) {
@@ -100,9 +116,6 @@ const AppRoutes = () => {
       {!showWelcome && (
         <Routes>
           {/* ========== الصفحات العامة ========== */}
-          <Route path="/verify-email" element={<VerifyEmail />} />
-          <Route path="/confirm" element={<ConfirmEmail />} />
-          
           <Route 
             path="/" 
             element={
@@ -115,8 +128,6 @@ const AppRoutes = () => {
           
           <Route path="/u/:username" element={<PublicPortfolioWrapper />} />
           <Route path="/project/:id" element={<ProjectDetail />} />
-          
-          {/* ========== صفحات التأكيد ========== */}
           
           {/* ========== AI Builder ========== */}
           <Route 
