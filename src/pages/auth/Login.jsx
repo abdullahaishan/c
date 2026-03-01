@@ -17,19 +17,27 @@ const Login = () => {
   const from = location.state?.from?.pathname || '/dashboard'
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+  e.preventDefault()
+  
+  setLoading(true)
+  setError('')
 
-    const result = await login(email, password)
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    })
+
+    if (error) throw error
+
+    // ✅ فقط نوجه للوحة التحكم - Auth يتولى الباقي
+    navigate('/dashboard')
     
-    if (result.success) {
-      navigate(from, { replace: true })
-    } else {
-      setError(result.error)
-    }
-    
+  } catch (error) {
+    setError(error.message)
+  } finally {
     setLoading(false)
+  }
   }
 
   return (
