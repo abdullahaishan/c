@@ -1589,40 +1589,7 @@ export const authService = {
     return developer
   },
 
-  // تسجيل مستخدم جديد
-  /*  async register(userData) {
-    // 1. إنشاء المستخدم في Supabase Auth
-    const { data, error } = await supabase.auth.signUp({
-      email: userData.email,
-      password: userData.password,
-      options: {
-        data: {
-          full_name: userData.full_name
-        }
-      }
-    })
-    
-    if (error) throw error
 
-    // 2. إنشاء سجل في جدول developers بنفس ID
-    const { data: developer, error: insertError } = await supabase
-      .from('developers')
-      .insert([{
-        id: data.user.id,  // ✅ نفس ID من Auth
-        username: userData.full_name.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Math.random().toString(36).substring(2, 6),
-        email: userData.email,
-        full_name: userData.full_name,
-        plan_id: 1,
-        role: 'user',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }])
-      .select()
-      .single()
-    
-    if (insertError) throw insertError
-    return developer
-  },*/
 // تسجيل مستخدم جديد
 async register(userData) {
   try {
