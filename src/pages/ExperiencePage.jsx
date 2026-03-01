@@ -72,7 +72,7 @@ const ExperiencePage = () => {
   if (error || !data) {
     return (
       <div className="relative min-h-screen bg-[#030014] overflow-hidden">
-        <AnimatedBackground />
+        
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="text-center max-w-md px-4">
             <AlertCircle className="w-16 h-16 text-red-500/50 mx-auto mb-4" />
