@@ -1,11 +1,11 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAdminAuth } from '../../hooks/useAdminAuth'
-import { Shield, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { Shield, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react'
 import AnimatedBackground from '../../components/AnimatedBackground'
 
 const AdminLogin = () => {
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [localError, setLocalError] = useState('')
@@ -17,12 +17,12 @@ const AdminLogin = () => {
     e.preventDefault()
     setLocalError('')
 
-    if (!username || !password) {
-      setLocalError('Please enter both username and password')
+    if (!email || !password) {
+      setLocalError('Please enter both email and password')
       return
     }
 
-    const result = await login(username, password)
+    const result = await login(email, password)
     
     if (result.success) {
       navigate('/admin')
@@ -43,7 +43,7 @@ const AdminLogin = () => {
               <Shield className="w-12 h-12 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-white mb-2">Admin Login</h1>
-            <p className="text-gray-400">Access the administration panel</p>
+            <p className="text-gray-400">Sign in with your admin credentials</p>
           </div>
 
           {/* Login Form */}
@@ -57,19 +57,19 @@ const AdminLogin = () => {
                 </div>
               )}
 
-              {/* Username Field */}
+              {/* Email Field */}
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Username
+                  Email Address
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6366f1] focus:outline-none transition"
-                    placeholder="Enter admin username"
+                    placeholder="admin@example.com"
                     disabled={loading}
                   />
                 </div>
@@ -87,7 +87,7 @@ const AdminLogin = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full pl-10 pr-12 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-[#6366f1] focus:outline-none transition"
-                    placeholder="Enter password"
+                    placeholder="••••••••"
                     disabled={loading}
                   />
                   <button
@@ -109,21 +109,13 @@ const AdminLogin = () => {
                 {loading ? (
                   <div className="flex items-center justify-center gap-2">
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Logging in...</span>
+                    <span>Signing in...</span>
                   </div>
                 ) : (
-                  'Login to Dashboard'
+                  'Sign In'
                 )}
               </button>
             </form>
-
-            {/* Security Note */}
-            <div className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
-              <p className="text-xs text-yellow-400 text-center">
-                ⚠️ This area is restricted to authorized administrators only.
-                All access attempts are logged.
-              </p>
-            </div>
           </div>
         </div>
       </div>
