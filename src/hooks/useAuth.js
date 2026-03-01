@@ -41,27 +41,55 @@ export const useAuth = () => {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const storedUser = localStorage.getItem('developer')
+        // ✅ استخدام Supabase Auth للتحقق من الجلسة
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (session?.user) {
+          // جلب بيانات المطور من جدول developers (وليس localStorage)
+          const { data: developer } = await supabase
+            .from('developers')
+            .select('*')
+            .eq('id', session.user.id)
+            .single()
 
-        if (storedUser) {
-          const userData = JSON.parse(storedUser)
-
-          if (userData && userData.id) {
-            setUser(userData)
-            await checkPortfolio(userData.id)
+          if (developer) {
+            setUser(developer)
+            await checkPortfolio(developer.id)
           } else {
-            localStorage.removeItem('developer')
+            // إذا لم يكن في developers، تحقق من pending_developers
+            const { data: pending } = await supabase
+              .from('pending_developers')
+              .select('*')
+              .eq('id', session.user.id)
+              .single()
+
+            if (pending) {
+              // المستخدم في مرحلة الانتظار
+              setUser({ ...pending, pending: true })
+            }
           }
         }
       } catch (err) {
         console.error('Init auth error:', err)
-        localStorage.removeItem('developer')
       } finally {
         setLoading(false)
       }
     }
 
     initAuth()
+
+    // الاستماع لتغييرات المصادقة
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        // تحديث حالة المستخدم عند تغيير الجلسة
+        initAuth()
+      } else {
+        setUser(null)
+        setHasPortfolio(false)
+      }
+    })
+
+    return () => subscription?.unsubscribe()
   }, [])
 
   // ✅ تسجيل الدخول
@@ -91,24 +119,27 @@ export const useAuth = () => {
     }
   }
 
-  // ✅ إنشاء حساب
+  // ✅ إنشاء حساب - ✅ الأهم: التعديل هنا
   const register = async (formData) => {
     try {
       setLoading(true)
       setError(null)
 
-      const newUser = await authService.register(formData)
-
-      if (!newUser || !newUser.id) {
-        throw new Error('Registration failed: invalid user data')
+      const result = await authService.register(formData)
+      
+      // ✅ authService.register يعيد { success, user, message }
+      if (!result.success) {
+        throw new Error(result.message || 'Registration failed')
       }
 
-      setUser(newUser)
-      localStorage.setItem('developer', JSON.stringify(newUser))
+      // لا نضع المستخدم في state مباشرة لأنه غير مؤكد بعد
+      // نوجهه لصفحة التأكيد
 
-      setHasPortfolio(false)
-
-      return { success: true, user: newUser }
+      return { 
+        success: true, 
+        user: result.user,
+        message: 'تم إرسال رابط التأكيد إلى بريدك الإلكتروني'
+      }
 
     } catch (err) {
       setError(err.message)
@@ -119,10 +150,15 @@ export const useAuth = () => {
   }
 
   // ✅ تسجيل الخروج
-  const logout = () => {
-    setUser(null)
-    setHasPortfolio(false)
-    localStorage.removeItem('developer')
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut()
+      setUser(null)
+      setHasPortfolio(false)
+      localStorage.removeItem('developer')
+    } catch (err) {
+      console.error('Logout error:', err)
+    }
   }
 
   const refreshPortfolioStatus = async () => {
