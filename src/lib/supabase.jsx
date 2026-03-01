@@ -158,7 +158,11 @@ async getByUsername(username) {
       .select(`
         *,
         portfolios (*),
+        projects (*),
         skills (*),
+        certificates (*),
+        experience (*),
+        education (*),
         social_links (*)
       `)
       .eq('id', id)
