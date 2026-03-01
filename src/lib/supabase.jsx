@@ -159,7 +159,7 @@ async getByUsername(username) {
         *,
         portfolios (*),
         skills (*),
-
+        social_links (*)
       `)
       .eq('id', id)
       .single()
