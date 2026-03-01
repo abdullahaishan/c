@@ -41,8 +41,7 @@ import AdminDevelopers from './pages/admin/Developers'
 import AdminPlans from './pages/admin/Plans'
 import AdminPayments from './pages/admin/Payments'
 import AdminMessages from './pages/admin/Messages' // إذا كان لديك
-import AdminUpgradeRequests from './pages/admin/UpgradeRequests' // إذا كان لديك
-
+import AdminUpgradeRequests from './pages/admin/UpgradeRequests' // إذا كان لدي
 // Provider
 import { DeveloperProvider } from './context/DeveloperContext'
 import { useAuth } from './hooks/useAuth'
@@ -153,6 +152,7 @@ const AppRoutes = () => {
             <Route path="plans" element={<AdminPlans />} />
             <Route path="payments" element={<AdminPayments />} />
             <Route path="messages" element={<AdminMessages />} />
+            <Route path="upgrade-requests" element={<AdminUpgradeRequests />} />
           </Route>
           
           {/* ========== 404 ========== */}
