@@ -1,24 +1,30 @@
-// src/pages/admin/Developers.jsx
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import {
   Search,
   Filter,
-  MoreVertical,
-  CheckCircle,
-  XCircle,
   Eye,
   Edit,
   Trash2,
+  CheckCircle,
+  XCircle,
   Crown,
-  AlertCircle
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  MoreVertical,
+  UserCheck,
+  UserX
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
-const Developers = () => {
+const AdminDevelopers = () => {
   const [developers, setDevelopers] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState('all') // all, active, suspended
+  const [filter, setFilter] = useState('all')
+  const [selectedDev, setSelectedDev] = useState(null)
 
   useEffect(() => {
     fetchDevelopers()
@@ -30,27 +36,21 @@ const Developers = () => {
       .from('developers')
       .select(`
         *,
-        plans (name),
-        payments (count)
+        packages (name, name_ar),
+        payments (count),
+        cv_downloads (count),
+        developer_visitors (count)
       `)
       .order('created_at', { ascending: false })
-    
-    if (!error) setDevelopers(data)
+
+    if (!error) setDevelopers(data || [])
     setLoading(false)
   }
 
-  const handleSuspend = async (id) => {
+  const handleStatusChange = async (id, status) => {
     await supabase
       .from('developers')
-      .update({ is_active: false })
-      .eq('id', id)
-    fetchDevelopers()
-  }
-
-  const handleActivate = async (id) => {
-    await supabase
-      .from('developers')
-      .update({ is_active: true })
+      .update({ subscription_status: status })
       .eq('id', id)
     fetchDevelopers()
   }
@@ -63,6 +63,17 @@ const Developers = () => {
       .eq('id', id)
     fetchDevelopers()
   }
+
+  const filteredDevelopers = developers.filter(dev => {
+    if (filter === 'active') return dev.subscription_status === 'active'
+    if (filter === 'inactive') return dev.subscription_status !== 'active'
+    if (filter === 'pending') return !dev.approved_by
+    return true
+  }).filter(dev =>
+    dev.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+    dev.email?.toLowerCase().includes(search.toLowerCase()) ||
+    dev.username?.toLowerCase().includes(search.toLowerCase())
+  )
 
   return (
     <div className="space-y-6">
@@ -91,37 +102,34 @@ const Developers = () => {
           onChange={(e) => setFilter(e.target.value)}
           className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
         >
-          <option value="all">All</option>
+          <option value="all">All Developers</option>
           <option value="active">Active</option>
-          <option value="suspended">Suspended</option>
+          <option value="inactive">Inactive</option>
+          <option value="pending">Pending Approval</option>
         </select>
       </div>
 
       {/* Developers Table */}
       <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden">
-        <table className="w-full">
-          <thead className="border-b border-white/10">
-            <tr>
-              <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">Developer</th>
-              <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">Plan</th>
-              <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">Status</th>
-              <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">Joined</th>
-              <th className="px-6 py-4 text-right text-sm font-medium text-gray-400">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/10">
-            {developers
-              .filter(dev => {
-                if (filter === 'active') return dev.is_active
-                if (filter === 'suspended') return !dev.is_active
-                return true
-              })
-              .filter(dev => 
-                dev.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-                dev.email?.toLowerCase().includes(search.toLowerCase()) ||
-                dev.username?.toLowerCase().includes(search.toLowerCase())
-              )
-              .map(dev => (
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="w-12 h-12 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-gray-400">Loading developers...</p>
+          </div>
+        ) : (
+          <table className="w-full">
+            <thead className="border-b border-white/10">
+              <tr>
+                <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">Developer</th>
+                <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">Package</th>
+                <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">Status</th>
+                <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">Stats</th>
+                <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">Joined</th>
+                <th className="px-6 py-4 text-right text-sm font-medium text-gray-400">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/10">
+              {filteredDevelopers.map(dev => (
                 <tr key={dev.id} className="hover:bg-white/5">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -131,18 +139,23 @@ const Developers = () => {
                         className="w-10 h-10 rounded-full object-cover"
                       />
                       <div>
-                        <p className="text-white font-medium">{dev.full_name}</p>
+                        <p className="text-white font-medium">{dev.full_name || 'Unnamed'}</p>
                         <p className="text-sm text-gray-400">@{dev.username}</p>
+                        <p className="text-xs text-gray-500">{dev.email}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 bg-[#6366f1]/20 text-[#6366f1] rounded-full text-sm">
-                      {dev.plans?.name || 'Free'}
-                    </span>
+                    {dev.packages ? (
+                      <span className="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-full text-sm">
+                        {dev.packages.name}
+                      </span>
+                    ) : (
+                      <span className="text-gray-500">Free</span>
+                    )}
                   </td>
                   <td className="px-6 py-4">
-                    {dev.is_active ? (
+                    {dev.subscription_status === 'active' ? (
                       <span className="flex items-center gap-1 text-green-400">
                         <CheckCircle className="w-4 h-4" />
                         Active
@@ -150,35 +163,42 @@ const Developers = () => {
                     ) : (
                       <span className="flex items-center gap-1 text-red-400">
                         <XCircle className="w-4 h-4" />
-                        Suspended
+                        Inactive
                       </span>
                     )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="space-y-1 text-sm">
+                      <p className="text-gray-400">Projects: {dev.projects_count || 0}</p>
+                      <p className="text-gray-400">Skills: {dev.skills_count || 0}</p>
+                      <p className="text-gray-400">Views: {dev.visitors_count || 0}</p>
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-gray-400">
                     {new Date(dev.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <a
-                        href={`/u/${dev.username}`}
+                      <Link
+                        to={`/u/${dev.username}`}
                         target="_blank"
                         className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg"
                       >
                         <Eye className="w-4 h-4" />
-                      </a>
-                      {dev.is_active ? (
+                      </Link>
+                      {dev.subscription_status === 'active' ? (
                         <button
-                          onClick={() => handleSuspend(dev.id)}
+                          onClick={() => handleStatusChange(dev.id, 'inactive')}
                           className="p-2 text-yellow-400 hover:bg-yellow-500/10 rounded-lg"
                         >
-                          <XCircle className="w-4 h-4" />
+                          <UserX className="w-4 h-4" />
                         </button>
                       ) : (
                         <button
-                          onClick={() => handleActivate(dev.id)}
+                          onClick={() => handleStatusChange(dev.id, 'active')}
                           className="p-2 text-green-400 hover:bg-green-500/10 rounded-lg"
                         >
-                          <CheckCircle className="w-4 h-4" />
+                          <UserCheck className="w-4 h-4" />
                         </button>
                       )}
                       <button
@@ -191,11 +211,12 @@ const Developers = () => {
                   </td>
                 </tr>
               ))}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   )
 }
 
-export default Developers
+export default AdminDevelopers
