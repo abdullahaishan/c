@@ -33,17 +33,15 @@ import NotFound from './pages/NotFound'
 // صفحات المشروع
 import ProjectDetail from './components/ProjectDetail'
 
+// صفحات الأدمن
+import AdminLogin from './pages/admin/Login'
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminOverview from './pages/admin/Overview'
 import AdminDevelopers from './pages/admin/Developers'
 import AdminPlans from './pages/admin/Plans'
 import AdminPayments from './pages/admin/Payments'
+import AdminMessages from './pages/admin/Messages' // إذا كان لديك
 
-  <Route index element={<AdminOverview />} />
-  <Route path="developers" element={<AdminDevelopers />} />
-  <Route path="plans" element={<AdminPlans />} />
-  <Route path="payments" element={<AdminPayments />} />
-</Route>
 // Provider
 import { DeveloperProvider } from './context/DeveloperContext'
 import { useAuth } from './hooks/useAuth'
@@ -58,19 +56,15 @@ const PublicPortfolioWrapper = () => {
 }
 
 const AppRoutes = () => {
-  // ✅ نتحقق من sessionStorage أولاً
   const [showWelcome, setShowWelcome] = useState(() => {
-    // هل شاهد المستخدم الشاشة من قبل في هذه الجلسة؟
     const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome')
-    return hasSeenWelcome !== 'true' // إذا لم يشاهدها، نعرضها
+    return hasSeenWelcome !== 'true'
   })
   
   const { user, loading } = useAuth()
   const [redirectTo, setRedirectTo] = useState(null)
 
-  // عند انتهاء شاشة الترحيب
   const handleWelcomeComplete = () => {
-    // ✅ نسجل أنه شاهد الشاشة
     sessionStorage.setItem('hasSeenWelcome', 'true')
     
     if (user) {
@@ -80,12 +74,10 @@ const AppRoutes = () => {
     }
   }
 
-  // إذا كان فيه توجيه، ننفذه
   if (redirectTo) {
     return <Navigate to={redirectTo} replace />
   }
 
-  // أثناء التحميل، نظهر شاشة الترحيب فقط إذا لم يشاهدها من قبل
   if (loading && showWelcome) {
     return <WelcomeScreen onLoadingComplete={handleWelcomeComplete} />
   }
@@ -100,35 +92,21 @@ const AppRoutes = () => {
 
       {!showWelcome && (
         <Routes>
-          {/* الصفحة الرئيسية */}
+          {/* ========== الصفحات العامة ========== */}
           <Route 
             path="/" 
             element={
               user ? <Navigate to="/dashboard" replace /> : <LandingPage />
             } 
           />
-          <Route 
-  path="/admin" 
-  element={
-    <ProtectedRoute adminOnly>
-      <AdminLayout />
-    </ProtectedRoute>
-  }
->
-          {/* المصادقة */}
+          
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-
-          {/* الصفحة العامة للمطور */}
-          <Route 
-            path="/u/:username" 
-            element={<PublicPortfolioWrapper />} 
-          />
           
-          {/* تفاصيل مشروع */}
+          <Route path="/u/:username" element={<PublicPortfolioWrapper />} />
           <Route path="/project/:id" element={<ProjectDetail />} />
           
-          {/* AI Builder */}
+          {/* ========== AI Builder ========== */}
           <Route 
             path="/app/builder" 
             element={
@@ -138,7 +116,7 @@ const AppRoutes = () => {
             } 
           />
           
-          {/* لوحة التحكم */}
+          {/* ========== لوحة تحكم المستخدم ========== */}
           <Route 
             path="/dashboard" 
             element={
@@ -158,6 +136,25 @@ const AppRoutes = () => {
             <Route path="messages" element={<Messages />} />
           </Route>
           
+          {/* ========== صفحات الأدمن ========== */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute adminOnly>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<AdminOverview />} />
+            <Route path="developers" element={<AdminDevelopers />} />
+            <Route path="plans" element={<AdminPlans />} />
+            <Route path="payments" element={<AdminPayments />} />
+            <Route path="messages" element={<AdminMessages />} />
+          </Route>
+          
+          {/* ========== 404 ========== */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       )}
