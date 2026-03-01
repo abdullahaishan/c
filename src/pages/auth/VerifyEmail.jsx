@@ -99,6 +99,10 @@ const VerifyEmail = () => {
             <p className="text-gray-400">
               لقد أرسلنا رابط التأكيد إلى
             </p>
+            // في VerifyEmail.jsx - أضف هذا النص
+<p className="text-sm text-gray-400 bg-purple-500/10 p-3 rounded-lg border border-purple-500/20">
+  📧 رابط التأكيد سيتم إرساله إلى بريدك. بعد الضغط عليه، سيتم تفعيل حسابك تلقائياً.
+</p>
             <p className="text-[#a855f7] font-medium mt-2">{email}</p>
           </div>
 
