@@ -168,7 +168,7 @@ const ProgressBar = ({ proficiency, color }) => {
 };
 
 // ✅ مكون بطاقة المهارة
-const SkillCard = ({ skill }) => {
+{/*const SkillCard = ({ skill }) => {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -177,11 +177,11 @@ const SkillCard = ({ skill }) => {
       onClick={() => setExpanded(!expanded)}
     >
       <div className="flex items-start gap-4">
-        {/* أيقونة المهارة */}
+      
         <SkillIcon skill={skill} />
         
         <div className="flex-1">
-          {/* رأس البطاقة */}
+          
           <div className="flex items-center justify-between mb-2">
             <div>
               <h4 className="text-white font-semibold flex items-center gap-2">
@@ -196,10 +196,10 @@ const SkillCard = ({ skill }) => {
             </div>
           </div>
           
-          {/* شريط التقدم */}
+      
           <ProgressBar proficiency={skill.proficiency || 0} color={skill.color} />
           
-          {/* سنوات الخبرة */}
+          
           {skill.years_of_experience > 0 && (
             <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
               <span>📅</span>
@@ -207,7 +207,7 @@ const SkillCard = ({ skill }) => {
             </div>
           )}
           
-          {/* وصف المهارة (يظهر عند التوسيع) */}
+      
           {expanded && skill.description && (
             <p className="mt-3 text-sm text-gray-400 border-t border-white/10 pt-3">
               {skill.description}
@@ -227,6 +227,80 @@ const SkillCategory = ({ title, skills, icon: Icon, color }) => {
     <div className="mb-8">
       <div className="flex items-center gap-2 mb-4">
         <div className={`w-8 h-8 rounded-lg bg-gradient-to-r ${color} flex items-center justify-center`}>
+          <Icon className="w-4 h-4 text-white" />
+        </div>
+        <h3 className="text-xl font-semibold text-white">{title}</h3>
+        <span className="text-sm text-gray-400 ml-auto">{skills.length} مهارات</span>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {skills.map((skill) => (
+          <SkillCard key={skill.id} skill={skill} />
+        ))}
+      </div>
+    </div>
+  );
+};*/}
+// ✅ تعديل SkillCard
+const SkillCard = ({ skill }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div
+      className="bg-gradient-to-br from-white/15 to-white/5 rounded-xl p-5 border border-white/20 hover:border-[#6366f1]/50 transition-all group cursor-pointer hover:shadow-lg hover:shadow-purple-500/10"
+      onClick={() => setExpanded(!expanded)}
+    >
+      <div className="flex items-start gap-4">
+        {/* أيقونة المهارة */}
+        <SkillIcon skill={skill} />
+        
+        <div className="flex-1">
+          {/* رأس البطاقة */}
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h4 className="text-white font-semibold flex items-center gap-2">
+                {skill.name}
+                {skill.is_main && (
+                  <span className="text-xs px-2 py-0.5 bg-yellow-500/30 text-yellow-400 rounded-full border border-yellow-500/30">
+                    رئيسية
+                  </span>
+                )}
+              </h4>
+              <p className="text-xs text-gray-400">{skill.category || 'غير مصنف'}</p>
+            </div>
+          </div>
+          
+          {/* شريط التقدم */}
+          <ProgressBar proficiency={skill.proficiency || 0} color={skill.color} />
+          
+          {/* سنوات الخبرة */}
+          {skill.years_of_experience > 0 && (
+            <div className="mt-2 text-xs text-gray-400 flex items-center gap-1">
+              <span>📅</span>
+              {skill.years_of_experience} {skill.years_of_experience === 1 ? 'سنة' : 'سنوات'} خبرة
+            </div>
+          )}
+          
+          {/* وصف المهارة (يظهر عند التوسيع) */}
+          {expanded && skill.description && (
+            <p className="mt-3 text-sm text-gray-300 border-t border-white/20 pt-3">
+              {skill.description}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ✅ تعديل SkillCategory (اختياري)
+const SkillCategory = ({ title, skills, icon: Icon, color }) => {
+  if (skills.length === 0) return null;
+  
+  return (
+    <div className="mb-8">
+      <div className="flex items-center gap-2 mb-4">
+        <div className={`w-8 h-8 rounded-lg bg-gradient-to-r ${color} flex items-center justify-center shadow-lg`}>
           <Icon className="w-4 h-4 text-white" />
         </div>
         <h3 className="text-xl font-semibold text-white">{title}</h3>
