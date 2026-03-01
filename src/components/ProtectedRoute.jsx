@@ -17,7 +17,7 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   // إذا كان المسار خاص بالأدمن
   if (adminOnly) {
     if (!admin) {
-      return <Navigate to="/login" state={{ from: location }} replace />
+      return <Navigate to="/admin/login" state={{ from: location }} replace />
     }
     return children
   }
