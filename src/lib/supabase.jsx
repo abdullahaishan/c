@@ -1579,14 +1579,46 @@ export const authService = {
     
     if (error) throw error
     
-    // جلب بيانات المطور من جدول developers
-    const { data: developer } = await supabase
-      .from('developers')
-      .select('*')
-      .eq('id', data.user.id)
-      .single()
+    // ✅ فقط نعيد بيانات المستخدم من Auth
+    return { 
+      success: true, 
+      user: data.user,
+      session: data.session
+    }
+  },
+
+  // تسجيل مستخدم جديد
+  async register(userData) {
+    const { data, error } = await supabase.auth.signUp({
+      email: userData.email,
+      password: userData.password,
+      options: {
+        data: {
+          full_name: userData.full_name
+        },
+        emailRedirectTo: `${window.location.origin}/confirm`
+      }
+    })
     
-    return developer
+    if (error) throw error
+
+    return { 
+      success: true, 
+      user: data.user,
+      message: 'Verification link sent to your email'
+    }
+  },
+
+  // تسجيل الخروج
+  async logout() {
+    const { error } = await supabase.auth.signOut()
+    if (error) throw error
+  },
+
+  // الحصول على المستخدم الحالي من Auth فقط
+  async getCurrentUser() {
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.user || null
   },
 
 
