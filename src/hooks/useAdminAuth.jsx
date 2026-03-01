@@ -7,19 +7,7 @@ export const useAdminAuth = () => {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    // التحقق من جلسة الأدمن عند التحميل
     checkAdminSession()
-
-    // الاستماع لتغييرات الجلسة
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        checkAdminRole(session.user.id)
-      } else {
-        setAdmin(null)
-      }
-    })
-
-    return () => subscription?.unsubscribe()
   }, [])
 
   const checkAdminSession = async () => {
@@ -42,35 +30,59 @@ export const useAdminAuth = () => {
 
   const checkAdminRole = async (userId) => {
     try {
-      // جلب بيانات الأدمن من جدول admins
-      const { data, error } = await supabase
+      // 1. جلب بيانات المطور الأساسية
+      const { data: developer, error: devError } = await supabase
+        .from('developers')
+        .select(`
+          id,
+          username,
+          email,
+          full_name,
+          profile_image,
+          role,
+          plan_id
+        `)
+        .eq('id', userId)
+        .single()
+
+      if (devError || !developer) {
+        console.log('User is not a developer')
+        setAdmin(null)
+        return
+      }
+
+      // 2. التحقق من وجوده في جدول admins
+      const { data: adminData, error: adminError } = await supabase
         .from('admins')
         .select('*')
-        .eq('id', userId)
+        .eq('developer_id', userId)
         .eq('is_active', true)
         .single()
 
-      if (error) throw error
-      
-      if (data) {
-        setAdmin({
-          id: data.id,
-          username: data.username,
-          email: data.email,
-          role: data.role,
-          permissions: data.permissions
-        })
-
-        // تحديث آخر دخول
-        await supabase
-          .from('admins')
-          .update({ last_login: new Date() })
-          .eq('id', userId)
-      } else {
-        // إذا لم يكن في جدول admins، نسجل خروجه
-        await supabase.auth.signOut()
+      if (adminError || !adminData) {
+        console.log('Developer is not an admin')
         setAdmin(null)
+        return
       }
+
+      // 3. دمج البيانات
+      setAdmin({
+        id: developer.id,
+        username: developer.username,
+        email: developer.email,
+        full_name: developer.full_name,
+        profile_image: developer.profile_image,
+        role: adminData.role, // 'super_admin', 'admin', 'moderator'
+        permissions: adminData.permissions,
+        developer_role: developer.role // 'user' أو 'admin'
+      })
+
+      // تحديث آخر دخول (اختياري)
+      await supabase
+        .from('admins')
+        .update({ last_login: new Date() })
+        .eq('developer_id', userId)
+
     } catch (err) {
       console.error('Error checking admin role:', err)
       setAdmin(null)
@@ -113,21 +125,13 @@ export const useAdminAuth = () => {
     }
   }
 
-  // دوال مساعدة للتحقق من الصلاحيات
-  const hasRole = (role) => {
-    return admin?.role === role;
-  }
-
-  const hasAnyRole = (roles) => {
-    return roles.includes(admin?.role);
-  }
-
+  // دوال مساعدة
+  const isSuperAdmin = () => admin?.role === 'super_admin'
+  const isAdmin = () => !!admin
+  const hasRole = (role) => admin?.role === role
+  const hasAnyRole = (roles) => roles.includes(admin?.role)
   const hasPermission = (permission) => {
-    return admin?.permissions?.includes(permission) || admin?.role === 'super_admin';
-  }
-
-  const isSuperAdmin = () => {
-    return admin?.role === 'super_admin';
+    return admin?.permissions?.includes(permission) || isSuperAdmin()
   }
 
   return {
@@ -136,10 +140,10 @@ export const useAdminAuth = () => {
     error,
     login,
     logout,
+    isSuperAdmin,
+    isAdmin,
     hasRole,
     hasAnyRole,
-    hasPermission,
-    isSuperAdmin,
-    isAdmin: !!admin
+    hasPermission
   }
 }
