@@ -1622,7 +1622,7 @@ export const authService = {
     
     if (insertError) throw insertError
     return developer
-  },*/}
+  },*/},
 // تسجيل مستخدم جديد
 async register(userData) {
   try {
