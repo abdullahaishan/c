@@ -42,11 +42,12 @@ export const useAdminAuth = () => {
 
   const checkAdminRole = async (userId) => {
     try {
-      // التحقق من وجود المستخدم في جدول admins
+      // جلب بيانات الأدمن من جدول admins
       const { data, error } = await supabase
         .from('admins')
         .select('*')
-        .eq('id', userId) // id نفس user_id من Auth
+        .eq('id', userId)
+        .eq('is_active', true)
         .single()
 
       if (error) throw error
@@ -56,8 +57,15 @@ export const useAdminAuth = () => {
           id: data.id,
           username: data.username,
           email: data.email,
-          role: data.role
+          role: data.role,
+          permissions: data.permissions
         })
+
+        // تحديث آخر دخول
+        await supabase
+          .from('admins')
+          .update({ last_login: new Date() })
+          .eq('id', userId)
       } else {
         // إذا لم يكن في جدول admins، نسجل خروجه
         await supabase.auth.signOut()
@@ -74,16 +82,13 @@ export const useAdminAuth = () => {
       setLoading(true)
       setError(null)
 
-      // ✅ استخدام Supabase Auth لتسجيل الدخول
+      // تسجيل الدخول عبر Supabase Auth
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       })
 
       if (error) throw error
-
-      // ✅ التحقق من صلاحية الأدمن (يتم تلقائياً عبر onAuthStateChange)
-      // لا حاجة لإعادة التحقق هنا لأن useEffect سيتولى ذلك
 
       return { success: true, user: data.user }
     } catch (err) {
@@ -108,12 +113,33 @@ export const useAdminAuth = () => {
     }
   }
 
+  // دوال مساعدة للتحقق من الصلاحيات
+  const hasRole = (role) => {
+    return admin?.role === role;
+  }
+
+  const hasAnyRole = (roles) => {
+    return roles.includes(admin?.role);
+  }
+
+  const hasPermission = (permission) => {
+    return admin?.permissions?.includes(permission) || admin?.role === 'super_admin';
+  }
+
+  const isSuperAdmin = () => {
+    return admin?.role === 'super_admin';
+  }
+
   return {
     admin,
     loading,
     error,
     login,
     logout,
+    hasRole,
+    hasAnyRole,
+    hasPermission,
+    isSuperAdmin,
     isAdmin: !!admin
   }
 }
