@@ -13,6 +13,8 @@ const Register = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [rateLimit, setRateLimit] = useState(false)
+  const [cooldown, setCooldown] = useState(0)
   
   const { register } = useAuth()
   const navigate = useNavigate()
@@ -28,14 +30,15 @@ const Register = () => {
     e.preventDefault()
     setError('')
     setSuccess('')
+    setRateLimit(false)
 
     if (formData.password !== formData.confirmPassword) {
-      setError('كلمات المرور غير متطابقة')
+      setError('Passwords do not match')
       return
     }
 
     if (formData.password.length < 6) {
-      setError('كلمة المرور يجب أن تكون 6 أحرف على الأقل')
+      setError('Password must be at least 6 characters')
       return
     }
 
@@ -49,16 +52,35 @@ const Register = () => {
       })
       
       if (result.success) {
-        setSuccess('✅ تم إنشاء الحساب! تم إرسال رابط التأكيد إلى بريدك الإلكتروني')
+        setSuccess('✅ Account created! Verification link sent to your email')
         
         setTimeout(() => {
           navigate('/verify-email')
         }, 2000)
       } else {
-        setError(result.error || 'فشل إنشاء الحساب')
+        // Check if it's a rate limit error
+        if (result.error?.includes('rate limit') || result.error?.includes('Rate limit')) {
+          setRateLimit(true)
+          setError('Too many registration attempts. Please wait a moment before trying again.')
+          
+          // Start cooldown timer
+          setCooldown(60)
+          const timer = setInterval(() => {
+            setCooldown(prev => {
+              if (prev <= 1) {
+                clearInterval(timer)
+                setRateLimit(false)
+                return 0
+              }
+              return prev - 1
+            })
+          }, 1000)
+        } else {
+          setError(result.error || 'Registration failed')
+        }
       }
     } catch (err) {
-      setError(err.message || 'حدث خطأ غير متوقع')
+      setError(err.message || 'An unexpected error occurred')
     } finally {
       setLoading(false)
     }
@@ -82,7 +104,7 @@ const Register = () => {
         className="absolute top-4 right-4 sm:top-6 sm:right-6 lg:top-8 lg:right-8 z-20 flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition-all group"
       >
         <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 group-hover:-translate-x-1 transition-transform" />
-        <span className="text-sm sm:text-base">رجوع</span>
+        <span className="text-sm sm:text-base">Back</span>
       </button>
 
       {/* Main Content */}
@@ -91,20 +113,33 @@ const Register = () => {
           {/* Header */}
           <div className="text-center mb-6 sm:mb-8">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6366f1] to-[#a855f7] mb-2">
-              إنشاء حساب جديد
+              Create Account
             </h2>
-            <p className="text-sm sm:text-base text-gray-400">انضم إلى مجتمع المطورين المحترفين</p>
+            <p className="text-sm sm:text-base text-gray-400">Join the professional developer community</p>
           </div>
 
           {/* Form Card */}
           <div className="bg-white/5 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 border border-white/10">
-            {/* Messages */}
-            {error && (
+            {/* Rate Limit Message */}
+            {rateLimit && (
+              <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg sm:rounded-xl">
+                <p className="text-yellow-400 text-xs sm:text-sm font-medium mb-1">
+                  ⚠️ Too many registration attempts
+                </p>
+                <p className="text-gray-400 text-xs sm:text-sm">
+                  Please wait {cooldown} seconds before trying again
+                </p>
+              </div>
+            )}
+
+            {/* Error Message */}
+            {error && !rateLimit && (
               <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-500/10 border border-red-500/20 rounded-lg sm:rounded-xl text-red-400 text-xs sm:text-sm">
                 {error}
               </div>
             )}
 
+            {/* Success Message */}
             {success && (
               <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-green-500/10 border border-green-500/20 rounded-lg sm:rounded-xl text-green-400 text-xs sm:text-sm">
                 {success}
@@ -122,8 +157,9 @@ const Register = () => {
                   required
                   value={formData.fullName}
                   onChange={handleChange}
-                  className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 bg-white/10 border border-white/20 rounded-lg sm:rounded-xl text-white text-sm sm:text-base placeholder-gray-400 focus:outline-none focus:border-[#6366f1] focus:ring-2 focus:ring-[#6366f1]/20 transition-all"
-                  placeholder="الاسم الكامل"
+                  disabled={rateLimit}
+                  className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 bg-white/10 border border-white/20 rounded-lg sm:rounded-xl text-white text-sm sm:text-base placeholder-gray-400 focus:outline-none focus:border-[#6366f1] focus:ring-2 focus:ring-[#6366f1]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  placeholder="Full name"
                 />
               </div>
 
@@ -136,8 +172,9 @@ const Register = () => {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 bg-white/10 border border-white/20 rounded-lg sm:rounded-xl text-white text-sm sm:text-base placeholder-gray-400 focus:outline-none focus:border-[#6366f1] focus:ring-2 focus:ring-[#6366f1]/20 transition-all"
-                  placeholder="البريد الإلكتروني"
+                  disabled={rateLimit}
+                  className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 bg-white/10 border border-white/20 rounded-lg sm:rounded-xl text-white text-sm sm:text-base placeholder-gray-400 focus:outline-none focus:border-[#6366f1] focus:ring-2 focus:ring-[#6366f1]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  placeholder="Email address"
                 />
               </div>
 
@@ -150,8 +187,9 @@ const Register = () => {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 bg-white/10 border border-white/20 rounded-lg sm:rounded-xl text-white text-sm sm:text-base placeholder-gray-400 focus:outline-none focus:border-[#6366f1] focus:ring-2 focus:ring-[#6366f1]/20 transition-all"
-                  placeholder="كلمة المرور"
+                  disabled={rateLimit}
+                  className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 bg-white/10 border border-white/20 rounded-lg sm:rounded-xl text-white text-sm sm:text-base placeholder-gray-400 focus:outline-none focus:border-[#6366f1] focus:ring-2 focus:ring-[#6366f1]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  placeholder="Password"
                 />
               </div>
 
@@ -164,21 +202,22 @@ const Register = () => {
                   required
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 bg-white/10 border border-white/20 rounded-lg sm:rounded-xl text-white text-sm sm:text-base placeholder-gray-400 focus:outline-none focus:border-[#6366f1] focus:ring-2 focus:ring-[#6366f1]/20 transition-all"
-                  placeholder="تأكيد كلمة المرور"
+                  disabled={rateLimit}
+                  className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-3 bg-white/10 border border-white/20 rounded-lg sm:rounded-xl text-white text-sm sm:text-base placeholder-gray-400 focus:outline-none focus:border-[#6366f1] focus:ring-2 focus:ring-[#6366f1]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  placeholder="Confirm password"
                 />
               </div>
 
               {/* Terms */}
               <div className="text-xs sm:text-sm text-gray-400 text-center">
-                <p>بإنشاء حسابك، أنت توافق على</p>
+                <p>By creating an account, you agree to our</p>
                 <div className="flex gap-2 justify-center mt-1">
                   <Link to="/terms" className="text-[#a855f7] hover:text-[#6366f1] transition-colors">
-                    شروط الخدمة
+                    Terms of Service
                   </Link>
-                  <span className="text-gray-600">و</span>
+                  <span className="text-gray-600">and</span>
                   <Link to="/privacy" className="text-[#a855f7] hover:text-[#6366f1] transition-colors">
-                    سياسة الخصوصية
+                    Privacy Policy
                   </Link>
                 </div>
               </div>
@@ -186,7 +225,7 @@ const Register = () => {
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || rateLimit}
                 className="w-full py-2.5 sm:py-3 px-4 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base flex items-center justify-center gap-2 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:hover:scale-100"
               >
                 {loading ? (
@@ -194,7 +233,7 @@ const Register = () => {
                 ) : (
                   <>
                     <UserPlus className="w-4 h-4 sm:w-5 sm:h-5" />
-                    إنشاء حساب
+                    Create Account
                   </>
                 )}
               </button>
@@ -202,9 +241,9 @@ const Register = () => {
 
             {/* Login Link */}
             <p className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-400">
-              لديك حساب بالفعل؟{' '}
+              Already have an account?{' '}
               <Link to="/login" className="text-[#a855f7] hover:text-[#6366f1] transition-colors font-medium">
-                تسجيل الدخول
+                Sign in
               </Link>
             </p>
           </div>
