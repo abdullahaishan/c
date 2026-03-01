@@ -10,7 +10,7 @@ export const adminDeveloperService = {
       .from('developers')
       .select(`
         *,
-        plans (
+        packages (
           id,
           name,
           name_ar,
@@ -19,12 +19,12 @@ export const adminDeveloperService = {
         payments (
           id,
           amount,
-          status,
+          payment_status,
           created_at
         ),
         projects:projects(count),
         skills:skills(count),
-        certificates:certificates(count)
+        certifications:certifications(count)
       `)
       .order('created_at', { ascending: false })
 
@@ -32,13 +32,64 @@ export const adminDeveloperService = {
     return data || []
   },
 
-  // تحديث حالة المطور (تفعيل/تعطيل)
+  // جلب مطور محدد
+  async getDeveloperById(developerId) {
+    const { data, error } = await supabase
+      .from('developers')
+      .select(`
+        *,
+        packages (*),
+        payments (*),
+        projects (*),
+        skills (*),
+        certifications (*),
+        education (*),
+        work_experience (*),
+        social_links (*),
+        rotating_skills (*),
+        developer_settings (*),
+        personal_info (*)
+      `)
+      .eq('id', developerId)
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  // تحديث حالة المطور
+  async updateDeveloperStatus(developerId, updates) {
+    const { error } = await supabase
+      .from('developers')
+      .update({
+        ...updates,
+        updated_at: new Date()
+      })
+      .eq('id', developerId)
+
+    if (error) throw error
+    return true
+  },
+
+  // تفعيل/تعطيل المطور
   async toggleDeveloperStatus(developerId, isActive) {
+    return this.updateDeveloperStatus(developerId, { 
+      subscription_status: isActive ? 'active' : 'inactive',
+      approved_by: isActive ? (await this.getCurrentAdminId()) : null,
+      approved_at: isActive ? new Date() : null
+    })
+  },
+
+  // تغيير باقة المطور
+  async changeDeveloperPackage(developerId, packageId, adminId) {
     const { error } = await supabase
       .from('developers')
-      .update({ 
-        is_active: isActive,
-        updated_at: new Date()
+      .update({
+        package_id: packageId,
+        subscription_start: new Date(),
+        subscription_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 يوم
+        approved_by: adminId,
+        approved_at: new Date()
       })
       .eq('id', developerId)
 
@@ -46,21 +97,7 @@ export const adminDeveloperService = {
     return true
   },
 
-  // تغيير خطة المطور يدوياً
-  async changeDeveloperPlan(developerId, planId) {
-    const { error } = await supabase
-      .from('developers')
-      .update({ 
-        plan_id: planId,
-        updated_at: new Date()
-      })
-      .eq('id', developerId)
-
-    if (error) throw error
-    return true
-  },
-
-  // حذف مطور نهائياً (مع كل بياناته)
+  // حذف مطور
   async deleteDeveloper(developerId) {
     const { error } = await supabase
       .from('developers')
@@ -71,7 +108,7 @@ export const adminDeveloperService = {
     return true
   },
 
-  // البحث عن مطور
+  // البحث عن مطورين
   async searchDevelopers(query) {
     const { data, error } = await supabase
       .from('developers')
@@ -81,53 +118,31 @@ export const adminDeveloperService = {
 
     if (error) throw error
     return data || []
-  },
-
-  // إحصائيات المطورين
-  async getDeveloperStats() {
-    const { data: total } = await supabase
-      .from('developers')
-      .select('*', { count: 'exact', head: true })
-
-    const { data: active } = await supabase
-      .from('developers')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_active', true)
-
-    const { data: newThisMonth } = await supabase
-      .from('developers')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', new Date(new Date().setDate(1)).toISOString())
-
-    return {
-      total: total || 0,
-      active: active || 0,
-      newThisMonth: newThisMonth || 0
-    }
   }
 }
 
 // ===========================================
-// خدمات إدارة الباقات والمدفوعات
+// خدمات إدارة الباقات
 // ===========================================
-export const adminPlanService = {
+export const adminPackageService = {
   // جلب جميع الباقات
-  async getAllPlans() {
+  async getAllPackages() {
     const { data, error } = await supabase
-      .from('plans')
+      .from('packages')
       .select('*')
       .order('sort_order')
+      .order('price_monthly')
 
     if (error) throw error
     return data || []
   },
 
   // إنشاء باقة جديدة
-  async createPlan(planData) {
+  async createPackage(packageData) {
     const { data, error } = await supabase
-      .from('plans')
+      .from('packages')
       .insert([{
-        ...planData,
+        ...packageData,
         created_at: new Date()
       }])
       .select()
@@ -138,14 +153,14 @@ export const adminPlanService = {
   },
 
   // تحديث باقة
-  async updatePlan(planId, updates) {
+  async updatePackage(packageId, updates) {
     const { data, error } = await supabase
-      .from('plans')
+      .from('packages')
       .update({
         ...updates,
         updated_at: new Date()
       })
-      .eq('id', planId)
+      .eq('id', packageId)
       .select()
       .single()
 
@@ -154,46 +169,231 @@ export const adminPlanService = {
   },
 
   // حذف باقة
-  async deletePlan(planId) {
+  async deletePackage(packageId) {
     const { error } = await supabase
-      .from('plans')
+      .from('packages')
       .delete()
-      .eq('id', planId)
+      .eq('id', packageId)
 
     if (error) throw error
     return true
   },
 
   // ترتيب الباقات
-  async reorderPlans(planIds) {
-    for (let i = 0; i < planIds.length; i++) {
+  async reorderPackages(packageIds) {
+    for (let i = 0; i < packageIds.length; i++) {
       await supabase
-        .from('plans')
+        .from('packages')
         .update({ sort_order: i })
-        .eq('id', planIds[i])
+        .eq('id', packageIds[i])
     }
     return true
   },
 
-  // إحصائيات الباقات
-  async getPlanStats() {
-    const { data: plans } = await supabase
-      .from('plans')
-      .select('id, name, price_monthly')
+  // تفعيل/تعطيل باقة
+  async togglePackageStatus(packageId, isActive) {
+    return this.updatePackage(packageId, { is_active: isActive })
+  }
+}
 
-    const stats = []
-    for (const plan of plans || []) {
-      const { count } = await supabase
-        .from('developers')
-        .select('*', { count: 'exact', head: true })
-        .eq('plan_id', plan.id)
+// ===========================================
+// خدمات إدارة طلبات الانضمام
+// ===========================================
+export const adminJoinRequestService = {
+  // جلب جميع طلبات الانضمام
+  async getAllJoinRequests() {
+    const { data, error } = await supabase
+      .from('join_requests')
+      .select(`
+        *,
+        packages (
+          id,
+          name,
+          name_ar,
+          price_monthly
+        ),
+        processed_by:admins!join_requests_processed_by_fkey (
+          id,
+          username
+        )
+      `)
+      .order('created_at', { ascending: false })
 
-      stats.push({
-        ...plan,
-        subscribers: count || 0
+    if (error) throw error
+    return data || []
+  },
+
+  // الموافقة على طلب انضمام
+  async approveJoinRequest(requestId, adminId) {
+    // 1. جلب بيانات الطلب
+    const { data: request } = await supabase
+      .from('join_requests')
+      .select('*')
+      .eq('id', requestId)
+      .single()
+
+    if (!request) throw new Error('Request not found')
+
+    // 2. إنشاء حساب مطور جديد
+    const { data: developer, error: devError } = await supabase
+      .from('developers')
+      .insert([{
+        username: `user_${Date.now()}`,
+        email: request.email,
+        password_hash: 'temporary_password', // يجب تغييره لاحقاً
+        whatsapp: request.whatsapp,
+        package_id: request.package_id,
+        subscription_status: 'active',
+        subscription_start: new Date(),
+        subscription_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        approved_by: adminId,
+        approved_at: new Date(),
+        role: 'member'
+      }])
+      .select()
+      .single()
+
+    if (devError) throw devError
+
+    // 3. تحديث حالة الطلب
+    const { error: updateError } = await supabase
+      .from('join_requests')
+      .update({
+        status: 'approved',
+        processed_at: new Date(),
+        processed_by: adminId
       })
+      .eq('id', requestId)
+
+    if (updateError) throw updateError
+
+    // 4. إنشاء payment record
+    if (request.amount) {
+      await supabase
+        .from('payments')
+        .insert([{
+          developer_id: developer.id,
+          request_id: requestId,
+          package_id: request.package_id,
+          amount: request.amount,
+          payment_method: request.payment_method,
+          transaction_id: request.transaction_id,
+          transfer_image: request.transfer_image,
+          payment_status: 'approved',
+          payment_date: new Date()
+        }])
     }
-    return stats
+
+    return { success: true, developer }
+  },
+
+  // رفض طلب انضمام
+  async rejectJoinRequest(requestId, adminId, reason = '') {
+    const { error } = await supabase
+      .from('join_requests')
+      .update({
+        status: 'rejected',
+        admin_notes: reason,
+        processed_at: new Date(),
+        processed_by: adminId
+      })
+      .eq('id', requestId)
+
+    if (error) throw error
+    return true
+  }
+}
+
+// ===========================================
+// خدمات إدارة طلبات الترقية
+// ===========================================
+export const adminUpgradeRequestService = {
+  // جلب جميع طلبات الترقية
+  async getAllUpgradeRequests() {
+    const { data, error } = await supabase
+      .from('upgrade_requests')
+      .select(`
+        *,
+        developers (
+          id,
+          full_name,
+          username,
+          email,
+          profile_image
+        ),
+        current_package_id:packages!upgrade_requests_current_package_id_fkey (
+          id,
+          name
+        ),
+        requested_package:packages!upgrade_requests_requested_package_id_fkey (
+          id,
+          name,
+          price_monthly
+        ),
+        processed_by:admins!upgrade_requests_processed_by_fkey (
+          id,
+          username
+        )
+      `)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return data || []
+  },
+
+  // الموافقة على طلب ترقية
+  async approveUpgradeRequest(requestId, adminId) {
+    // 1. جلب بيانات الطلب
+    const { data: request } = await supabase
+      .from('upgrade_requests')
+      .select('*')
+      .eq('id', requestId)
+      .single()
+
+    if (!request) throw new Error('Request not found')
+
+    // 2. تحديث باقة المطور
+    const { error: devError } = await supabase
+      .from('developers')
+      .update({
+        package_id: request.requested_package_id,
+        pending_upgrade_id: null,
+        approved_by: adminId,
+        approved_at: new Date()
+      })
+      .eq('id', request.developer_id)
+
+    if (devError) throw devError
+
+    // 3. تحديث حالة الطلب
+    const { error: updateError } = await supabase
+      .from('upgrade_requests')
+      .update({
+        status: 'approved',
+        processed_at: new Date(),
+        processed_by: adminId
+      })
+      .eq('id', requestId)
+
+    if (updateError) throw updateError
+
+    return true
+  },
+
+  // رفض طلب ترقية
+  async rejectUpgradeRequest(requestId, adminId, reason = '') {
+    const { error } = await supabase
+      .from('upgrade_requests')
+      .update({
+        status: 'rejected',
+        admin_notes: reason,
+        processed_at: new Date(),
+        processed_by: adminId
+      })
+      .eq('id', requestId)
+
+    if (error) throw error
+    return true
   }
 }
 
@@ -201,7 +401,7 @@ export const adminPlanService = {
 // خدمات إدارة المدفوعات
 // ===========================================
 export const adminPaymentService = {
-  // جلب جميع طلبات الدفع
+  // جلب جميع المدفوعات
   async getAllPayments() {
     const { data, error } = await supabase
       .from('payments')
@@ -214,65 +414,31 @@ export const adminPaymentService = {
           email,
           profile_image
         ),
-        plans (
+        packages (
           id,
           name,
           name_ar
+        ),
+        join_requests!payments_request_id_fkey (
+          id,
+          email,
+          whatsapp
         )
       `)
-      .order('created_at', { ascending: false })
+      .order('payment_date', { ascending: false })
 
     if (error) throw error
     return data || []
   },
 
-  // الموافقة على طلب دفع
-  async approvePayment(paymentId, adminId) {
-    // 1. جلب بيانات الدفع
-    const { data: payment } = await supabase
-      .from('payments')
-      .select('*')
-      .eq('id', paymentId)
-      .single()
-
-    if (!payment) throw new Error('Payment not found')
-
-    // 2. تحديث حالة الدفع
-    const { error: updateError } = await supabase
-      .from('payments')
-      .update({
-        status: 'approved',
-        approved_at: new Date(),
-        approved_by: adminId
-      })
-      .eq('id', paymentId)
-
-    if (updateError) throw updateError
-
-    // 3. ترقية حساب المطور
-    const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + 30) // 30 يوم
-
-    const { error: developerError } = await supabase
-      .from('developers')
-      .update({
-        plan_id: payment.plan_id,
-        plan_expires_at: expiresAt.toISOString()
-      })
-      .eq('id', payment.developer_id)
-
-    if (developerError) throw developerError
-
-    return true
-  },
-
-  // رفض طلب دفع
-  async rejectPayment(paymentId, reason = '') {
+  // تحديث حالة الدفع
+  async updatePaymentStatus(paymentId, status, adminId) {
     const { error } = await supabase
       .from('payments')
       .update({
-        status: 'rejected',
-        admin_notes: reason
+        payment_status: status,
+        approved_by: status === 'approved' ? adminId : null,
+        approved_at: status === 'approved' ? new Date() : null
       })
       .eq('id', paymentId)
 
@@ -285,17 +451,17 @@ export const adminPaymentService = {
     const { data: pending } = await supabase
       .from('payments')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'pending')
+      .eq('payment_status', 'pending')
 
     const { data: approved } = await supabase
       .from('payments')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'approved')
+      .eq('payment_status', 'approved')
 
     const { data: totalAmount } = await supabase
       .from('payments')
       .select('amount')
-      .eq('status', 'approved')
+      .eq('payment_status', 'approved')
 
     const totalRevenue = totalAmount?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0
 
@@ -304,14 +470,6 @@ export const adminPaymentService = {
       approved: approved || 0,
       totalRevenue
     }
-  },
-
-  // جلب المدفوعات حسب الشهر
-  async getPaymentsByMonth(months = 6) {
-    const { data } = await supabase
-      .rpc('get_payments_by_month', { months_ago: months })
-
-    return data || []
   }
 }
 
@@ -321,51 +479,128 @@ export const adminPaymentService = {
 export const adminAnalyticsService = {
   // إحصائيات عامة
   async getDashboardStats() {
-    const [devStats, planStats, paymentStats] = await Promise.all([
-      adminDeveloperService.getDeveloperStats(),
-      adminPlanService.getPlanStats(),
-      adminPaymentService.getPaymentStats()
-    ])
-
-    // عدد المشاريع المنشورة
-    const { count: projectsCount } = await supabase
-      .from('projects')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'published')
-
-    // عدد الزيارات الكلي
-    const { data: views } = await supabase
+    // عدد المطورين
+    const { count: totalDevs } = await supabase
       .from('developers')
-      .select('views_count')
-    
-    const totalViews = views?.reduce((sum, d) => sum + (d.views_count || 0), 0) || 0
+      .select('*', { count: 'exact', head: true })
+
+    const { count: activeDevs } = await supabase
+      .from('developers')
+      .select('*', { count: 'exact', head: true })
+      .eq('subscription_status', 'active')
+
+    // طلبات الانضمام
+    const { count: pendingJoin } = await supabase
+      .from('join_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending')
+
+    // طلبات الترقية
+    const { count: pendingUpgrade } = await supabase
+      .from('upgrade_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending')
+
+    // المدفوعات
+    const { data: payments } = await supabase
+      .from('payments')
+      .select('amount, payment_status')
+
+    const totalRevenue = payments?.reduce((sum, p) => {
+      return p.payment_status === 'approved' ? sum + (p.amount || 0) : sum
+    }, 0) || 0
+
+    // الزوار
+    const { count: visitors } = await supabase
+      .from('visitors')
+      .select('*', { count: 'exact', head: true })
+
+    // تحميل السير الذاتية
+    const { count: downloads } = await supabase
+      .from('cv_downloads')
+      .select('*', { count: 'exact', head: true })
 
     return {
-      developers: devStats,
-      plans: planStats,
-      payments: paymentStats,
-      projects: projectsCount || 0,
-      totalViews
+      developers: {
+        total: totalDevs || 0,
+        active: activeDevs || 0
+      },
+      requests: {
+        join: pendingJoin || 0,
+        upgrade: pendingUpgrade || 0
+      },
+      payments: {
+        pending: payments?.filter(p => p.payment_status === 'pending').length || 0,
+        approved: payments?.filter(p => p.payment_status === 'approved').length || 0,
+        totalRevenue
+      },
+      visitors: visitors || 0,
+      downloads: downloads || 0
     }
   },
 
-  // إحصائيات النمو الشهري
-  async getGrowthStats() {
-    const { data } = await supabase
-      .rpc('get_growth_stats')
-    
-    return data || []
+  // الحصول على معرف الأدمن الحالي (مساعد)
+  async getCurrentAdminId() {
+    const admin = JSON.parse(localStorage.getItem('admin_session') || '{}')
+    return admin.id || null
+  }
+}
+
+// ===========================================
+// خدمات إعدادات النظام
+// ===========================================
+export const adminSettingsService = {
+  // جلب إعدادات النظام
+  async getSettings() {
+    const { data, error } = await supabase
+      .from('settings')
+      .select('*')
+      .single()
+
+    if (error) throw error
+    return data
   },
 
-  // إحصائيات حسب الدولة (من الزوار)
-  async getCountryStats() {
-    const { data } = await supabase
-      .from('visitors')
-      .select('visitor_country, count')
-      .group('visitor_country')
-      .order('count', { ascending: false })
-      .limit(10)
+  // تحديث إعدادات النظام
+  async updateSettings(updates) {
+    const { data, error } = await supabase
+      .from('settings')
+      .update({
+        ...updates,
+        updated_at: new Date()
+      })
+      .eq('id', 1)
+      .select()
+      .single()
 
-    return data || []
+    if (error) throw error
+    return data
+  },
+
+  // جلب إعدادات الدفع
+  async getPaymentSettings() {
+    const { data, error } = await supabase
+      .from('payment_settings')
+      .select('*')
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  // تحديث إعدادات الدفع
+  async updatePaymentSettings(updates) {
+    const { data, error } = await supabase
+      .from('payment_settings')
+      .update({
+        ...updates,
+        updated_at: new Date()
+      })
+      .eq('id', 1)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
   }
 }
