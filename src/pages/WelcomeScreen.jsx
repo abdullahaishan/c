@@ -146,7 +146,7 @@ const WelcomeScreen = ({ onLoadingComplete }) => {
                       data-aos-delay="600"
                       className="inline-block px-2 bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent"
                     >
-                      My
+                      Portfolio
                     </span>
                   </div>
                   <div>
@@ -155,7 +155,7 @@ const WelcomeScreen = ({ onLoadingComplete }) => {
                       data-aos-delay="800"
                       className="inline-block px-2 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"
                     >
-                      Portfolio
+                      -v5
                     </span>{" "}
                     <span
                       data-aos="fade-up"
