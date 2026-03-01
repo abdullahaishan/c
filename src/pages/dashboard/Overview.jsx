@@ -156,40 +156,6 @@ const Overview = () => {
         </div>
       </div>
 
-      {/* بطاقات الاستخدام */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <UsageCard
-          label="المشاريع"
-          current={usage?.projects || 0}
-          max={limits?.maxProjects || 1}
-          color="from-blue-500 to-cyan-500"
-        />
-        <UsageCard
-          label="المهارات"
-          current={usage?.skills || 0}
-          max={limits?.maxSkills || 2}
-          color="from-purple-500 to-pink-500"
-        />
-        <UsageCard
-          label="الشهادات"
-          current={usage?.certificates || 0}
-          max={limits?.maxCertificates || 1}
-          color="from-yellow-500 to-orange-500"
-        />
-        <UsageCard
-          label="الخبرات"
-          current={usage?.experience || 0}
-          max={limits?.maxExperience || 1}
-          color="from-green-500 to-emerald-500"
-        />
-        <UsageCard
-          label="التعليم"
-          current={usage?.education || 0}
-          max={limits?.maxEducation || 1}
-          color="from-red-500 to-rose-500"
-        />
-      </div>
-
       {/* البطاقات الرئيسية */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
