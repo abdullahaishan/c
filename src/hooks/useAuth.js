@@ -8,7 +8,6 @@ export const useAuth = () => {
   const [error, setError] = useState(null)
   const [hasPortfolio, setHasPortfolio] = useState(false)
 
-  // ✅ التحقق من وجود بورتفليو
   const checkPortfolio = async (userId) => {
     if (!userId) {
       setHasPortfolio(false)
@@ -41,30 +40,26 @@ export const useAuth = () => {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // ✅ استخدام Supabase Auth للتحقق من الجلسة
         const { data: { session } } = await supabase.auth.getSession()
         
         if (session?.user) {
-          // جلب بيانات المطور من جدول developers (وليس localStorage)
           const { data: developer } = await supabase
             .from('developers')
             .select('*')
             .eq('id', session.user.id)
-            .single()
+            .maybeSingle()
 
           if (developer) {
             setUser(developer)
             await checkPortfolio(developer.id)
           } else {
-            // إذا لم يكن في developers، تحقق من pending_developers
             const { data: pending } = await supabase
               .from('pending_developers')
               .select('*')
               .eq('id', session.user.id)
-              .single()
+              .maybeSingle()
 
             if (pending) {
-              // المستخدم في مرحلة الانتظار
               setUser({ ...pending, pending: true })
             }
           }
@@ -78,10 +73,8 @@ export const useAuth = () => {
 
     initAuth()
 
-    // الاستماع لتغييرات المصادقة
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        // تحديث حالة المستخدم عند تغيير الجلسة
         initAuth()
       } else {
         setUser(null)
@@ -92,17 +85,28 @@ export const useAuth = () => {
     return () => subscription?.unsubscribe()
   }, [])
 
-  // ✅ تسجيل الدخول
+  // ✅ دالة login المصححة
   const login = async (email, password) => {
     try {
       setLoading(true)
       setError(null)
 
-      const userData = await authService.login(email, password)
-
-      if (!userData || !userData.id) {
-        throw new Error('Login failed: invalid user data')
+      const result = await authService.login(email, password)
+      
+      if (!result.success) {
+        throw new Error('Login failed')
       }
+
+      const userFromAuth = result.user
+
+      // جلب بيانات إضافية من developers
+      const { data: developer } = await supabase
+        .from('developers')
+        .select('*')
+        .eq('id', userFromAuth.id)
+        .maybeSingle()
+
+      const userData = developer || userFromAuth
 
       setUser(userData)
       localStorage.setItem('developer', JSON.stringify(userData))
@@ -119,7 +123,6 @@ export const useAuth = () => {
     }
   }
 
-  // ✅ إنشاء حساب - ✅ الأهم: التعديل هنا
   const register = async (formData) => {
     try {
       setLoading(true)
@@ -127,18 +130,14 @@ export const useAuth = () => {
 
       const result = await authService.register(formData)
       
-      // ✅ authService.register يعيد { success, user, message }
       if (!result.success) {
         throw new Error(result.message || 'Registration failed')
       }
 
-      // لا نضع المستخدم في state مباشرة لأنه غير مؤكد بعد
-      // نوجهه لصفحة التأكيد
-
       return { 
         success: true, 
         user: result.user,
-        message: 'تم إرسال رابط التأكيد إلى بريدك الإلكتروني'
+        message: 'Verification link sent to your email'
       }
 
     } catch (err) {
@@ -149,7 +148,6 @@ export const useAuth = () => {
     }
   }
 
-  // ✅ تسجيل الخروج
   const logout = async () => {
     try {
       await supabase.auth.signOut()
