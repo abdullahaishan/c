@@ -88,7 +88,7 @@ const AppRoutes = () => {
   
   if (user) {
     // ✅ إذا كان أدمن → /admin ، وإلا → /dashboard
-    setRedirectTo(user?.is_admin ? '/admin' : '/dashboard')
+    setRedirectTo(user?.is_admin ? '/dashboard' : '/dashboard')
   } else {
     setShowWelcome(false)
   }
