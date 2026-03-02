@@ -7,85 +7,68 @@ export const useAdminAuth = () => {
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    // التحقق من جلسة الأدمن عند التحميل
     checkAdminSession()
+
+    // الاستماع لتغييرات المصادقة
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      checkAdminSession()
+    })
+
+    return () => subscription?.unsubscribe()
   }, [])
 
   const checkAdminSession = async () => {
     try {
       setLoading(true)
-      const { data: { session } } = await supabase.auth.getSession()
       
-      if (session?.user) {
-        await checkAdminRole(session.user.id)
-      } else {
-        setAdmin(null)
-      }
-    } catch (err) {
-      console.error('Error checking admin session:', err)
-      setError('Failed to check admin session')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const checkAdminRole = async (userId) => {
-    try {
-      // 1. جلب بيانات المطور الأساسية
-      const { data: developer, error: devError } = await supabase
-        .from('developers')
-        .select(`
-          id,
-          username,
-          email,
-          full_name,
-          profile_image,
-          role,
-          plan_id
-        `)
-        .eq('id', userId)
-        .single()
-
-      if (devError || !developer) {
-        console.log('User is not a developer')
+      // 1. جلب المستخدم الحالي من Auth
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
         setAdmin(null)
         return
       }
+
+      console.log('🔍 Checking admin for user:', user.id)
 
       // 2. التحقق من وجوده في جدول admins
       const { data: adminData, error: adminError } = await supabase
         .from('admins')
         .select('*')
-        .eq('developer_id', userId)
-        .eq('is_active', true)
+        .eq('developer_id', user.id)
         .single()
 
       if (adminError || !adminData) {
-        console.log('Developer is not an admin')
+        console.log('❌ User is not an admin')
         setAdmin(null)
         return
       }
 
-      // 3. دمج البيانات
+      // 3. جلب بيانات المطور (اختياري)
+      const { data: developer } = await supabase
+        .from('developers')
+        .select('full_name, username, profile_image')
+        .eq('id', user.id)
+        .single()
+
+      // 4. تخزين بيانات الأدمن
       setAdmin({
-        id: developer.id,
-        username: developer.username,
-        email: developer.email,
-        full_name: developer.full_name,
-        profile_image: developer.profile_image,
-        role: adminData.role, // 'super_admin', 'admin', 'moderator'
-        permissions: adminData.permissions,
-        developer_role: developer.role // 'user' أو 'admin'
+        id: user.id,
+        email: user.email,
+        full_name: developer?.full_name || user.email,
+        username: developer?.username,
+        profile_image: developer?.profile_image,
+        role: adminData.role,
+        permissions: adminData.permissions
       })
 
-      // تحديث آخر دخول (اختياري)
-      await supabase
-        .from('admins')
-        .update({ last_login: new Date() })
-        .eq('developer_id', userId)
-
     } catch (err) {
-      console.error('Error checking admin role:', err)
+      console.error('Error checking admin session:', err)
+      setError(err.message)
       setAdmin(null)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -94,7 +77,7 @@ export const useAdminAuth = () => {
       setLoading(true)
       setError(null)
 
-      // تسجيل الدخول عبر Supabase Auth
+      // 1. تسجيل الدخول عبر Auth
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -102,10 +85,12 @@ export const useAdminAuth = () => {
 
       if (error) throw error
 
+      // 2. التحقق من صلاحية الأدمن (سيتم عبر onAuthStateChange)
       return { success: true, user: data.user }
+
     } catch (err) {
       console.error('Admin login error:', err)
-      setError(err.message || 'Login failed')
+      setError(err.message)
       return { success: false, error: err.message }
     } finally {
       setLoading(false)
@@ -114,24 +99,11 @@ export const useAdminAuth = () => {
 
   const logout = async () => {
     try {
-      setLoading(true)
       await supabase.auth.signOut()
       setAdmin(null)
     } catch (err) {
       console.error('Logout error:', err)
-      setError('Logout failed')
-    } finally {
-      setLoading(false)
     }
-  }
-
-  // دوال مساعدة
-  const isSuperAdmin = () => admin?.role === 'super_admin'
-  const isAdmin = () => !!admin
-  const hasRole = (role) => admin?.role === role
-  const hasAnyRole = (roles) => roles.includes(admin?.role)
-  const hasPermission = (permission) => {
-    return admin?.permissions?.includes(permission) || isSuperAdmin()
   }
 
   return {
@@ -140,10 +112,6 @@ export const useAdminAuth = () => {
     error,
     login,
     logout,
-    isSuperAdmin,
-    isAdmin,
-    hasRole,
-    hasAnyRole,
-    hasPermission
+    isAdmin: !!admin
   }
 }
