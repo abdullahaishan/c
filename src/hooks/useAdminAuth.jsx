@@ -7,10 +7,8 @@ export const useAdminAuth = () => {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    // التحقق من جلسة الأدمن عند التحميل
     checkAdminSession()
 
-    // الاستماع لتغييرات المصادقة
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
       checkAdminSession()
     })
@@ -22,7 +20,6 @@ export const useAdminAuth = () => {
     try {
       setLoading(true)
       
-      // 1. جلب المستخدم الحالي من Auth
       const { data: { user } } = await supabase.auth.getUser()
       
       if (!user) {
@@ -32,27 +29,34 @@ export const useAdminAuth = () => {
 
       console.log('🔍 Checking admin for user:', user.id)
 
-      // 2. التحقق من وجوده في جدول admins
+      // ✅ استخدم maybeSingle() بدلاً من single()
       const { data: adminData, error: adminError } = await supabase
         .from('admins')
         .select('*')
         .eq('developer_id', user.id)
-        .single()
+        .maybeSingle()  // ← هذا لا يرمي خطأ إذا لم يجد
 
-      if (adminError || !adminData) {
-        console.log('❌ User is not an admin')
+      if (adminError) {
+        console.error('❌ Admin query error:', adminError)
         setAdmin(null)
         return
       }
 
-      // 3. جلب بيانات المطور (اختياري)
-      const { data: developer } = await supabase
+      if (!adminData) {
+        console.log('❌ User is not an admin (no record in admins table)')
+        setAdmin(null)
+        return
+      }
+
+      console.log('✅ Admin record found:', adminData)
+
+      // جلب بيانات المطور
+      const { data: developer, error: devError } = await supabase
         .from('developers')
         .select('full_name, username, profile_image')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
 
-      // 4. تخزين بيانات الأدمن
       setAdmin({
         id: user.id,
         email: user.email,
@@ -64,7 +68,7 @@ export const useAdminAuth = () => {
       })
 
     } catch (err) {
-      console.error('Error checking admin session:', err)
+      console.error('💥 Error checking admin session:', err)
       setError(err.message)
       setAdmin(null)
     } finally {
@@ -77,7 +81,6 @@ export const useAdminAuth = () => {
       setLoading(true)
       setError(null)
 
-      // 1. تسجيل الدخول عبر Auth
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -85,11 +88,10 @@ export const useAdminAuth = () => {
 
       if (error) throw error
 
-      // 2. التحقق من صلاحية الأدمن (سيتم عبر onAuthStateChange)
       return { success: true, user: data.user }
 
     } catch (err) {
-      console.error('Admin login error:', err)
+      console.error('❌ Admin login error:', err)
       setError(err.message)
       return { success: false, error: err.message }
     } finally {
