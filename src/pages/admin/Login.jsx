@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAdminAuth } from '../../hooks/useAdminAuth'
-import { Mail, Lock, Eye, EyeOff, AlertCircle, Shield } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, AlertCircle, Shield, XCircle } from 'lucide-react'
 import AnimatedBackground from '../../components/AnimatedBackground'
 
 const AdminLogin = () => {
@@ -12,6 +12,7 @@ const AdminLogin = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [debugInfo, setDebugInfo] = useState(null)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -23,18 +24,40 @@ const AdminLogin = () => {
 
     setLoading(true)
     setError('')
+    setDebugInfo(null)
 
     try {
+      console.log('🔐 Admin login attempt:', email)
+      
       const result = await login(email, password)
       
+      console.log('📦 Login result:', result)
+      
       if (result.success) {
+        console.log('✅ Login successful, redirecting...')
         navigate('/admin')
       } else {
+        console.log('❌ Login failed:', result.error)
         setError(result.error || 'Login failed')
+        
+        // تخزين معلومات التصحيح
+        setDebugInfo({
+          error: result.error,
+          timestamp: new Date().toISOString(),
+          email
+        })
       }
 
     } catch (err) {
-      setError(err.message || 'An error occurred')
+      console.error('💥 Unexpected error:', err)
+      setError(err.message || 'An unexpected error occurred')
+      
+      setDebugInfo({
+        error: err.message,
+        stack: err.stack,
+        timestamp: new Date().toISOString(),
+        email
+      })
     } finally {
       setLoading(false)
     }
@@ -61,15 +84,37 @@ const AdminLogin = () => {
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6366f1] to-[#a855f7] mb-2">
               Admin Login
             </h2>
-            <p className="text-sm sm:text-base text-gray-400">Sign in with your developer account</p>
+            <p className="text-sm sm:text-base text-gray-400">Sign in to admin panel</p>
           </div>
 
           <div className="bg-white/5 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 border border-white/10">
             
+            {/* رسالة الخطأ العادية */}
             {error && (
               <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-500/10 border border-red-500/20 rounded-lg sm:rounded-xl text-red-400 text-xs sm:text-sm flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                 <span>{error}</span>
+              </div>
+            )}
+
+            {/* معلومات التصحيح (تظهر فقط في حالة الخطأ) */}
+            {debugInfo && (
+              <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg sm:rounded-xl">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-medium text-yellow-400">🔍 Debug Information:</p>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(JSON.stringify(debugInfo, null, 2))
+                      alert('Copied to clipboard!')
+                    }}
+                    className="text-xs text-yellow-400 hover:text-yellow-300"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <pre className="text-xs text-yellow-300 overflow-auto max-h-40 whitespace-pre-wrap">
+                  {JSON.stringify(debugInfo, null, 2)}
+                </pre>
               </div>
             )}
 
@@ -86,7 +131,7 @@ const AdminLogin = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-3 bg-white/10 border border-white/20 rounded-lg sm:rounded-xl text-white text-sm sm:text-base placeholder-gray-400 focus:outline-none focus:border-[#6366f1] focus:ring-2 focus:ring-[#6366f1]/20 transition-all"
-                    placeholder="your@email.com"
+                    placeholder="admin@example.com"
                     disabled={loading}
                   />
                 </div>
@@ -131,7 +176,7 @@ const AdminLogin = () => {
 
             <p className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-400">
               <Link to="/login" className="text-[#a855f7] hover:text-[#6366f1] transition-colors">
-                Not an admin? User login
+                Regular user? Login here
               </Link>
             </p>
           </div>
