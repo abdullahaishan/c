@@ -12,16 +12,19 @@ const ConfirmEmail = () => {
   const [debugInfo, setDebugInfo] = useState(null)
   const [userEmail, setUserEmail] = useState('')
   const [currentUrl, setCurrentUrl] = useState('')
-  const [dbErrors, setDbErrors] = useState([]) // ✅ تخزين أخطاء قاعدة البيانات
-  const [allResponses, setAllResponses] = useState([]) // ✅ تخزين جميع استجابات Supabase
+  const [dbErrors, setDbErrors] = useState([])
+  const [allResponses, setAllResponses] = useState([])
 
   useEffect(() => {
     setCurrentUrl(window.location.href)
 
     const confirmEmail = async () => {
       try {
-        // قراءة جميع المعاملات الممكنة
+        // قراءة جميع المعاملات الممكنة (بما فيها الـ hash)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        
         const params = {
+          // من query string (بعد ?)
           token_hash: searchParams.get('token_hash'),
           token: searchParams.get('token'),
           type: searchParams.get('type'),
@@ -30,40 +33,47 @@ const ConfirmEmail = () => {
           redirect_to: searchParams.get('redirect_to'),
           code: searchParams.get('code'),
           error: searchParams.get('error'),
-          error_description: searchParams.get('error_description')
+          error_description: searchParams.get('error_description'),
+          
+          // من hash fragment (بعد #)
+          hash_access_token: hashParams.get('access_token'),
+          hash_refresh_token: hashParams.get('refresh_token'),
+          hash_type: hashParams.get('type'),
+          hash_error: hashParams.get('error'),
+          hash_error_description: hashParams.get('error_description')
         }
 
-        // تسجيل المعاملات
+        console.log('🔍 Full URL:', window.location.href)
+        console.log('🔍 All params:', params)
+        console.log('🔍 Hash params:', Object.fromEntries(hashParams.entries()))
+
         addResponse('📥 URL Parameters', params)
+        addResponse('📥 Hash Parameters', Object.fromEntries(hashParams.entries()))
 
-        const verificationToken = params.token_hash || params.token || params.access_token || params.code
-        
-        if (!verificationToken) {
-          if (params.error) {
-            throw new Error(`خطأ من Supabase: ${params.error_description || params.error}`)
-          }
-          
-          setDebugInfo({
-            currentUrl: window.location.href,
-            params: params,
-            allParams: Object.fromEntries(searchParams.entries())
-          })
-          
-          throw new Error('رابط التأكيد غير صالح: لا يوجد رمز تأكيد في الرابط')
+        // التحقق من وجود خطأ في الرابط
+        if (params.error || params.hash_error) {
+          const errorMsg = params.error_description || params.hash_error_description || 'خطأ في التأكيد'
+          throw new Error(`❌ ${errorMsg}`)
         }
 
-        // محاولة التأكيد
-        addResponse('🔑 Attempting verification with token', { token: verificationToken })
-        
-        const { error: verifyError, data: verifyData } = await supabase.auth.verifyOtp({
-          token_hash: verificationToken,
-          type: params.type || 'signup'
-        })
+        // الحصول على access_token (من query أو hash)
+        const accessToken = params.access_token || params.hash_access_token
+        const refreshToken = params.refresh_token || params.hash_refresh_token
 
-        addResponse('📧 verifyOtp response', { error: verifyError, data: verifyData })
+        if (accessToken) {
+          addResponse('🔑 Found access_token, setting session...', { accessToken })
+          
+          // تعيين الجلسة باستخدام access_token
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          })
 
-        if (verifyError) {
-          throw new Error(verifyError.message || 'فشل تأكيد البريد الإلكتروني')
+          addResponse('📦 setSession response', { error: sessionError })
+
+          if (sessionError) {
+            throw new Error(`فشل تعيين الجلسة: ${sessionError.message}`)
+          }
         }
 
         // جلب المستخدم
@@ -78,13 +88,7 @@ const ConfirmEmail = () => {
         }
 
         setUserEmail(user.email)
-
-        if (!user.email_confirmed_at) {
-          setStatus('waiting')
-          setMessage('في انتظار تأكيد البريد الإلكتروني...')
-          setTimeout(() => window.location.reload(), 3000)
-          return
-        }
+        addResponse('✅ User confirmed', { user })
 
         // التحقق من developers
         addResponse('📦 Checking developers...', { userId: user.id })
@@ -225,6 +229,7 @@ const ConfirmEmail = () => {
     const dataToCopy = {
       url: currentUrl,
       params: Object.fromEntries(searchParams.entries()),
+      hashParams: Object.fromEntries(new URLSearchParams(window.location.hash.substring(1)).entries()),
       debugInfo,
       dbErrors,
       allResponses,
@@ -293,7 +298,10 @@ const ConfirmEmail = () => {
               <div className="bg-white/5 rounded-lg p-4 border border-white/10">
                 <p className="text-sm text-gray-400 mb-2">📋 معاملات الرابط:</p>
                 <pre className="text-xs text-gray-300 overflow-auto max-h-40">
-                  {JSON.stringify(Object.fromEntries(searchParams.entries()), null, 2)}
+                  {JSON.stringify({
+                    query: Object.fromEntries(searchParams.entries()),
+                    hash: Object.fromEntries(new URLSearchParams(window.location.hash.substring(1)).entries())
+                  }, null, 2)}
                 </pre>
               </div>
 
