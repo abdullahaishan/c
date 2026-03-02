@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useAdminAuth } from '../hooks/useAdminAuth'
 import LoadingScreen from './LoadingScreen'
 
-const ProtectedRoute = ({ children, adminOnly = false }) => {
+const AdminProtectedRoute = ({ children, adminOnly = false }) => {
   const { user, loading } = useAuth()
   const { admin, loading: adminLoading } = useAdminAuth()
   const location = useLocation()
@@ -27,4 +27,4 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   return children
 }
 
-export default ProtectedRoute
+export default AdminProtectedRoute
