@@ -43,8 +43,21 @@ const Login = () => {
         return
       }
 
-      // ✅ إذا كل شيء صحيح، انتقل للوحة التحكم
-      navigate('/dashboard')
+      // ✅ جلب بيانات المطور للتحقق من صلاحية الأدمن
+const { data: developer } = await supabase
+  .from('developers')
+  .select('is_admin')
+  .eq('id', user.id)
+  .maybeSingle()
+
+// ✅ التوجيه الذكي: أدمن → /admin ، مطور عادي → /dashboard
+if (developer?.is_admin) {
+  console.log('👑 Admin logged in, redirecting to /admin')
+  navigate('/admin')
+} else {
+  console.log('👤 Regular developer logged in, redirecting to /dashboard')
+  navigate('/dashboard')
+}
 
     } catch (err) {
       console.error('❌ Login error:', err)
