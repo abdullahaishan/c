@@ -174,7 +174,7 @@ const AppRoutes = () => {
 <Route 
   path="/admin" 
   element={
-    <AdminProtectedRoute adminOnly>
+    <AdminProtectedRoute >
       <AdminLayout />
     </AdminProtectedRoute>
   }
