@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { AnimatePresence } from 'framer-motion'
 import "./index.css"
+import VerifyOtp from './pages/auth/VerifyOtp'
+
 
 // الصفحات العامة
 import WelcomeScreen from './pages/WelcomeScreen'
@@ -125,7 +127,8 @@ const AppRoutes = () => {
           
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          
+          // ضمن Routes
+<Route path="/verify-otp" element={<VerifyOtp />} />
           <Route path="/u/:username" element={<PublicPortfolioWrapper />} />
           <Route path="/project/:id" element={<ProjectDetail />} />
           
