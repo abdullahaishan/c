@@ -36,15 +36,18 @@ import NotFound from './pages/NotFound'
 // صفحات المشروع
 import ProjectDetail from './components/ProjectDetail'
 
-// صفحات الأدمن
+// استيرادات الأدمن
 import AdminLogin from './pages/admin/Login'
 import AdminLayout from './pages/admin/AdminLayout'
-import AdminOverview from './pages/admin/Overview'
+import AdminDashboard from './pages/admin/Dashboard'
 import AdminDevelopers from './pages/admin/Developers'
 import AdminPlans from './pages/admin/Plans'
-import AdminPayments from './pages/admin/Payments'
+import AdminSubscriptions from './pages/admin/Subscriptions'
+import AdminUpgrades from './pages/admin/Upgrades'
 import AdminMessages from './pages/admin/Messages'
-import AdminUpgradeRequests from './pages/admin/UpgradeRequests'
+import AdminAnalytics from './pages/admin/Analytics'
+import AdminSettings from './pages/admin/Settings'
+
 
 // صفحات التأكيد
 import VerifyEmail from './pages/auth/VerifyEmail'
@@ -165,23 +168,25 @@ const AppRoutes = () => {
           </Route>
           
           {/* ========== صفحات الأدمن ========== */}
-           
+          
 <Route path="/admin/login" element={<AdminLogin />} />
 
 <Route 
   path="/admin" 
   element={
-    <AdminRoute>  // ✅ هذا هو المهم!
+    <AdminProtectedRoute adminOnly>
       <AdminLayout />
-    </AdminRoute>
+    </AdminProtectedRoute>
   }
 >
-  <Route index element={<AdminOverview />} />
+  <Route index element={<AdminDashboard />} />
   <Route path="developers" element={<AdminDevelopers />} />
   <Route path="plans" element={<AdminPlans />} />
-  <Route path="payments" element={<AdminPayments />} />
+  <Route path="subscriptions" element={<AdminSubscriptions />} />
+  <Route path="upgrades" element={<AdminUpgrades />} />
   <Route path="messages" element={<AdminMessages />} />
-  <Route path="upgrade-requests" element={<AdminUpgradeRequests />} />
+  <Route path="analytics" element={<AdminAnalytics />} />
+  <Route path="settings" element={<AdminSettings />} />
 </Route>
         
           
