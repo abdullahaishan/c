@@ -25,20 +25,20 @@ const AdminLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
 
-  useEffect(() => {
-    if (admin?.id) {
-      loadUnreadCount()
-    }
-  }, [admin])
+//  useEffect(() => {
+//    if (admin?.id) {
+//      loadUnreadCount()
+ //   }
+//  }, [admin])
 
-  const loadUnreadCount = async () => {
-    try {
-    const { data } = await adminNotificationService.getUnreadNotifications(admin.id, 0, 1)
-      setUnreadCount(data.length)
-    } catch (error) {
-      console.error('Error loading unread count:', error)
-    }
-  }
+//  const loadUnreadCount = async () => {
+//    try {
+//    const { data } = await adminNotificationService.getUnreadNotifications(admin.id, 0, 1)
+//      setUnreadCount(data.length)
+//    } catch (error) {
+ //     console.error('Error loading unread count:', error)
+//    }
+//  }
 
 //  if (!admin) {
 //    return <Navigate to="/admin/login" replace />
