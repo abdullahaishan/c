@@ -27,7 +27,8 @@ const Register = () => {
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+  
+e.preventDefault()
     setError('')
     setSuccess('')
     setRateLimit(false)
@@ -41,44 +42,28 @@ const Register = () => {
       setError('Password must be at least 6 characters')
       return
     }
+  setLoading(true)
+  setError('')
+  setSuccess('')
 
-    setLoading(true)
-
-    try {
-      const result = await register({
-        full_name: formData.fullName,
-        email: formData.email,
-        password: formData.password
-      })
+  try {
+    const result = await register({
+      full_name: formData.fullName,
+      email: formData.email,
+      password: formData.password
+    })
+    
+    if (result.success) {
+      setSuccess('✅ تم إرسال رمز التأكيد إلى بريدك الإلكتروني')
       
-      if (result.success) {
-        setSuccess('✅ Account created! Verification link sent to your email')
-        
-        setTimeout(() => {
-          navigate('/verify-email')
-        }, 2000)
-      } else {
-        // Check if it's a rate limit error
-        if (result.error?.includes('rate limit') || result.error?.includes('Rate limit')) {
-          setRateLimit(true)
-          setError('Too many registration attempts. Please wait a moment before trying again.')
-          
-          // Start cooldown timer
-          setCooldown(60)
-          const timer = setInterval(() => {
-            setCooldown(prev => {
-              if (prev <= 1) {
-                clearInterval(timer)
-                setRateLimit(false)
-                return 0
-              }
-              return prev - 1
-            })
-          }, 1000)
-        } else {
-          setError(result.error || 'Registration failed')
-        }
-      }
+      // ✅ التوجيه إلى صفحة إدخال الرمز مع البريد
+      setTimeout(() => {
+        navigate('/verify-otp', { state: { email: formData.email } })
+      }, 1500)
+    } else {
+      setError(result.error || 'فشل إنشاء الحساب')
+    }
+
     } catch (err) {
       setError(err.message || 'An unexpected error occurred')
     } finally {
