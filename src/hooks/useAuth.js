@@ -164,9 +164,6 @@ export const useAuth = () => {
       await checkPortfolio(user.id)
     }
   }
-
-const isAdmin = user?.is_admin || false
-
   return {
     user,
     loading,
@@ -177,6 +174,5 @@ const isAdmin = user?.is_admin || false
     logout,
     refreshPortfolioStatus,
     isAuthenticated: !!user, 
-    isAdmin,
   }
 }
