@@ -1,27 +1,18 @@
 import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth'
-import { useAdminAuth } from '../hooks/useAdminAuth'
+import { useAdminAuth } from '../hooks/useAdminAuth'  // ← فقط useAdminAuth
 import LoadingScreen from './LoadingScreen'
 
-const AdminProtectedRoute = ({ children, adminOnly = false }) => {
-  const { user, loading } = useAuth()
-  const { admin, loading: adminLoading } = useAdminAuth()
+const AdminProtectedRoute = ({ children }) => {  // ← أزل adminOnly
+  const { admin, loading } = useAdminAuth()
   const location = useLocation()
 
-  if (loading || (adminOnly && adminLoading)) {
+  if (loading) {
     return <LoadingScreen />
   }
 
-  if (adminOnly) {
-    if (!admin) {
-      return <Navigate to="/admin/login" state={{ from: location }} replace />
-    }
-    return children
-  }
-
-  if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+  if (!admin) {
+    return <Navigate to="/admin/login" state={{ from: location }} replace />
   }
 
   return children
