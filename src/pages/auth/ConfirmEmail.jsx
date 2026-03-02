@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import AnimatedBackground from '../../components/AnimatedBackground'
-import { CheckCircle, XCircle, Loader, AlertCircle, LogIn, UserPlus } from 'lucide-react'
+import { CheckCircle, XCircle, Loader, AlertCircle, LogIn, UserPlus, Copy, Database } from 'lucide-react'
 
 const ConfirmEmail = () => {
   const [searchParams] = useSearchParams()
@@ -11,111 +11,122 @@ const ConfirmEmail = () => {
   const [message, setMessage] = useState('')
   const [debugInfo, setDebugInfo] = useState(null)
   const [userEmail, setUserEmail] = useState('')
+  const [currentUrl, setCurrentUrl] = useState('')
+  const [dbErrors, setDbErrors] = useState([]) // ✅ تخزين أخطاء قاعدة البيانات
+  const [allResponses, setAllResponses] = useState([]) // ✅ تخزين جميع استجابات Supabase
 
   useEffect(() => {
+    setCurrentUrl(window.location.href)
+
     const confirmEmail = async () => {
       try {
-        // قراءة المعاملات من الرابط
-        const token_hash = searchParams.get('token_hash')
-        const token = searchParams.get('token')
-        const type = searchParams.get('type')
-        const redirect_to = searchParams.get('redirect_to')
-
-        console.log('🔍 Confirmation params:', { token_hash, token, type, redirect_to })
-
-        // التحقق من وجود رمز التأكيد
-        const verificationToken = token_hash || token
-        if (!verificationToken) {
-          throw new Error('رابط التأكيد غير صالح: الرمز مفقود')
+        // قراءة جميع المعاملات الممكنة
+        const params = {
+          token_hash: searchParams.get('token_hash'),
+          token: searchParams.get('token'),
+          type: searchParams.get('type'),
+          access_token: searchParams.get('access_token'),
+          refresh_token: searchParams.get('refresh_token'),
+          redirect_to: searchParams.get('redirect_to'),
+          code: searchParams.get('code'),
+          error: searchParams.get('error'),
+          error_description: searchParams.get('error_description')
         }
 
-        // تحديد نوع التأكيد
-        const verificationType = type || 'signup'
+        // تسجيل المعاملات
+        addResponse('📥 URL Parameters', params)
 
-        // 1. التحقق من صحة الرابط وتأكيد البريد
-        console.log('📧 Verifying OTP...')
-        const { error: verifyError } = await supabase.auth.verifyOtp({
+        const verificationToken = params.token_hash || params.token || params.access_token || params.code
+        
+        if (!verificationToken) {
+          if (params.error) {
+            throw new Error(`خطأ من Supabase: ${params.error_description || params.error}`)
+          }
+          
+          setDebugInfo({
+            currentUrl: window.location.href,
+            params: params,
+            allParams: Object.fromEntries(searchParams.entries())
+          })
+          
+          throw new Error('رابط التأكيد غير صالح: لا يوجد رمز تأكيد في الرابط')
+        }
+
+        // محاولة التأكيد
+        addResponse('🔑 Attempting verification with token', { token: verificationToken })
+        
+        const { error: verifyError, data: verifyData } = await supabase.auth.verifyOtp({
           token_hash: verificationToken,
-          type: verificationType
+          type: params.type || 'signup'
         })
 
+        addResponse('📧 verifyOtp response', { error: verifyError, data: verifyData })
+
         if (verifyError) {
-          console.error('❌ Verify OTP error:', verifyError)
           throw new Error(verifyError.message || 'فشل تأكيد البريد الإلكتروني')
         }
 
-        // 2. جلب المستخدم المؤكد
-        console.log('👤 Fetching confirmed user...')
+        // جلب المستخدم
+        addResponse('👤 Fetching user...', {})
+        
         const { data: { user }, error: userError } = await supabase.auth.getUser()
         
+        addResponse('👤 getUser response', { error: userError, user })
+
         if (userError || !user) {
-          console.error('❌ Get user error:', userError)
           throw new Error('لم يتم العثور على المستخدم')
         }
 
-        console.log('✅ Confirmed user:', user.id, user.email)
         setUserEmail(user.email)
 
-        // التحقق من أن البريد مؤكد فعلاً
         if (!user.email_confirmed_at) {
-          console.log('⏳ Email not confirmed yet')
           setStatus('waiting')
           setMessage('في انتظار تأكيد البريد الإلكتروني...')
-          
-          // انتظر قليلاً ثم أعد المحاولة
           setTimeout(() => window.location.reload(), 3000)
           return
         }
 
-        // 3. التحقق من وجود المستخدم في جدول developers
-        console.log('📦 Checking developers table...')
+        // التحقق من developers
+        addResponse('📦 Checking developers...', { userId: user.id })
+        
         const { data: existingDeveloper, error: checkError } = await supabase
           .from('developers')
           .select('*')
           .eq('id', user.id)
           .maybeSingle()
 
+        addResponse('📦 developers response', { error: checkError, data: existingDeveloper })
+
         if (checkError) {
-          console.error('❌ Check developer error:', checkError)
+          addDbError('developers fetch error', checkError)
         }
 
-        // إذا كان المستخدم موجوداً بالفعل في developers
         if (existingDeveloper) {
-          console.log('✅ User already exists in developers')
           setStatus('success')
           setMessage('✅ تم تأكيد بريدك الإلكتروني!')
-          
-          // تخزين معلومات التصحيح
-          setDebugInfo({
-            userId: user.id,
-            userEmail: user.email,
-            status: 'already_exists',
-            developer: existingDeveloper
-          })
-
           setTimeout(() => navigate('/dashboard'), 2000)
           return
         }
 
-        // 4. البحث في جدول pending_developers
-        console.log('📦 Checking pending_developers table...')
+        // التحقق من pending_developers
+        addResponse('📦 Checking pending_developers...', { userId: user.id })
+        
         const { data: pending, error: pendingError } = await supabase
           .from('pending_developers')
           .select('*')
           .eq('id', user.id)
           .maybeSingle()
 
-        console.log('📊 Pending query result:', { pending, pendingError })
+        addResponse('📦 pending_developers response', { error: pendingError, data: pending })
 
         if (pendingError) {
-          console.error('❌ Pending fetch error:', pendingError)
+          addDbError('pending_developers fetch error', pendingError)
         }
 
-        // 5. إذا وجدنا بيانات في pending، انقلها إلى developers
         if (pending) {
-          console.log('📝 Moving data from pending to developers...')
+          addResponse('📝 Moving data to developers...', { pending })
           
-          const { error: insertError } = await supabase
+          const { error: insertError, data: insertData } = await supabase
             .from('developers')
             .insert([{
               id: pending.id,
@@ -127,43 +138,40 @@ const ConfirmEmail = () => {
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             }])
+            .select()
+
+          addResponse('📝 insert response', { error: insertError, data: insertData })
 
           if (insertError) {
-            console.error('❌ Insert error:', insertError)
+            addDbError('insert error', insertError)
             throw new Error('فشل في إنشاء حساب المطور')
           }
 
-          // حذف من pending بعد النجاح
-          await supabase
+          // حذف من pending
+          const { error: deleteError } = await supabase
             .from('pending_developers')
             .delete()
             .eq('id', user.id)
 
-          console.log('✅ Successfully moved to developers')
-          
+          addResponse('🗑️ delete response', { error: deleteError })
+
+          if (deleteError) {
+            addDbError('delete error', deleteError)
+          }
+
           setStatus('success')
           setMessage('✅ تم تأكيد بريدك الإلكتروني وإنشاء حسابك!')
-          
-          setDebugInfo({
-            userId: user.id,
-            userEmail: user.email,
-            username: pending.username,
-            full_name: pending.full_name,
-            status: 'created_from_pending'
-          })
-
           setTimeout(() => navigate('/dashboard'), 2000)
           return
         }
 
-        // 6. إذا لم نجد في أي جدول، أنشئ سجلاً جديداً في developers
-        console.log('🆕 Creating new developer record...')
+        // إنشاء سجل جديد
+        addResponse('🆕 Creating new developer record...', {})
         
-        // إنشاء اسم مستخدم من البريد الإلكتروني
         const username = user.email.split('@')[0].toLowerCase() + 
           '-' + Math.random().toString(36).substring(2, 6)
 
-        const { error: createError } = await supabase
+        const { error: createError, data: createData } = await supabase
           .from('developers')
           .insert([{
             id: user.id,
@@ -175,28 +183,22 @@ const ConfirmEmail = () => {
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           }])
+          .select()
+
+        addResponse('🆕 create response', { error: createError, data: createData })
 
         if (createError) {
-          console.error('❌ Create error:', createError)
+          addDbError('create error', createError)
           throw new Error('فشل في إنشاء حساب المطور')
         }
 
-        console.log('✅ Developer record created successfully')
-        
         setStatus('success')
         setMessage('✅ تم تأكيد بريدك الإلكتروني وإنشاء حسابك!')
-        
-        setDebugInfo({
-          userId: user.id,
-          userEmail: user.email,
-          username,
-          status: 'created_new'
-        })
-
         setTimeout(() => navigate('/dashboard'), 2000)
 
       } catch (error) {
-        console.error('💥 Confirmation error:', error)
+        console.error('💥 Error:', error)
+        addDbError('catch error', { message: error.message, stack: error.stack })
         setStatus('error')
         setMessage(error.message || 'حدث خطأ أثناء تأكيد البريد')
       }
@@ -205,58 +207,151 @@ const ConfirmEmail = () => {
     confirmEmail()
   }, [searchParams, navigate])
 
+  // دوال مساعدة لتسجيل الأخطاء
+  const addDbError = (source, error) => {
+    setDbErrors(prev => [...prev, { source, error, timestamp: new Date().toISOString() }])
+  }
+
+  const addResponse = (action, data) => {
+    setAllResponses(prev => [...prev, { action, data, timestamp: new Date().toISOString() }])
+  }
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text)
+    alert('تم النسخ!')
+  }
+
+  const copyAllData = () => {
+    const dataToCopy = {
+      url: currentUrl,
+      params: Object.fromEntries(searchParams.entries()),
+      debugInfo,
+      dbErrors,
+      allResponses,
+      timestamp: new Date().toISOString()
+    }
+    copyToClipboard(JSON.stringify(dataToCopy, null, 2))
+  }
+
   return (
     <div className="relative min-h-screen bg-[#030014] overflow-hidden">
       <AnimatedBackground />
       
-      <div className="relative z-10 min-h-screen flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10">
+      <div className="relative z-10 min-h-screen flex items-center justify-center px-4 py-8">
+        <div className="max-w-2xl w-full bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
           
-          {/* حالة التحميل */}
+          {/* Header with copy button */}
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-white">تأكيد البريد الإلكتروني</h2>
+            <button
+              onClick={copyAllData}
+              className="flex items-center gap-2 px-3 py-1 bg-white/10 rounded-lg hover:bg-white/20 transition"
+            >
+              <Copy className="w-4 h-4" />
+              <span className="text-sm">نسخ كل البيانات</span>
+            </button>
+          </div>
+          
           {status === 'loading' && (
-            <div className="text-center">
+            <div className="text-center py-8">
               <Loader className="w-16 h-16 text-[#a855f7] animate-spin mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-white mb-2">جاري تأكيد بريدك...</h2>
-              <p className="text-gray-400">الرجاء الانتظار</p>
+              <h3 className="text-xl text-white mb-2">جاري تأكيد بريدك...</h3>
             </div>
           )}
 
-          {/* حالة الانتظار */}
-          {status === 'waiting' && (
-            <div className="text-center">
-              <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-white mb-2">في انتظار التأكيد</h2>
-              <p className="text-yellow-400 mb-4">{message}</p>
-              <p className="text-gray-400 text-sm">جاري إعادة المحاولة...</p>
-            </div>
-          )}
-
-          {/* حالة النجاح */}
           {status === 'success' && (
-            <div className="text-center">
+            <div className="text-center py-8">
               <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-white mb-2">تم التأكيد بنجاح! ✅</h2>
-              <p className="text-green-400 mb-4">{message}</p>
-              <p className="text-gray-400 text-sm">جاري تحويلك إلى لوحة التحكم...</p>
+              <h3 className="text-xl text-white mb-2">تم التأكيد بنجاح! ✅</h3>
+              <p className="text-green-400">{message}</p>
             </div>
           )}
 
-          {/* حالة الخطأ */}
           {status === 'error' && (
-            <>
-              <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-white mb-2 text-center">فشل التأكيد</h2>
-              <p className="text-red-400 text-center mb-6">{message}</p>
-              
+            <div className="space-y-6">
+              <div className="text-center">
+                <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                <h3 className="text-xl text-white mb-2">فشل التأكيد</h3>
+                <p className="text-red-400">{message}</p>
+              </div>
+
+              {/* الرابط الحالي */}
+              <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm text-gray-400">🔗 الرابط الحالي:</p>
+                  <button
+                    onClick={() => copyToClipboard(currentUrl)}
+                    className="text-xs text-purple-400 hover:text-purple-300"
+                  >
+                    نسخ
+                  </button>
+                </div>
+                <p className="text-xs text-gray-300 break-all">{currentUrl}</p>
+              </div>
+
+              {/* معاملات الرابط */}
+              <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                <p className="text-sm text-gray-400 mb-2">📋 معاملات الرابط:</p>
+                <pre className="text-xs text-gray-300 overflow-auto max-h-40">
+                  {JSON.stringify(Object.fromEntries(searchParams.entries()), null, 2)}
+                </pre>
+              </div>
+
+              {/* أخطاء قاعدة البيانات */}
+              {dbErrors.length > 0 && (
+                <div className="bg-red-500/10 rounded-lg p-4 border border-red-500/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm text-red-400">❌ أخطاء قاعدة البيانات:</p>
+                    <button
+                      onClick={() => copyToClipboard(JSON.stringify(dbErrors, null, 2))}
+                      className="text-xs text-red-400 hover:text-red-300"
+                    >
+                      نسخ
+                    </button>
+                  </div>
+                  <pre className="text-xs text-red-300 overflow-auto max-h-60">
+                    {JSON.stringify(dbErrors, null, 2)}
+                  </pre>
+                </div>
+              )}
+
+              {/* جميع استجابات Supabase */}
+              {allResponses.length > 0 && (
+                <div className="bg-blue-500/10 rounded-lg p-4 border border-blue-500/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm text-blue-400">📊 استجابات Supabase:</p>
+                    <button
+                      onClick={() => copyToClipboard(JSON.stringify(allResponses, null, 2))}
+                      className="text-xs text-blue-400 hover:text-blue-300"
+                    >
+                      نسخ
+                    </button>
+                  </div>
+                  <pre className="text-xs text-blue-300 overflow-auto max-h-60">
+                    {JSON.stringify(allResponses, null, 2)}
+                  </pre>
+                </div>
+              )}
+
+              {/* Debug Info */}
               {debugInfo && (
-                <div className="mt-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                  <p className="text-yellow-400 text-sm font-medium mb-2">معلومات التصحيح:</p>
-                  <pre className="text-xs text-gray-300 overflow-auto">
+                <div className="bg-yellow-500/10 rounded-lg p-4 border border-yellow-500/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm text-yellow-400">🔍 معلومات التصحيح:</p>
+                    <button
+                      onClick={() => copyToClipboard(JSON.stringify(debugInfo, null, 2))}
+                      className="text-xs text-yellow-400 hover:text-yellow-300"
+                    >
+                      نسخ
+                    </button>
+                  </div>
+                  <pre className="text-xs text-yellow-300 overflow-auto max-h-40">
                     {JSON.stringify(debugInfo, null, 2)}
                   </pre>
                 </div>
               )}
 
+              {/* أزرار الإجراءات */}
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={() => navigate('/login')}
@@ -273,13 +368,7 @@ const ConfirmEmail = () => {
                   تسجيل جديد
                 </button>
               </div>
-
-              {userEmail && (
-                <p className="text-center text-gray-400 text-sm mt-4">
-                  البريد الإلكتروني: <span className="text-[#a855f7]">{userEmail}</span>
-                </p>
-              )}
-            </>
+            </div>
           )}
         </div>
       </div>
