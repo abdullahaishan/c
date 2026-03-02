@@ -25,7 +25,7 @@ export const useAdminAuth = () => {
           .select('id, full_name, username, email, profile_image, is_admin, role')
           .eq('id', adminData.id)
           .eq('is_admin', true)
-          .single()
+          .maybeSingle()
 
         if (data) {
           setAdmin(data)
