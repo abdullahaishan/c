@@ -37,11 +37,11 @@ const Login = () => {
       // ✅ التحقق من حالة المستخدم في Auth
       const { data: { user } } = await supabase.auth.getUser()
       
-      if (!user?.email_confirmed_at) {
-        setError('❌ Please confirm your email first')
-        setLoading(false)
-        return
-      }
+  //    if (!user?.email_confirmed_at) {
+     //   setError('❌ Please confirm your email first')
+    //    setLoading(false)
+      //  return
+ //     }
 
       // ✅ إذا كل شيء صحيح، انتقل للوحة التحكم
       navigate('/dashboard')
