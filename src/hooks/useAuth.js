@@ -165,6 +165,8 @@ export const useAuth = () => {
     }
   }
 
+const isAdmin = user?.is_admin || false
+
   return {
     user,
     loading,
@@ -174,6 +176,7 @@ export const useAuth = () => {
     register,
     logout,
     refreshPortfolioStatus,
-    isAuthenticated: !!user
+    isAuthenticated: !!user, 
+    isAdmin,
   }
 }
