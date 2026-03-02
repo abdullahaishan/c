@@ -5,6 +5,7 @@ import { AnimatePresence } from 'framer-motion'
 import "./index.css"
 import VerifyOtp from './pages/auth/VerifyOtp'
 import AdminProtectedRoute from './components/AdminProtectedRoute'
+import AdminRoute from './components/AdminRoute'
 
 // الصفحات العامة
 import WelcomeScreen from './pages/WelcomeScreen'
@@ -164,15 +165,24 @@ const AppRoutes = () => {
           </Route>
           
           {/* ========== صفحات الأدمن ========== */}
-           <Route path="/admin/Login" element={<AdminLogin />} />
-            <Route 
+           
+<Route path="/admin/login" element={<AdminLogin />} />
+
+<Route 
   path="/admin" 
   element={
-    <AdminProtectedRoute>  // ✅ استخدام المكون الخاص بالأدمن
+    <AdminRoute>  // ✅ هذا هو المهم!
       <AdminLayout />
-    </AdminProtectedRoute>
+    </AdminRoute>
   }
 >
+  <Route index element={<AdminOverview />} />
+  <Route path="developers" element={<AdminDevelopers />} />
+  <Route path="plans" element={<AdminPlans />} />
+  <Route path="payments" element={<AdminPayments />} />
+  <Route path="messages" element={<AdminMessages />} />
+  <Route path="upgrade-requests" element={<AdminUpgradeRequests />} />
+</Route>
   <Route index element={<AdminOverview />} />
   <Route path="developers" element={<AdminDevelopers />} />
   <Route path="plans" element={<AdminPlans />} />
