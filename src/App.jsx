@@ -183,13 +183,6 @@ const AppRoutes = () => {
   <Route path="messages" element={<AdminMessages />} />
   <Route path="upgrade-requests" element={<AdminUpgradeRequests />} />
 </Route>
-  <Route index element={<AdminOverview />} />
-  <Route path="developers" element={<AdminDevelopers />} />
-  <Route path="plans" element={<AdminPlans />} />
-  <Route path="payments" element={<AdminPayments />} />
-  <Route path="messages" element={<AdminMessages />} />
-  <Route path="upgrade-requests" element={<AdminUpgradeRequests />} />
-</Route>
         
           
           {/* ========== 404 ========== */}
