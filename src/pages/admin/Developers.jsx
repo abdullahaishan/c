@@ -1,87 +1,192 @@
-import React, { useState, useEffect } from 'react'
-import { supabase } from '../../lib/supabase'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { Link } from 'react-router-dom'
+import { adminDeveloperService, adminPlanMonitorService } from '../../lib/adminService'
+import { useAdminAuth } from '../../hooks/useAdminAuth'
 import {
   Search,
   Filter,
+  CheckCircle,
+  XCircle,
   Eye,
   Edit,
   Trash2,
-  CheckCircle,
-  XCircle,
   Crown,
+  AlertCircle,
+  Loader,
+  MoreVertical,
   Mail,
   Phone,
   MapPin,
   Calendar,
-  MoreVertical,
+  TrendingUp,
+  Shield,
   UserCheck,
   UserX
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
 
-const AdminDevelopers = () => {
+const Developers = () => {
+  const { admin } = useAdminAuth()
   const [developers, setDevelopers] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [page, setPage] = useState(0)
+  const [total, setTotal] = useState(0)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
   const [selectedDev, setSelectedDev] = useState(null)
+  const [showDetails, setShowDetails] = useState(false)
+  const [overages, setOverages] = useState([])
+  const observerRef = useRef()
+
+  // تحميل المطورين
+  const loadDevelopers = async (pageNum, searchTerm = search, filterType = filter) => {
+    if (loading) return
+    
+    setLoading(true)
+    try {
+      let result
+      if (searchTerm) {
+        result = await adminDeveloperService.searchDevelopers(searchTerm, pageNum, 20)
+      } else {
+        result = await adminDeveloperService.getAllDevelopers(pageNum, 20)
+      }
+      
+      if (pageNum === 0) {
+        setDevelopers(result.data)
+      } else {
+        setDevelopers(prev => [...prev, ...result.data])
+      }
+      
+      setHasMore(result.hasMore)
+      setTotal(result.count)
+      setPage(pageNum)
+    } catch (error) {
+      console.error('Error loading developers:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // تحميل المطورين المتجاوزين للحدود
+  const loadOverages = async () => {
+    try {
+      const result = await adminPlanMonitorService.checkPlanOverages(0, 100)
+      setOverages(result.data)
+    } catch (error) {
+      console.error('Error loading overages:', error)
+    }
+  }
 
   useEffect(() => {
-    fetchDevelopers()
+    loadDevelopers(0)
+    loadOverages()
   }, [])
 
-  const fetchDevelopers = async () => {
-    setLoading(true)
-    const { data, error } = await supabase
-      .from('developers')
-      .select(`
-        *,
-        packages (name, name_ar),
-        payments (count),
-        cv_downloads (count),
-        developer_visitors (count)
-      `)
-      .order('created_at', { ascending: false })
+  // البحث مع debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadDevelopers(0, search, filter)
+    }, 500)
 
-    if (!error) setDevelopers(data || [])
-    setLoading(false)
+    return () => clearTimeout(timer)
+  }, [search, filter])
+
+  // Infinite scroll
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0]
+        if (first.isIntersecting && hasMore && !loading) {
+          loadDevelopers(page + 1, search, filter)
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    )
+
+    const currentObserver = observerRef.current
+    if (currentObserver) {
+      observer.observe(currentObserver)
+    }
+
+    return () => {
+      if (currentObserver) {
+        observer.unobserve(currentObserver)
+      }
+    }
+  }, [hasMore, loading, page, search, filter])
+
+  const handleToggleStatus = async (devId, currentStatus) => {
+    if (!window.confirm(`هل أنت متأكد من ${currentStatus ? 'تعطيل' : 'تفعيل'} هذا المطور؟`)) return
+    
+    try {
+      await adminDeveloperService.toggleDeveloperStatus(devId, !currentStatus, admin.id)
+      loadDevelopers(0, search, filter)
+    } catch (error) {
+      console.error('Error toggling status:', error)
+      alert('حدث خطأ أثناء تحديث الحالة')
+    }
   }
 
-  const handleStatusChange = async (id, status) => {
-    await supabase
-      .from('developers')
-      .update({ subscription_status: status })
-      .eq('id', id)
-    fetchDevelopers()
+  const handleDelete = async (devId) => {
+    if (!window.confirm('هل أنت متأكد من حذف هذا المطور؟ لا يمكن التراجع عن هذا الإجراء.')) return
+    
+    try {
+      await adminDeveloperService.deleteDeveloper(devId)
+      loadDevelopers(0, search, filter)
+    } catch (error) {
+      console.error('Error deleting developer:', error)
+      alert('حدث خطأ أثناء الحذف')
+    }
   }
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure? This will delete all developer data.')) return
-    await supabase
-      .from('developers')
-      .delete()
-      .eq('id', id)
-    fetchDevelopers()
+  const getStatusBadge = (dev) => {
+    const isOverLimit = overages.some(o => o.developer.id === dev.id)
+    
+    if (!dev.is_active) {
+      return <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded-full text-xs">معطل</span>
+    }
+    if (isOverLimit) {
+      return <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs flex items-center gap-1">
+        <AlertCircle className="w-3 h-3" /> تجاوز الحدود
+      </span>
+    }
+    return <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded-full text-xs">نشط</span>
   }
 
   const filteredDevelopers = developers.filter(dev => {
-    if (filter === 'active') return dev.subscription_status === 'active'
-    if (filter === 'inactive') return dev.subscription_status !== 'active'
-    if (filter === 'pending') return !dev.approved_by
+    if (filter === 'active') return dev.is_active
+    if (filter === 'inactive') return !dev.is_active
+    if (filter === 'overLimit') return overages.some(o => o.developer.id === dev.id)
     return true
-  }).filter(dev =>
-    dev.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-    dev.email?.toLowerCase().includes(search.toLowerCase()) ||
-    dev.username?.toLowerCase().includes(search.toLowerCase())
-  )
+  })
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Manage Developers</h1>
+        <h1 className="text-2xl font-bold text-white">إدارة المطورين</h1>
         <div className="text-sm text-gray-400">
-          Total: {developers.length} developers
+          الإجمالي: {total} مطور
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+          <p className="text-2xl font-bold text-white">{developers.filter(d => d.is_active).length}</p>
+          <p className="text-xs text-gray-400">نشط</p>
+        </div>
+        <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+          <p className="text-2xl font-bold text-white">{developers.filter(d => !d.is_active).length}</p>
+          <p className="text-xs text-gray-400">معطل</p>
+        </div>
+        <div className="bg-yellow-500/10 rounded-xl p-4 border border-yellow-500/20">
+          <p className="text-2xl font-bold text-yellow-400">{overages.length}</p>
+          <p className="text-xs text-gray-400">تجاوز الحدود</p>
+        </div>
+        <div className="bg-green-500/10 rounded-xl p-4 border border-green-500/20">
+          <p className="text-2xl font-bold text-green-400">{developers.filter(d => d.plan_id > 1).length}</p>
+          <p className="text-xs text-gray-400">مشتركين</p>
         </div>
       </div>
 
@@ -91,7 +196,7 @@ const AdminDevelopers = () => {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input
             type="text"
-            placeholder="Search developers..."
+            placeholder="بحث بالاسم أو البريد أو اسم المستخدم..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
@@ -102,121 +207,137 @@ const AdminDevelopers = () => {
           onChange={(e) => setFilter(e.target.value)}
           className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
         >
-          <option value="all">All Developers</option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
-          <option value="pending">Pending Approval</option>
+          <option value="all">الكل</option>
+          <option value="active">نشط</option>
+          <option value="inactive">معطل</option>
+          <option value="overLimit">تجاوز الحدود</option>
         </select>
       </div>
 
-      {/* Developers Table */}
-      <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden">
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="w-12 h-12 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto mb-4" />
-            <p className="text-gray-400">Loading developers...</p>
-          </div>
-        ) : (
-          <table className="w-full">
-            <thead className="border-b border-white/10">
-              <tr>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">Developer</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">Package</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">Status</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">Stats</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-400">Joined</th>
-                <th className="px-6 py-4 text-right text-sm font-medium text-gray-400">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/10">
-              {filteredDevelopers.map(dev => (
-                <tr key={dev.id} className="hover:bg-white/5">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={dev.profile_image || '/default-avatar.png'}
-                        alt={dev.full_name}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                      <div>
-                        <p className="text-white font-medium">{dev.full_name || 'Unnamed'}</p>
-                        <p className="text-sm text-gray-400">@{dev.username}</p>
-                        <p className="text-xs text-gray-500">{dev.email}</p>
-                      </div>
+      {/* Developers Grid */}
+      <div className="grid grid-cols-1 gap-4">
+        {filteredDevelopers.map((dev) => {
+          const isOverLimit = overages.some(o => o.developer.id === dev.id)
+          const overageDetails = overages.find(o => o.developer.id === dev.id)
+          
+          return (
+            <div
+              key={dev.id}
+              className={`bg-white/5 backdrop-blur-xl rounded-2xl p-6 border ${
+                isOverLimit ? 'border-yellow-500/50' : 'border-white/10'
+              } hover:border-purple-500/50 transition-all`}
+            >
+              <div className="flex flex-col md:flex-row gap-6">
+                {/* Avatar & Basic Info */}
+                <div className="flex items-start gap-4 flex-1">
+                  <img
+                    src={dev.profile_image || '/default-avatar.png'}
+                    alt={dev.full_name}
+                    className="w-16 h-16 rounded-full object-cover"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-lg font-semibold text-white">{dev.full_name}</h3>
+                      {getStatusBadge(dev)}
                     </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    {dev.packages ? (
-                      <span className="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-full text-sm">
-                        {dev.packages.name}
-                      </span>
-                    ) : (
-                      <span className="text-gray-500">Free</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    {dev.subscription_status === 'active' ? (
-                      <span className="flex items-center gap-1 text-green-400">
-                        <CheckCircle className="w-4 h-4" />
-                        Active
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-red-400">
-                        <XCircle className="w-4 h-4" />
-                        Inactive
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="space-y-1 text-sm">
-                      <p className="text-gray-400">Projects: {dev.projects_count || 0}</p>
-                      <p className="text-gray-400">Skills: {dev.skills_count || 0}</p>
-                      <p className="text-gray-400">Views: {dev.visitors_count || 0}</p>
+                    <p className="text-sm text-gray-400">@{dev.username}</p>
+                    <p className="text-sm text-gray-400">{dev.email}</p>
+                    
+                    {/* Stats */}
+                    <div className="flex items-center gap-4 mt-3 text-xs">
+                      <span className="text-gray-500">📊 مشاريع: {dev.stats?.projects || 0}</span>
+                      <span className="text-gray-500">🛠️ مهارات: {dev.stats?.skills || 0}</span>
+                      <span className="text-gray-500">📜 شهادات: {dev.stats?.certificates || 0}</span>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 text-gray-400">
-                    {new Date(dev.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link
-                        to={`/u/${dev.username}`}
-                        target="_blank"
-                        className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Link>
-                      {dev.subscription_status === 'active' ? (
-                        <button
-                          onClick={() => handleStatusChange(dev.id, 'inactive')}
-                          className="p-2 text-yellow-400 hover:bg-yellow-500/10 rounded-lg"
-                        >
-                          <UserX className="w-4 h-4" />
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleStatusChange(dev.id, 'active')}
-                          className="p-2 text-green-400 hover:bg-green-500/10 rounded-lg"
-                        >
-                          <UserCheck className="w-4 h-4" />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleDelete(dev.id)}
-                        className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                  </div>
+                </div>
+
+                {/* Plan Info */}
+                <div className="md:w-48">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Crown className={`w-4 h-4 ${
+                      dev.plan_id === 1 ? 'text-gray-400' :
+                      dev.plan_id === 2 ? 'text-blue-400' :
+                      dev.plan_id === 3 ? 'text-yellow-400' : 'text-purple-400'
+                    }`} />
+                    <span className="text-white font-medium">{dev.plans?.name || 'مجانية'}</span>
+                  </div>
+                  
+                  {/* Overage Warning */}
+                  {isOverLimit && overageDetails && (
+                    <div className="mt-2 p-2 bg-yellow-500/10 rounded-lg">
+                      <p className="text-xs text-yellow-400 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        تجاوز في: {overageDetails.issues.join('، ')}
+                      </p>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2">
+                  <Link
+                    to={`/admin/developers/${dev.id}`}
+                    className="p-2 text-blue-400 hover:bg-blue-500/10 rounded-lg"
+                    title="تفاصيل"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </Link>
+                  <a
+                    href={`/u/${dev.username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 text-gray-400 hover:bg-white/10 rounded-lg"
+                    title="عرض الملف الشخصي"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </a>
+                  {dev.is_active ? (
+                    <button
+                      onClick={() => handleToggleStatus(dev.id, true)}
+                      className="p-2 text-yellow-400 hover:bg-yellow-500/10 rounded-lg"
+                      title="تعطيل"
+                    >
+                      <UserX className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleToggleStatus(dev.id, false)}
+                      className="p-2 text-green-400 hover:bg-green-500/10 rounded-lg"
+                      title="تفعيل"
+                    >
+                      <UserCheck className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleDelete(dev.id)}
+                    className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg"
+                    title="حذف"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Loading Indicator */}
+      <div ref={observerRef} className="h-10 flex justify-center">
+        {loading && (
+          <Loader className="w-6 h-6 animate-spin text-purple-400" />
         )}
       </div>
+
+      {/* No More Data */}
+      {!hasMore && developers.length > 0 && (
+        <p className="text-center text-gray-500 py-4">
+          تم تحميل جميع المطورين ({developers.length} من {total})
+        </p>
+      )}
     </div>
   )
 }
 
-export default AdminDevelopers
+export default Developers
