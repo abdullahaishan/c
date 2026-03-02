@@ -80,14 +80,15 @@ const AppRoutes = () => {
   })
 
   const handleWelcomeComplete = () => {
-    sessionStorage.setItem('hasSeenWelcome', 'true')
-    
-    if (user) {
-      setRedirectTo('/dashboard')
-    } else {
-      setShowWelcome(false)
-    }
+  sessionStorage.setItem('hasSeenWelcome', 'true')
+  
+  if (user) {
+    // ✅ إذا كان أدمن → /admin ، وإلا → /dashboard
+    setRedirectTo(user?.is_admin ? '/admin' : '/dashboard')
+  } else {
+    setShowWelcome(false)
   }
+}
 
   if (redirectTo) {
     return <Navigate to={redirectTo} replace />
