@@ -178,7 +178,7 @@ const AppRoutes = () => {
   <Route path="messages" element={<AdminMessages />} />
   <Route path="upgrade-requests" element={<AdminUpgradeRequests />} />
 </Route>
-          </Route>
+        
           
           {/* ========== 404 ========== */}
           <Route path="*" element={<NotFound />} />
