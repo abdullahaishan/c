@@ -31,18 +31,7 @@ const AdminLayout = () => {
     }
   }, [admin])
 
-  const loadUnreadCount = async () => {
-    try {
-      const { data } = await adminNotificationService.getUnreadNotifications(admin.id, 0, 1)
-      setUnreadCount(data.length)
-    } catch (error) {
-      console.error('Error loading unread count:', error)
-    }
-  }
-
-  if (!admin) {
-    return <Navigate to="/admin/login" replace />
-  }
+  
 
   const navigation = [
     { name: 'لوحة التحكم', href: '/admin', icon: LayoutDashboard },
