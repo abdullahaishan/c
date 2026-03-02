@@ -163,6 +163,7 @@ const AppRoutes = () => {
           </Route>
           
           {/* ========== صفحات الأدمن ========== */}
+           <Route path="/admin/login" element={<AdminLogin />} />
             <Route 
   path="/admin" 
   element={
