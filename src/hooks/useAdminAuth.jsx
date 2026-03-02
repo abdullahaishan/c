@@ -57,7 +57,6 @@ export const useAdminAuth = () => {
         .from('developers')
         .select('id, full_name, username, email, profile_image, is_admin, role')
         .eq('id', authData.user.id)
-        .eq('is_admin', true)
         .maybeSingle()
 
       if (devError || !developer) {
