@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { authService } from '../../lib/supabase'
+import { supabase } from '../../lib/supabase'  // ✅ أضف هذا
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react'
 import AnimatedBackground from '../../components/AnimatedBackground'
 
@@ -24,9 +25,25 @@ const Login = () => {
     setError('')
 
     try {
-      const user = await authService.login(email, password)
+      // ✅ استخدم النتيجة بشكل صحيح
+      const result = await authService.login(email, password)
       
-      console.log('✅ Logged in successfully:', user)
+      if (!result.success) {
+        throw new Error(result.error || 'Login failed')
+      }
+
+      console.log('✅ Logged in successfully:', result.user)
+
+      // ✅ التحقق من حالة المستخدم في Auth
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user?.email_confirmed_at) {
+        setError('❌ Please confirm your email first')
+        setLoading(false)
+        return
+      }
+
+      // ✅ إذا كل شيء صحيح، انتقل للوحة التحكم
       navigate('/dashboard')
 
     } catch (err) {
