@@ -1,12 +1,13 @@
+// src/pages/admin/Login.jsx
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { authService } from '../../lib/supabase'
-import { supabase } from '../../lib/supabase'  // ✅ أضف هذا
-import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { useAdminAuth } from '../../hooks/useAdminAuth'
+import { Mail, Lock, Eye, EyeOff, AlertCircle, Shield } from 'lucide-react'
 import AnimatedBackground from '../../components/AnimatedBackground'
 
-const Login = () => {
+const AdminLogin = () => {
   const navigate = useNavigate()
+  const { login } = useAdminAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -25,37 +26,16 @@ const Login = () => {
     setError('')
 
     try {
-      // ✅ استخدم النتيجة بشكل صحيح
-      const result = await authService.login(email, password)
+      const result = await login(email, password)
       
-      if (!result.success) {
-        throw new Error(result.error || 'Login failed')
+      if (result.success) {
+        navigate('/admin')
+      } else {
+        setError(result.error || 'Login failed')
       }
-
-      console.log('✅ Logged in successfully:', result.user)
-
-      // ✅ التحقق من حالة المستخدم في Auth
-      const { data: { user } } = await supabase.auth.getUser()
-      
-  //    if (!user?.email_confirmed_at) {
-     //   setError('❌ Please confirm your email first')
-    //    setLoading(false)
-      //  return
- //     }
-
-      // ✅ إذا كل شيء صحيح، انتقل للوحة التحكم
-      navigate('/dashboard')
 
     } catch (err) {
-      console.error('❌ Login error:', err)
-      
-      if (err.message.includes('Invalid login credentials')) {
-        setError('❌ Invalid email or password')
-      } else if (err.message.includes('Email not confirmed')) {
-        setError('❌ Please confirm your email before logging in')
-      } else {
-        setError(err.message || 'Login failed')
-      }
+      setError(err.message || 'An error occurred')
     } finally {
       setLoading(false)
     }
@@ -65,7 +45,6 @@ const Login = () => {
     <div className="relative min-h-screen bg-[#030014] overflow-hidden">
       <AnimatedBackground />
       
-      {/* Back Button */}
       <Link
         to="/"
         className="absolute top-4 right-4 sm:top-6 sm:right-6 lg:top-8 lg:right-8 z-20 flex items-center gap-2 px-3 py-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl text-gray-300 hover:text-white transition-all group"
@@ -73,20 +52,21 @@ const Login = () => {
         <span className="text-sm sm:text-base">Back to Home</span>
       </Link>
 
-      {/* Main Content */}
       <div className="relative z-10 min-h-screen flex items-center justify-center px-3 sm:px-4 py-12 sm:py-16">
         <div className="w-full max-w-[90%] sm:max-w-md">
-          {/* Header */}
+          
           <div className="text-center mb-6 sm:mb-8">
+            <div className="inline-flex p-4 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-2xl mb-4">
+              <Shield className="w-12 h-12 text-white" />
+            </div>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6366f1] to-[#a855f7] mb-2">
-              Welcome Back
+              Admin Login
             </h2>
-            <p className="text-sm sm:text-base text-gray-400">Sign in to your account</p>
+            <p className="text-sm sm:text-base text-gray-400">Sign in to admin panel</p>
           </div>
 
-          {/* Form Card */}
           <div className="bg-white/5 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 border border-white/10">
-            {/* Error Message */}
+            
             {error && (
               <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-500/10 border border-red-500/20 rounded-lg sm:rounded-xl text-red-400 text-xs sm:text-sm flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
@@ -94,9 +74,8 @@ const Login = () => {
               </div>
             )}
 
-            {/* Form */}
             <form className="space-y-4 sm:space-y-5" onSubmit={handleSubmit}>
-              {/* Email */}
+              
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
                   Email Address
@@ -114,7 +93,6 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* Password */}
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
                   Password
@@ -139,11 +117,10 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 sm:py-3 px-4 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base flex items-center justify-center gap-2 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:hover:scale-100"
+                className="w-full py-2.5 sm:py-3 px-4 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base flex items-center justify-center gap-2 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -153,11 +130,9 @@ const Login = () => {
               </button>
             </form>
 
-            {/* Register Link */}
             <p className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-400">
-              Don't have an account?{' '}
-              <Link to="/register" className="text-[#a855f7] hover:text-[#6366f1] transition-colors font-medium">
-                Create one now
+              <Link to="/login" className="text-[#a855f7] hover:text-[#6366f1] transition-colors">
+                Regular user? Login here
               </Link>
             </p>
           </div>
@@ -167,4 +142,4 @@ const Login = () => {
   )
 }
 
-export default Login
+export default AdminLogin
