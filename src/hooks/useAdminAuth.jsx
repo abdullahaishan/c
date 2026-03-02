@@ -59,7 +59,7 @@ export const useAdminAuth = () => {
         .select('id, full_name, username, email, profile_image, is_admin, role')
         .eq('id', authData.user.id)
         .eq('is_admin', true)
-        .single()
+        .maybeSingle()
 
       if (devError || !developer) {
         await supabase.auth.signOut()
