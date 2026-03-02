@@ -1587,41 +1587,6 @@ export const authService = {
     }
   },
 
-  // تسجيل مستخدم جديد
-  async register(userData) {
-    const { data, error } = await supabase.auth.signUp({
-      email: userData.email,
-      password: userData.password,
-      options: {
-        data: {
-          full_name: userData.full_name
-        },
-        emailRedirectTo: `${window.location.origin}/confirm`
-      }
-    })
-    
-    if (error) throw error
-
-    return { 
-      success: true, 
-      user: data.user,
-      message: 'Verification link sent to your email'
-    }
-  },
-
-  // تسجيل الخروج
-  async logout() {
-    const { error } = await supabase.auth.signOut()
-    if (error) throw error
-  },
-
-  // الحصول على المستخدم الحالي من Auth فقط
-  async getCurrentUser() {
-    const { data: { session } } = await supabase.auth.getSession()
-    return session?.user || null
-  },
-
-
 // في authService.register، بعد إنشاء المستخدم
 async register(userData) {
   try {
