@@ -22,9 +22,8 @@ export const useAdminAuth = () => {
         // التحقق من أن المستخدم لا يزال أدمن
         const { data } = await supabase
           .from('developers')
-          .select('id, full_name, username, email, profile_image, is_admin, role')
+          .select('*')
           .eq('id', adminData.id)
-          .eq('is_admin', true)
           .maybeSingle()
 
         if (data) {
