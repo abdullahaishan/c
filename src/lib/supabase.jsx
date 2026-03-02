@@ -1622,12 +1622,9 @@ export const authService = {
   },
 
 
-// تسجيل مستخدم جديد
+// في authService.register، بعد إنشاء المستخدم
 async register(userData) {
   try {
-    console.log('Attempting to register:', userData.email)
-    
-    // 1. إنشاء المستخدم في Supabase Auth
     const { data, error } = await supabase.auth.signUp({
       email: userData.email,
       password: userData.password,
@@ -1635,73 +1632,35 @@ async register(userData) {
         data: {
           full_name: userData.full_name
         },
-        emailRedirectTo: `${window.location.origin}/confirm`
+        // لا حاجة لـ emailRedirectTo لأننا سنستخدم OTP
       }
     })
     
-    if (error) {
-      console.error('SignUp error details:', error)
-      
-      if (error.message.includes('User already registered')) {
-        throw new Error('Email already in use')
-      } else if (error.message.includes('Password should be at least 6 characters')) {
-        throw new Error('Password must be at least 6 characters')
-      } else if (error.message.includes('rate limit')) {
-        throw new Error('Too many registration attempts. Please wait a moment.')
-      } else {
-        throw new Error(error.message || 'Registration failed')
-      }
-    }
+    if (error) throw error
 
-    if (!data?.user) {
-      throw new Error('User creation failed')
-    }
+    // تخزين البيانات في pending_developers
+    const username = userData.full_name.split(' ')[0].toLowerCase() + 
+      '-' + Math.random().toString(36).substring(2, 6)
 
-    // ✅ إنشاء username من أول اسم فقط
-    // مثال: "Mohamed Ahmed Ali" → "mohamed"
-    const firstName = userData.full_name
-      .split(' ')[0]  // خذ أول كلمة فقط
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '')  // أزل الرموز الخاصة
-      .trim();
-
-    // التأكد من أن username فريد بإضافة أحرف عشوائية إذا كان موجوداً
-    const username = firstName + '-' + Math.random().toString(36).substring(2, 6);
-
-    console.log('Generated username:', username)
-
-    // 3. تخزين البيانات في الجدول المؤقت
-    const { error: insertError } = await supabase
+    await supabase
       .from('pending_developers')
       .insert([{
         id: data.user.id,
-        username,  // ✅ الآن هو أول اسم فقط
+        username,
         email: userData.email,
         full_name: userData.full_name,
         plan_id: 1,
         role: 'user'
       }])
-      .select()
-
-    if (insertError) {
-      console.error('Insert error:', insertError)
-      throw new Error('Failed to save user data. Please try again.')
-    }
-
-    // 4. تخزين البريد في sessionStorage للتوجيه
-    sessionStorage.setItem('pendingVerification', userData.email)
 
     return { 
       success: true, 
-      user: data.user,
-      message: 'Verification link sent to your email'
+      message: 'تم إرسال رمز التأكيد إلى بريدك الإلكتروني'
     }
   } catch (error) {
-    console.error('Registration error:', error)
     throw error
   }
 },
-
   // تسجيل الخروج
   async logout() {
     const { error } = await supabase.auth.signOut()
