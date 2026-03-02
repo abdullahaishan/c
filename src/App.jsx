@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import { AnimatePresence } from 'framer-motion'
 import "./index.css"
 import VerifyOtp from './pages/auth/VerifyOtp'
-
+import AdminProtectedRoute from './components/AdminProtectedRoute'
 
 // الصفحات العامة
 import WelcomeScreen from './pages/WelcomeScreen'
@@ -164,7 +164,6 @@ const AppRoutes = () => {
           
           {/* ========== صفحات الأدمن ========== */}
           <Route path="/admin/login" element={<AdminLogin />} />
-          
           <Route 
             path="/admin" 
             element={
@@ -173,12 +172,21 @@ const AppRoutes = () => {
               </ProtectedRoute>
             }
           >
-            <Route index element={<AdminOverview />} />
-            <Route path="developers" element={<AdminDevelopers />} />
-            <Route path="plans" element={<AdminPlans />} />
-            <Route path="payments" element={<AdminPayments />} />
-            <Route path="messages" element={<AdminMessages />} />
-            <Route path="upgrade-requests" element={<AdminUpgradeRequests />} />
+            <Route 
+  path="/admin" 
+  element={
+    <AdminProtectedRoute>  // ✅ استخدام المكون الخاص بالأدمن
+      <AdminLayout />
+    </AdminProtectedRoute>
+  }
+>
+  <Route index element={<AdminOverview />} />
+  <Route path="developers" element={<AdminDevelopers />} />
+  <Route path="plans" element={<AdminPlans />} />
+  <Route path="payments" element={<AdminPayments />} />
+  <Route path="messages" element={<AdminMessages />} />
+  <Route path="upgrade-requests" element={<AdminUpgradeRequests />} />
+</Route>
           </Route>
           
           {/* ========== 404 ========== */}
