@@ -1,7 +1,7 @@
+// components/plans/PaymentModel.jsx
 import React, { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { supabase, storageService } from '../../lib/supabase'
-import { CURRENCIES, COUNTRIES, convertPrice } from '../../utils/currency'
+import { supabase } from '../../lib/supabase'
 import {
   X,
   Upload,
@@ -19,7 +19,48 @@ import {
   Banknote
 } from 'lucide-react'
 
-const PaymentModal = ({ plan, billingCycle, currency, convertedPrice, userCountry, userRegion, onClose }) => {
+// ============================================
+// بيانات العملات (مضافة مباشرة)
+// ============================================
+const CURRENCIES = {
+  USD: { symbol: '$', name: 'دولار أمريكي', code: 'USD' },
+  YER: { symbol: 'ر.ي', name: 'ريال يمني', code: 'YER' },
+  SAR: { symbol: 'ر.س', name: 'ريال سعودي', code: 'SAR' },
+  AED: { symbol: 'د.إ', name: 'درهم إماراتي', code: 'AED' },
+  EGP: { symbol: 'ج.م', name: 'جنيه مصري', code: 'EGP' }
+}
+
+// ============================================
+// خدمة رفع الصور
+// ============================================
+const storageService = {
+  async uploadImage(file, path) {
+    const fileName = `${path}_${file.name}`
+    
+    const { error: uploadError } = await supabase.storage
+      .from('payments')
+      .upload(fileName, file)
+
+    if (uploadError) throw uploadError
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('payments')
+      .getPublicUrl(fileName)
+
+    return publicUrl
+  }
+}
+
+const PaymentModal = ({ 
+  plan, 
+  billingCycle, 
+  currency, 
+  convertedPrice, 
+  userCountry, 
+  userRegion,
+  exchangeRate,
+  onClose 
+}) => {
   const [step, setStep] = useState('method')
   const [method, setMethod] = useState('')
   const [cryptoType, setCryptoType] = useState('')
@@ -41,15 +82,15 @@ const PaymentModal = ({ plan, billingCycle, currency, convertedPrice, userCountr
   const isBank = method === 'bank'
   
   // رقم واتساب الأدمن
-  const ADMIN_WHATSAPP = '+967771315459'
+  const ADMIN_WHATSAPP = '967771315459'
   const ADMIN_NAME = 'مدير الموقع'
 
   // عناوين المحافظ
   const walletAddresses = {
-    btc: 'لايتوفر حاليا',
-    eth: 'لايتوفر حاليا',
-    usdt: 'لايتوفر حاليا',
-    trx: 'لايتوفر حاليا'
+    btc: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
+    eth: '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+    usdt: 'TXYZ... (عنوان USDT TRC20)',
+    trx: 'TXYZ... (عنوان TRX)'
   }
 
   // معلومات البنوك اليمنية
@@ -63,46 +104,47 @@ const PaymentModal = ({ plan, billingCycle, currency, convertedPrice, userCountr
     },
     { 
       id: 'alahli', 
-      name:'بنك القاسمي', 
-      account: 'لايتوفر حاليا',
-      iban: 'YEلايتوفر حاليا',
-      branch: 'الفرع الرئيسي - صنعاء'
+      name: 'البنك الأهلي اليمني', 
+      account: '102515815',
+      iban: 'YE1234567890',
+      branch: 'الفرع الرئيسي - عدن'
     },
     { 
       id: 'taslif', 
-      name: 'بنك التسليف', 
-      account: 'لايتوفر حاليا',
+      name: 'بنك التسليف التعاوني', 
+      account: '2844083',
       iban: 'YE5555555555',
       branch: 'الفرع الرئيسي - تعز'
     }
   ]
 
   // إنشاء رابط واتساب مع الرسالة
-  const createWhatsAppLink = (paymentDetails) => {
+  const createWhatsAppLink = () => {
     const message = `
-*طلب دفع جديد - ${plan.name_ar}*
+*طلب دفع جديد - ${plan?.name_ar || 'باقة'}*
 ━━━━━━━━━━━━━━━━
-👤 *المستخدم:* ${user?.full_name}
-📧 *البريد:* ${user?.email}
-🆔 *المعرف:* ${user?.id}
+👤 *المستخدم:* ${user?.full_name || 'غير معروف'}
+📧 *البريد:* ${user?.email || 'غير معروف'}
+🆔 *المعرف:* ${user?.id || 'غير معروف'}
 
-💳 *الباقة:* ${plan.name_ar}
-💰 *المبلغ:* ${convertedPrice.symbol}${convertedPrice.price}
-💱 *العملة:* ${currency}
+💳 *الباقة:* ${plan?.name_ar || 'غير معروفة'}
+💰 *المبلغ:* ${convertedPrice?.symbol || '$'}${convertedPrice?.price || 0}
+💱 *العملة:* ${currency || 'USD'}
 📅 *الدورة:* ${billingCycle === 'monthly' ? 'شهرية' : 'سنوية'}
 
-💵 *طريقة الدفع:* ${getMethodName(method)}
+💵 *طريقة الدفع:* ${getMethodName(method) || 'غير محددة'}
 ${cryptoType ? `🪙 *العملة:* ${cryptoType.toUpperCase()}` : ''}
 ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
 
 📝 *التفاصيل:* ${transferDetails || 'لا يوجد'}
+🖼️ *صورة التحويل:* ${imagePreview ? 'مرفقة' : 'غير مرفقة'}
 
 ⏰ *التاريخ:* ${new Date().toLocaleString('ar')}
 ━━━━━━━━━━━━━━━━
 ✅ الرجاء تأكيد الدفع بعد التحقق
     `.trim()
     
-    return `https://wa.me/${ADMIN_WHATSAPP.replace('+', '')}?text=${encodeURIComponent(message)}`
+    return `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(message)}`
   }
 
   const getMethodName = (methodId) => {
@@ -144,6 +186,11 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
   }
 
   const handleSubmit = async () => {
+    if (!imageFile) {
+      setError('الرجاء رفع صورة التحويل')
+      return
+    }
+
     setLoading(true)
     setError('')
 
@@ -153,7 +200,7 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
       if (imageFile) {
         imageUrl = await storageService.uploadImage(
           imageFile,
-          `payments/${user.id}/${Date.now()}`
+          `payments/${user?.id || 'anonymous'}/${Date.now()}`
         )
       }
 
@@ -161,10 +208,10 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
       const { error: dbError } = await supabase
         .from('payments')
         .insert([{
-          developer_id: user.id,
-          plan_id: plan.id,
-          amount: convertedPrice.price,
-          currency: currency,
+          developer_id: user?.id,
+          plan_id: plan?.id,
+          amount: convertedPrice?.price || plan?.price_monthly,
+          currency: currency || 'USD',
           payment_method: method,
           crypto_type: cryptoType,
           bank_name: selectedBank,
@@ -172,7 +219,7 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
           transfer_details: transferDetails,
           billing_cycle: billingCycle,
           status: 'pending',
-          created_at: new Date()
+          created_at: new Date().toISOString()
         }])
 
       if (dbError) throw dbError
@@ -181,10 +228,28 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
       await supabase
         .from('notifications')
         .insert([{
-          user_id: user.id,
+          user_id: user?.id,
           title: 'تم استلام طلب الدفع',
-          message: `تم استلام طلب ترقية إلى باقة ${plan.name_ar}. سنتواصل معك قريباً.`,
-          type: 'payment'
+          message: `تم استلام طلب ترقية إلى باقة ${plan?.name_ar || 'الباقة'}. سنتواصل معك قريباً.`,
+          type: 'payment',
+          created_at: new Date().toISOString()
+        }])
+
+      // إشعار للأدمن
+      await supabase
+        .from('admin_notifications')
+        .insert([{
+          title: 'طلب دفع جديد',
+          message: `طلب جديد من ${user?.full_name || user?.email} لشراء باقة ${plan?.name_ar}`,
+          type: 'payment_request',
+          user_id: user?.id,
+          metadata: {
+            plan_id: plan?.id,
+            amount: convertedPrice?.price || plan?.price_monthly,
+            currency,
+            payment_method: method
+          },
+          created_at: new Date().toISOString()
         }])
 
       setStep('success')
@@ -224,16 +289,21 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
             <div className="flex justify-between items-center">
               <div>
                 <p className="text-gray-400 text-sm">الباقة المختارة</p>
-                <p className="text-xl font-bold text-white">{plan.name_ar}</p>
+                <p className="text-xl font-bold text-white">{plan?.name_ar || 'غير معروفة'}</p>
               </div>
               <div className="text-right">
                 <p className="text-gray-400 text-sm">المبلغ</p>
                 <p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6366f1] to-[#a855f7]">
-                  {convertedPrice.symbol}{convertedPrice.price}
+                  {convertedPrice?.symbol || '$'}{convertedPrice?.price || plan?.price_monthly || 0}
                 </p>
-                {currency.includes('YER') && (
+                {currency !== 'USD' && (
                   <p className="text-xs text-gray-500 mt-1">
-                    ≈ ${plan.price_monthly || plan.price} USD
+                    ≈ ${plan?.price_monthly || 0} USD
+                  </p>
+                )}
+                {exchangeRate && (
+                  <p className="text-xs text-gray-500">
+                    سعر الصرف: 1 USD = {exchangeRate} {CURRENCIES[currency]?.symbol}
                   </p>
                 )}
               </div>
@@ -271,7 +341,7 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
               {/* ويسترن يونيون */}
               <PaymentMethodCard
                 id="western"
-                name="Western Union"
+                name="ويسترن يونيون"
                 icon={Send}
                 description="حوالات ويسترن يونيون"
                 onClick={() => {
@@ -322,7 +392,7 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
                 name="تحويل بنكي"
                 icon={Landmark}
                 description="بنك الكريمي (موصى به) - 3101557757"
-                required={true}
+                popular={true}
                 onClick={() => {
                   setMethod('bank')
                   setStep('bank')
@@ -601,14 +671,14 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
 }
 
 // مكون بطاقة طريقة الدفع
-const PaymentMethodCard = ({ id, name, icon: Icon, description, required, onClick }) => (
+const PaymentMethodCard = ({ id, name, icon: Icon, description, popular, onClick }) => (
   <button
     onClick={onClick}
     className={`w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all flex items-center gap-4 relative ${
-      required ? 'border-yellow-500/50 bg-yellow-500/5' : ''
+      popular ? 'border-yellow-500/50 bg-yellow-500/5' : ''
     }`}
   >
-    {required && (
+    {popular && (
       <span className="absolute -top-2 -right-2 px-2 py-0.5 bg-yellow-500 text-black text-xs rounded-full font-bold">
         موصى به
       </span>
