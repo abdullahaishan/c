@@ -2,11 +2,11 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from './useAuth'
 import { supabase } from '../lib/supabase'
-import { PLAN_LIMITS } from '../utils/constants'
 
 export const usePlan = () => {
   const { user } = useAuth()
   const [plan, setPlan] = useState(null)
+  const [allPlans, setAllPlans] = useState([]) // جميع الباقات
   const [loading, setLoading] = useState(true)
   const [usage, setUsage] = useState(null)
 
@@ -15,7 +15,24 @@ export const usePlan = () => {
       fetchPlanData()
       fetchCurrentUsage()
     }
+    fetchAllPlans() // جلب جميع الباقات حتى لو لم يسجل الدخول
   }, [user])
+
+  // جلب جميع الباقات من قاعدة البيانات
+  const fetchAllPlans = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('plans')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+
+      if (error) throw error
+      setAllPlans(data || [])
+    } catch (error) {
+      console.error('Error fetching all plans:', error)
+    }
+  }
 
   const fetchPlanData = async () => {
     try {
@@ -60,24 +77,31 @@ export const usePlan = () => {
     }
   }
 
+  // جلب الباقة الحالية للمستخدم
   const getPlanId = () => user?.plan_id || 1
-  const getPlanLimits = () => PLAN_LIMITS[getPlanId()] || PLAN_LIMITS[1]
 
+  // جلب حدود الباقة الحالية
+  const getPlanLimits = () => {
+    const currentPlan = plan || allPlans.find(p => p.id === getPlanId())
+    return currentPlan || {}
+  }
+
+  // التحقق من الحدود
   const checkLimit = (type, currentCount = null) => {
     const limits = getPlanLimits()
     const count = currentCount ?? usage?.[type] ?? 0
     
     switch(type) {
       case 'projects':
-        return limits.maxProjects === -1 ? true : count < limits.maxProjects
+        return limits.max_projects === -1 ? true : count < limits.max_projects
       case 'skills':
-        return limits.maxSkills === -1 ? true : count < limits.maxSkills
+        return limits.max_skills === -1 ? true : count < limits.max_skills
       case 'certificates':
-        return limits.maxCertificates === -1 ? true : count < limits.maxCertificates
+        return limits.max_certificates === -1 ? true : count < limits.max_certificates
       case 'experience':
-        return limits.maxExperience === -1 ? true : count < limits.maxExperience
+        return limits.max_experience === -1 ? true : count < limits.max_experience
       case 'education':
-        return limits.maxEducation === -1 ? true : count < limits.maxEducation
+        return limits.max_education === -1 ? true : count < limits.max_education
       default:
         return false
     }
@@ -94,8 +118,8 @@ export const usePlan = () => {
       
       const limits = getPlanLimits()
       
-      if (limits.maxAiAnalyses === -1) return Infinity
-      return Math.max(0, (limits.maxAiAnalyses || 0) - (count || 0))
+      if (limits.max_ai_analyses === -1) return Infinity
+      return Math.max(0, (limits.max_ai_analyses || 0) - (count || 0))
     } catch (error) {
       console.error('Error:', error)
       return 0
@@ -104,7 +128,7 @@ export const usePlan = () => {
 
   const getRemainingStorage = (usedStorage) => {
     const limits = getPlanLimits()
-    return Math.max(0, limits.storageLimit - usedStorage)
+    return Math.max(0, limits.storage_limit - usedStorage)
   }
 
   const canUseFeature = (feature) => {
@@ -112,13 +136,19 @@ export const usePlan = () => {
     
     switch(feature) {
       case 'advanced_stats':
-        return limits.hasAdvancedStats
+        return limits.has_advanced_stats
       case 'reports':
-        return limits.hasReports
+        return limits.has_reports
       case 'priority_support':
-        return limits.hasPrioritySupport
+        return limits.has_priority_support
       case 'remove_branding':
-        return limits.hasRemoveBranding
+        return limits.has_remove_branding
+      case 'custom_domain':
+        return limits.custom_domain
+      case 'analytics':
+        return limits.analytics
+      case 'ai_analysis':
+        return limits.ai_analysis
       default:
         return false
     }
@@ -130,15 +160,15 @@ export const usePlan = () => {
     
     switch(type) {
       case 'projects':
-        return limits.maxProjects === -1 ? 0 : Math.min(100, (current / limits.maxProjects) * 100)
+        return limits.max_projects === -1 ? 0 : Math.min(100, (current / limits.max_projects) * 100)
       case 'skills':
-        return limits.maxSkills === -1 ? 0 : Math.min(100, (current / limits.maxSkills) * 100)
+        return limits.max_skills === -1 ? 0 : Math.min(100, (current / limits.max_skills) * 100)
       case 'certificates':
-        return limits.maxCertificates === -1 ? 0 : Math.min(100, (current / limits.maxCertificates) * 100)
+        return limits.max_certificates === -1 ? 0 : Math.min(100, (current / limits.max_certificates) * 100)
       case 'experience':
-        return limits.maxExperience === -1 ? 0 : Math.min(100, (current / limits.maxExperience) * 100)
+        return limits.max_experience === -1 ? 0 : Math.min(100, (current / limits.max_experience) * 100)
       case 'education':
-        return limits.maxEducation === -1 ? 0 : Math.min(100, (current / limits.maxEducation) * 100)
+        return limits.max_education === -1 ? 0 : Math.min(100, (current / limits.max_education) * 100)
       default:
         return 0
     }
@@ -146,6 +176,8 @@ export const usePlan = () => {
 
   return {
     planId: getPlanId(),
+    currentPlan: plan,
+    allPlans, // جميع الباقات من قاعدة البيانات
     limits: getPlanLimits(),
     usage,
     loading,
