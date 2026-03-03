@@ -22,7 +22,9 @@ import {
   TrendingUp,
   MessageCircle,
   Award,
-  Shield
+  Shield,
+  List,
+  Star
 } from 'lucide-react'
 
 const Plans = () => {
@@ -58,6 +60,8 @@ const Plans = () => {
     is_active: true
   })
   const [featureInput, setFeatureInput] = useState('')
+  const [editingFeatureIndex, setEditingFeatureIndex] = useState(null)
+  const [editingFeatureValue, setEditingFeatureValue] = useState('')
   const observerRef = useRef()
 
   useEffect(() => {
@@ -183,6 +187,7 @@ const Plans = () => {
     }
   }
 
+  // وظائف إدارة الميزات
   const handleAddFeature = () => {
     if (featureInput.trim()) {
       setEditData({
@@ -194,10 +199,61 @@ const Plans = () => {
   }
 
   const handleRemoveFeature = (index) => {
-    setEditData({
-      ...editData,
-      features: editData.features.filter((_, i) => i !== index)
-    })
+    if (window.confirm('هل أنت متأكد من حذف هذه الميزة؟')) {
+      setEditData({
+        ...editData,
+        features: editData.features.filter((_, i) => i !== index)
+      })
+    }
+  }
+
+  const handleEditFeature = (index) => {
+    setEditingFeatureIndex(index)
+    setEditingFeatureValue(editData.features[index])
+  }
+
+  const handleSaveFeature = () => {
+    if (editingFeatureValue.trim()) {
+      const updatedFeatures = [...editData.features]
+      updatedFeatures[editingFeatureIndex] = editingFeatureValue.trim()
+      setEditData({
+        ...editData,
+        features: updatedFeatures
+      })
+      setEditingFeatureIndex(null)
+      setEditingFeatureValue('')
+    }
+  }
+
+  const handleCancelEditFeature = () => {
+    setEditingFeatureIndex(null)
+    setEditingFeatureValue('')
+  }
+
+  const handleMoveFeatureUp = (index) => {
+    if (index > 0) {
+      const updatedFeatures = [...editData.features]
+      const temp = updatedFeatures[index]
+      updatedFeatures[index] = updatedFeatures[index - 1]
+      updatedFeatures[index - 1] = temp
+      setEditData({
+        ...editData,
+        features: updatedFeatures
+      })
+    }
+  }
+
+  const handleMoveFeatureDown = (index) => {
+    if (index < editData.features.length - 1) {
+      const updatedFeatures = [...editData.features]
+      const temp = updatedFeatures[index]
+      updatedFeatures[index] = updatedFeatures[index + 1]
+      updatedFeatures[index + 1] = temp
+      setEditData({
+        ...editData,
+        features: updatedFeatures
+      })
+    }
   }
 
   const handleAddNewPlan = async () => {
@@ -364,8 +420,13 @@ const Plans = () => {
                   />
                 </div>
 
-                {/* Features */}
+                {/* قسم الميزات المحسن مع إمكانية التعديل والترتيب */}
                 <div>
+                  <label className="block text-sm text-gray-400 mb-2 flex items-center gap-2">
+                    <List className="w-4 h-4" />
+                    الميزات
+                  </label>
+                  
                   <div className="flex gap-2 mb-2">
                     <input
                       type="text"
@@ -373,73 +434,143 @@ const Plans = () => {
                       onChange={(e) => setFeatureInput(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && handleAddFeature()}
                       className="flex-1 p-2 bg-white/10 border border-white/20 rounded-lg text-white"
-                      placeholder="ميزة جديدة"
+                      placeholder="أضف ميزة جديدة..."
                     />
                     <button
                       onClick={handleAddFeature}
-                      className="px-3 py-2 bg-[#6366f1] text-white rounded-lg"
+                      className="px-3 py-2 bg-[#6366f1] text-white rounded-lg hover:bg-[#a855f7] transition"
                     >
                       إضافة
                     </button>
                   </div>
-                  <div className="space-y-1">
-                    {editData.features?.map((feature, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
-                        <span className="text-sm text-gray-300">{feature}</span>
-                        <button
-                          onClick={() => handleRemoveFeature(idx)}
-                          className="p-1 text-red-400 hover:bg-red-500/10 rounded"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
+
+                  <div className="space-y-2 max-h-60 overflow-y-auto p-2 bg-white/5 rounded-lg">
+                    {editData.features?.length > 0 ? (
+                      editData.features.map((feature, idx) => (
+                        <div key={idx} className="flex items-center gap-2 p-2 bg-white/5 rounded-lg group hover:bg-white/10 transition">
+                          {editingFeatureIndex === idx ? (
+                            // وضع التعديل
+                            <>
+                              <input
+                                type="text"
+                                value={editingFeatureValue}
+                                onChange={(e) => setEditingFeatureValue(e.target.value)}
+                                className="flex-1 p-1 bg-white/10 border border-white/20 rounded text-white text-sm"
+                                autoFocus
+                              />
+                              <button
+                                onClick={handleSaveFeature}
+                                className="p-1 text-green-400 hover:bg-green-500/10 rounded"
+                              >
+                                <Check className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={handleCancelEditFeature}
+                                className="p-1 text-red-400 hover:bg-red-500/10 rounded"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </>
+                          ) : (
+                            // وضع العرض
+                            <>
+                              <span className="flex-1 text-sm text-gray-300">{feature}</span>
+                              
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                                <button
+                                  onClick={() => handleMoveFeatureUp(idx)}
+                                  disabled={idx === 0}
+                                  className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded disabled:opacity-30"
+                                >
+                                  ↑
+                                </button>
+                                <button
+                                  onClick={() => handleMoveFeatureDown(idx)}
+                                  disabled={idx === editData.features.length - 1}
+                                  className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded disabled:opacity-30"
+                                >
+                                  ↓
+                                </button>
+                                <button
+                                  onClick={() => handleEditFeature(idx)}
+                                  className="p-1 text-blue-400 hover:bg-blue-500/10 rounded"
+                                >
+                                  <Edit className="w-3 h-3" />
+                                </button>
+                                <button
+                                  onClick={() => handleRemoveFeature(idx)}
+                                  className="p-1 text-red-400 hover:bg-red-500/10 rounded"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-center text-gray-500 text-sm py-4">لا توجد ميزات مضافة</p>
+                    )}
                   </div>
                 </div>
 
-                {/* Features Toggles */}
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={editData.custom_domain}
-                      onChange={(e) => setEditData({ ...editData, custom_domain: e.target.checked })}
-                      className="w-4 h-4"
-                    />
-                    <span className="text-sm text-gray-300">نطاق مخصص</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={editData.remove_branding}
-                      onChange={(e) => setEditData({ ...editData, remove_branding: e.target.checked })}
-                      className="w-4 h-4"
-                    />
-                    <span className="text-sm text-gray-300">إزالة العلامة التجارية</span>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={editData.analytics}
-                      onChange={(e) => setEditData({ ...editData, analytics: e.target.checked })}
-                      className="w-4 h-4"
-                    />
-                    <span className="text-sm text-gray-300">تحليلات متقدمة</span>
-                  </label>
+                {/* المميزات الإضافية (Toggles) */}
+                <div className="space-y-2 pt-2">
+                  <h3 className="text-sm font-medium text-gray-400 mb-2">المميزات الإضافية</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="flex items-center gap-2 p-2 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10">
+                      <input
+                        type="checkbox"
+                        checked={editData.custom_domain}
+                        onChange={(e) => setEditData({ ...editData, custom_domain: e.target.checked })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm text-gray-300">نطاق مخصص</span>
+                    </label>
+                    <label className="flex items-center gap-2 p-2 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10">
+                      <input
+                        type="checkbox"
+                        checked={editData.remove_branding}
+                        onChange={(e) => setEditData({ ...editData, remove_branding: e.target.checked })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm text-gray-300">إزالة العلامة</span>
+                    </label>
+                    <label className="flex items-center gap-2 p-2 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10">
+                      <input
+                        type="checkbox"
+                        checked={editData.analytics}
+                        onChange={(e) => setEditData({ ...editData, analytics: e.target.checked })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm text-gray-300">تحليلات</span>
+                    </label>
+                    <label className="flex items-center gap-2 p-2 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10">
+                      <input
+                        type="checkbox"
+                        checked={editData.priority_support}
+                        onChange={(e) => setEditData({ ...editData, priority_support: e.target.checked })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm text-gray-300">دعم أولوية</span>
+                    </label>
+                  </div>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 pt-4">
                   <button
                     onClick={handleSave}
-                    className="flex-1 px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition"
+                    className="flex-1 px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition flex items-center justify-center gap-2"
                   >
-                    <Save className="w-4 h-4 mx-auto" />
+                    <Save className="w-4 h-4" />
+                    حفظ
                   </button>
                   <button
                     onClick={handleCancel}
-                    className="flex-1 px-3 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition"
+                    className="flex-1 px-3 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition flex items-center justify-center gap-2"
                   >
-                    <X className="w-4 h-4 mx-auto" />
+                    <X className="w-4 h-4" />
+                    إلغاء
                   </button>
                 </div>
               </div>
@@ -545,21 +676,21 @@ const Plans = () => {
                     </div>
                   </div>
 
-                  {/* Features */}
+                  {/* عرض الميزات بشكل كامل */}
                   {plan.features?.length > 0 && (
                     <div className="pt-3 border-t border-white/10">
-                      <p className="text-sm text-gray-400 mb-2">المميزات:</p>
-                      <ul className="space-y-1">
-                        {plan.features.slice(0, 3).map((feature, idx) => (
-                          <li key={idx} className="text-xs text-gray-300 flex items-center gap-1">
-                            <Check className="w-3 h-3 text-green-400" />
-                            {feature}
-                          </li>
+                      <div className="flex items-center gap-2 mb-3">
+                        <List className="w-4 h-4 text-purple-400" />
+                        <p className="text-sm text-white font-medium">المميزات ({plan.features.length})</p>
+                      </div>
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {plan.features.map((feature, idx) => (
+                          <div key={idx} className="flex items-start gap-2 p-2 bg-white/5 rounded-lg">
+                            <Check className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+                            <span className="text-sm text-gray-300">{feature}</span>
+                          </div>
                         ))}
-                        {plan.features.length > 3 && (
-                          <li className="text-xs text-gray-500">+{plan.features.length - 3} مميزات أخرى</li>
-                        )}
-                      </ul>
+                      </div>
                     </div>
                   )}
                 </div>
