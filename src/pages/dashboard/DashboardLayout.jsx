@@ -1,3 +1,4 @@
+// DashboardLayout.jsx
 import React, { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
@@ -22,14 +23,141 @@ import {
   Check
 } from 'lucide-react'
 
+// ============================================
+// مكونات Skeleton Loading
+// ============================================
+
+// Skeleton للشريط الجانبي
+const SidebarSkeleton = () => (
+  <div className="fixed inset-y-0 left-0 w-64 bg-white/5 backdrop-blur-xl border-r border-white/10 z-50 lg:translate-x-0">
+    {/* Logo Skeleton */}
+    <div className="h-16 flex items-center justify-center border-b border-white/10">
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 bg-white/10 rounded-lg animate-pulse"></div>
+        <div className="w-32 h-6 bg-white/10 rounded-lg animate-pulse"></div>
+      </div>
+    </div>
+
+    {/* Navigation Skeleton */}
+    <nav className="p-4 space-y-1">
+      {[1,2,3,4,5,6,7,8,9,10].map((i) => (
+        <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-xl">
+          <div className="w-5 h-5 bg-white/10 rounded-lg animate-pulse"></div>
+          <div className="w-24 h-4 bg-white/10 rounded-lg animate-pulse"></div>
+        </div>
+      ))}
+    </nav>
+
+    {/* User Info Skeleton */}
+    <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-white/10 rounded-full animate-pulse"></div>
+        <div className="flex-1">
+          <div className="w-24 h-4 bg-white/10 rounded-lg animate-pulse mb-2"></div>
+          <div className="w-32 h-3 bg-white/10 rounded-lg animate-pulse"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+)
+
+// Skeleton للشريط العلوي
+const TopNavbarSkeleton = () => (
+  <header className="sticky top-0 z-30 bg-white/5 backdrop-blur-xl border-b border-white/10">
+    <div className="flex items-center justify-between h-16 px-4">
+      {/* Mobile menu button skeleton */}
+      <div className="lg:hidden p-2">
+        <div className="w-6 h-6 bg-white/10 rounded-lg animate-pulse"></div>
+      </div>
+
+      {/* Right side skeleton */}
+      <div className="flex items-center gap-4 ml-auto">
+        {/* Share button skeleton */}
+        <div className="w-10 h-10 bg-white/10 rounded-lg animate-pulse"></div>
+        
+        {/* Notifications skeleton */}
+        <div className="w-10 h-10 bg-white/10 rounded-lg animate-pulse"></div>
+        
+        {/* Profile dropdown skeleton */}
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-white/10 rounded-full animate-pulse"></div>
+          <div className="w-16 h-4 bg-white/10 rounded-lg animate-pulse hidden sm:block"></div>
+          <div className="w-4 h-4 bg-white/10 rounded-lg animate-pulse"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+)
+
+// Skeleton للمحتوى الرئيسي
+const MainContentSkeleton = () => (
+  <main className="p-6">
+    <div className="space-y-6">
+      {/* عنوان الصفحة */}
+      <div className="h-8 w-48 bg-white/10 rounded-lg animate-pulse"></div>
+      
+      {/* بطاقات */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+          <div className="w-12 h-12 bg-white/10 rounded-xl animate-pulse mb-4"></div>
+          <div className="h-6 w-32 bg-white/10 rounded-lg animate-pulse mb-2"></div>
+          <div className="h-4 w-24 bg-white/10 rounded-lg animate-pulse"></div>
+        </div>
+        <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+          <div className="w-12 h-12 bg-white/10 rounded-xl animate-pulse mb-4"></div>
+          <div className="h-6 w-32 bg-white/10 rounded-lg animate-pulse mb-2"></div>
+          <div className="h-4 w-24 bg-white/10 rounded-lg animate-pulse"></div>
+        </div>
+        <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+          <div className="w-12 h-12 bg-white/10 rounded-xl animate-pulse mb-4"></div>
+          <div className="h-6 w-32 bg-white/10 rounded-lg animate-pulse mb-2"></div>
+          <div className="h-4 w-24 bg-white/10 rounded-lg animate-pulse"></div>
+        </div>
+        <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+          <div className="w-12 h-12 bg-white/10 rounded-xl animate-pulse mb-4"></div>
+          <div className="h-6 w-32 bg-white/10 rounded-lg animate-pulse mb-2"></div>
+          <div className="h-4 w-24 bg-white/10 rounded-lg animate-pulse"></div>
+        </div>
+      </div>
+      
+      {/* جدول أو قائمة */}
+      <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+        <div className="space-y-4">
+          {[1,2,3,4,5].map((i) => (
+            <div key={i} className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-white/10 rounded-lg animate-pulse"></div>
+              <div className="flex-1">
+                <div className="h-5 w-48 bg-white/10 rounded-lg animate-pulse mb-2"></div>
+                <div className="h-4 w-32 bg-white/10 rounded-lg animate-pulse"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </main>
+)
+
+// Skeleton كامل للـ Dashboard
+const DashboardSkeleton = () => (
+  <div className="min-h-screen bg-[#030014]">
+    <SidebarSkeleton />
+    <div className="lg:pl-64">
+      <TopNavbarSkeleton />
+      <MainContentSkeleton />
+    </div>
+  </div>
+)
+
 const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const [showShareTooltip, setShowShareTooltip] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [loading, setLoading] = useState(true) // حالة التحميل
   
-  const { user, logout } = useAuth()
+  const { user, logout, loading: authLoading } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -43,7 +171,21 @@ const DashboardLayout = () => {
     }
   }, [user])
 
+  // إنهاء حالة التحميل بعد التأكد من المستخدم
+  useEffect(() => {
+    if (!authLoading) {
+      // تأخير بسيط لإظهار الـ Skeleton بشكل أفضل
+      const timer = setTimeout(() => {
+        setLoading(false)
+      }, 500)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [authLoading])
+
   const fetchUnreadCount = async () => {
+    if (!user) return
+    
     try {
       const count = await messagesService.getUnreadCount(user.id)
       setUnreadCount(count)
@@ -54,7 +196,9 @@ const DashboardLayout = () => {
 
   // دالة نسخ رابط الموقع
   const copyPortfolioLink = () => {
-    const portfolioUrl = `${window.location.origin}/u/${user?.username}`
+    if (!user?.username) return
+    
+    const portfolioUrl = `${window.location.origin}/u/${user.username}`
     navigator.clipboard.writeText(portfolioUrl)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
@@ -84,6 +228,12 @@ const DashboardLayout = () => {
 
   const isActive = (path) => location.pathname === path
 
+  // عرض Skeleton أثناء التحميل
+  if (loading || authLoading) {
+    return <DashboardSkeleton />
+  }
+
+  // إذا لم يكن هناك مستخدم، عرض رسالة (نادراً ما تحدث لأن Route محمي)
   if (!user) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center">
@@ -158,6 +308,9 @@ const DashboardLayout = () => {
               src={user?.avatar || '/default-avatar.png'}
               alt={user?.full_name}
               className="w-10 h-10 rounded-full object-cover border-2 border-[#a855f7]/30"
+              onError={(e) => {
+                e.target.src = '/default-avatar.png'
+              }}
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">
@@ -187,7 +340,7 @@ const DashboardLayout = () => {
             {/* Right side */}
             <div className="flex items-center gap-4 ml-auto">
               
-              {/* زر مشاركة الموقع - جديد */}
+              {/* زر مشاركة الموقع */}
               <div className="relative">
                 <button
                   onClick={copyPortfolioLink}
@@ -195,6 +348,7 @@ const DashboardLayout = () => {
                   onMouseLeave={() => setShowShareTooltip(false)}
                   className="relative p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all"
                   title="مشاركة الموقع"
+                  disabled={!user?.username}
                 >
                   {copied ? (
                     <Check className="w-5 h-5 text-green-400" />
@@ -241,6 +395,9 @@ const DashboardLayout = () => {
                     src={user?.avatar || '/default-avatar.png'}
                     alt={user?.full_name}
                     className="w-8 h-8 rounded-full object-cover"
+                    onError={(e) => {
+                      e.target.src = '/default-avatar.png'
+                    }}
                   />
                   <span className="hidden sm:block text-sm">
                     {user?.full_name?.split(' ')[0] || 'User'}
