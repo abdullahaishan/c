@@ -22,35 +22,118 @@ import {
   Cpu,
   BarChart3,
   Shield,
-  Loader
+  Loader,
+  RefreshCw
 } from 'lucide-react'
 
 // ============================================
-// مكونات Skeleton Loading (تأثير السراب)
+// بيانات العملات
 // ============================================
+const CURRENCIES = {
+  USD: { symbol: '$', name: 'دولار أمريكي', code: 'USD' },
+  YER: { symbol: 'ر.ي', name: 'ريال يمني', code: 'YER' },
+  SAR: { symbol: 'ر.س', name: 'ريال سعودي', code: 'SAR' },
+  AED: { symbol: 'د.إ', name: 'درهم إماراتي', code: 'AED' },
+  EGP: { symbol: 'ج.م', name: 'جنيه مصري', code: 'EGP' }
+}
 
-// Skeleton للبطاقة الرئيسية
+// ============================================
+// دالة جلب أسعار الصرف الحقيقية
+// ============================================
+const fetchExchangeRates = async () => {
+  try {
+    // محاولة جلب الأسعار من API مجاني
+    const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD')
+    const data = await response.json()
+    
+    return {
+      USD: 1,
+      YER: data.rates?.YER || 250, // fallback إذا لم يكن موجوداً
+      SAR: data.rates?.SAR || 3.75,
+      AED: data.rates?.AED || 3.67,
+      EGP: data.rates?.EGP || 30.9,
+      lastUpdated: new Date().toISOString()
+    }
+  } catch (error) {
+    console.error('Error fetching exchange rates:', error)
+    
+    // أسعار افتراضية إذا فشل الاتصال
+    return {
+      USD: 1,
+      YER: 250,
+      SAR: 3.75,
+      AED: 3.67,
+      EGP: 30.9,
+      lastUpdated: new Date().toISOString()
+    }
+  }
+}
+
+// ============================================
+// دالة كشف الدولة
+// ============================================
+const detectCountryFromIP = async () => {
+  try {
+    // محاولة جلب موقع المستخدم
+    const response = await fetch('https://ipapi.co/json/')
+    const data = await response.json()
+    
+    // تحديد العملة المناسبة للدولة
+    let currency = 'USD'
+    if (data.country_code === 'YE') currency = 'YER'
+    else if (data.country_code === 'SA') currency = 'SAR'
+    else if (data.country_code === 'AE') currency = 'AED'
+    else if (data.country_code === 'EG') currency = 'EGP'
+    else if (data.currency) currency = data.currency
+    
+    return {
+      country: data.country_code || 'US',
+      country_name: data.country_name || 'United States',
+      region: data.continent_code === 'AS' ? 'middle_east' : 'western',
+      currency: currency
+    }
+  } catch (error) {
+    console.error('Error detecting country:', error)
+    return {
+      country: 'US',
+      country_name: 'United States',
+      region: 'western',
+      currency: 'USD'
+    }
+  }
+}
+
+// ============================================
+// مكون عرض سعر الصرف
+// ============================================
+const ExchangeRateIndicator = ({ rates, lastUpdated, onRefresh }) => (
+  <div className="text-xs text-gray-500 flex items-center gap-2">
+    <span>آخر تحديث: {new Date(lastUpdated).toLocaleTimeString('ar')}</span>
+    <button 
+      onClick={onRefresh}
+      className="p-1 hover:bg-white/10 rounded-full transition-all"
+      title="تحديث الأسعار"
+    >
+      <RefreshCw className="w-3 h-3" />
+    </button>
+  </div>
+)
+
+// ============================================
+// مكونات Skeleton Loading
+// ============================================
 const PlanCardSkeleton = () => (
   <div className="relative bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-8 animate-pulse">
-    {/* شريط التحميل العلوي */}
-      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-white/10 rounded-full"></div>
-    
-    {/* أيقونة الباقة */}
+    <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-white/10 rounded-full"></div>
     <div className="mb-6">
       <div className="w-12 h-12 rounded-xl bg-white/10"></div>
     </div>
-    
-    {/* اسم الباقة */}
     <div className="h-8 w-32 bg-white/10 rounded-lg mb-2"></div>
     <div className="h-4 w-24 bg-white/10 rounded-lg mb-4"></div>
-    
-    {/* السعر */}
     <div className="mb-6">
       <div className="h-10 w-40 bg-white/10 rounded-lg"></div>
       <div className="h-3 w-20 bg-white/5 rounded-lg mt-2"></div>
     </div>
-    
-    {/* المميزات (5 أسطر) */}
     <div className="space-y-4 mb-8">
       {[1,2,3,4,5,6].map((i) => (
         <div key={i} className="space-y-2">
@@ -61,20 +144,16 @@ const PlanCardSkeleton = () => (
             </div>
             <div className="h-4 w-16 bg-white/10 rounded-lg"></div>
           </div>
-          {/* شريط التقدم الوهمي */}
           <div className="h-1 bg-white/5 rounded-full overflow-hidden">
             <div className="h-full w-3/4 bg-white/10 rounded-full"></div>
           </div>
         </div>
       ))}
     </div>
-    
-    {/* زر الإجراء */}
     <div className="w-full h-12 bg-white/10 rounded-xl"></div>
   </div>
 )
 
-// Skeleton لشريط العملات
 const CurrencyBarSkeleton = () => (
   <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-4 border border-white/10 flex items-center justify-between animate-pulse">
     <div className="flex items-center gap-2">
@@ -86,7 +165,6 @@ const CurrencyBarSkeleton = () => (
   </div>
 )
 
-// Skeleton لشريط التبديل (شهري/سنوي)
 const ToggleSkeleton = () => (
   <div className="flex items-center justify-center gap-4 animate-pulse">
     <div className="w-20 h-10 bg-white/10 rounded-full"></div>
@@ -96,7 +174,6 @@ const ToggleSkeleton = () => (
   </div>
 )
 
-// Skeleton للشريط السفلي (تواصل مع الدعم)
 const ContactSkeleton = () => (
   <div className="mt-8 p-6 bg-white/5 rounded-2xl border border-white/10 animate-pulse">
     <div className="flex items-center justify-between flex-wrap gap-4">
@@ -112,7 +189,6 @@ const ContactSkeleton = () => (
   </div>
 )
 
-// Skeleton للشريط العلوي (باقتك الحالية)
 const HeaderSkeleton = () => (
   <div className="flex items-center justify-between animate-pulse">
     <div className="h-8 w-48 bg-white/10 rounded-lg"></div>
@@ -120,7 +196,6 @@ const HeaderSkeleton = () => (
   </div>
 )
 
-// Skeleton للـ Badge (جميع الباقات مدى الحياة)
 const LifetimeBadgeSkeleton = () => (
   <div className="mb-4 p-4 bg-white/5 rounded-xl border border-white/10 animate-pulse">
     <div className="flex items-center gap-2">
@@ -130,7 +205,9 @@ const LifetimeBadgeSkeleton = () => (
   </div>
 )
 
-// دالة مساعدة للحصول على الأيقونة المناسبة حسب اسم الباقة
+// ============================================
+// الدوال المساعدة
+// ============================================
 const getPlanIcon = (planName, planId) => {
   const icons = {
     1: Zap,
@@ -141,7 +218,6 @@ const getPlanIcon = (planName, planId) => {
   return icons[planId] || Crown
 }
 
-// دالة مساعدة للحصول على لون الباقة
 const getPlanColor = (planId) => {
   const colors = {
     1: 'from-blue-500 to-cyan-500',
@@ -152,8 +228,9 @@ const getPlanColor = (planId) => {
   return colors[planId] || 'from-gray-500 to-gray-600'
 }
 
-// دالة لتوليد قائمة المميزات من بيانات الباقة
 const generateFeaturesFromPlan = (plan) => {
+  if (!plan) return []
+  
   const features = [
     {
       text: 'عدد المشاريع',
@@ -216,58 +293,114 @@ const generateFeaturesFromPlan = (plan) => {
   return features
 }
 
+// ============================================
+// المكون الرئيسي
+// ============================================
 const PlanStatus = () => {
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [showPayment, setShowPayment] = useState(false)
   const [billingCycle, setBillingCycle] = useState('monthly')
   const [userCountry, setUserCountry] = useState('US')
+  const [userCountryName, setUserCountryName] = useState('United States')
   const [userRegion, setUserRegion] = useState('western')
   const [selectedCurrency, setSelectedCurrency] = useState('USD')
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false)
-  const [convertedPrices, setConvertedPrices] = useState({})
-  const [detectingCountry, setDetectingCountry] = useState(true) // حالة تحميل كشف الدولة
+  const [exchangeRates, setExchangeRates] = useState(null)
+  const [loadingRates, setLoadingRates] = useState(true)
+  const [detectingCountry, setDetectingCountry] = useState(true)
   
-  const { user, isAuthenticated, loading: authLoading } = useAuth()
-  const { allPlans, currentPlan, usage, getUsagePercentage, loading: plansLoading } = usePlan()
+  const { user, isAuthenticated, loading: authLoading } = useAuth() || { loading: true }
+  const { allPlans, currentPlan, usage, loading: plansLoading } = usePlan() || { allPlans: [], loading: true }
   const navigate = useNavigate()
 
-  // كشف الدولة عند تحميل الصفحة
-  useEffect(() => {
-    const detectCountry = async () => {
-      setDetectingCountry(true)
-      try {
-        const data = await detectCountryFromIP()
-        setUserCountry(data.country)
-        setUserRegion(data.region)
-        
-        // تحديد العملة حسب الدولة
-        if (data.country === 'YE') {
-          setSelectedCurrency('YER_ADEN')
-        } else if (data.currency) {
-          setSelectedCurrency(data.currency)
-        }
-      } catch (error) {
-        console.error('Error detecting country:', error)
-      } finally {
-        setDetectingCountry(false)
-      }
+  // ============================================
+  // جلب أسعار الصرف
+  // ============================================
+  const loadExchangeRates = async () => {
+    setLoadingRates(true)
+    try {
+      const rates = await fetchExchangeRates()
+      setExchangeRates(rates)
+    } catch (error) {
+      console.error('Error loading exchange rates:', error)
+    } finally {
+      setLoadingRates(false)
     }
+  }
+
+  // ============================================
+  // كشف الدولة
+  // ============================================
+  const detectCountry = async () => {
+    setDetectingCountry(true)
+    try {
+      const data = await detectCountryFromIP()
+      setUserCountry(data.country)
+      setUserCountryName(data.country_name)
+      setUserRegion(data.region)
+      setSelectedCurrency(data.currency)
+    } catch (error) {
+      console.error('Error detecting country:', error)
+    } finally {
+      setDetectingCountry(false)
+    }
+  }
+
+  // تحميل البيانات عند بدء التشغيل
+  useEffect(() => {
     detectCountry()
+    loadExchangeRates()
+    
+    // تحديث الأسعار كل 5 دقائق
+    const interval = setInterval(() => {
+      loadExchangeRates()
+    }, 5 * 60 * 1000)
+    
+    return () => clearInterval(interval)
   }, [])
 
-  // تحويل الأسعار عند تغيير العملة
+  // ============================================
+  // دالة تحويل العملة (تستخدم الأسعار الحقيقية)
+  // ============================================
+  const convertPrice = (priceInUSD, targetCurrency) => {
+    if (!exchangeRates) {
+      return {
+        price: priceInUSD,
+        currency: targetCurrency,
+        symbol: CURRENCIES[targetCurrency]?.symbol || '$',
+        originalUSD: priceInUSD
+      }
+    }
+    
+    const rate = exchangeRates[targetCurrency] || 1
+    const convertedPrice = priceInUSD * rate
+    
+    return {
+      price: Math.round(convertedPrice * 100) / 100,
+      currency: targetCurrency,
+      symbol: CURRENCIES[targetCurrency]?.symbol || '$',
+      originalUSD: priceInUSD,
+      rate: rate
+    }
+  }
+
+  // تحويل جميع الأسعار عند تغيير العملة أو تحديث الأسعار
   useEffect(() => {
-    if (allPlans && allPlans.length > 0) {
+    if (allPlans && allPlans.length > 0 && exchangeRates) {
       const newPrices = {}
       allPlans.forEach(plan => {
-        newPrices[`${plan.id}_monthly`] = convertPrice(plan.price_monthly || 0, selectedCurrency)
-        if (plan.price_yearly) {
-          newPrices[`${plan.id}_yearly`] = convertPrice(plan.price_yearly, selectedCurrency)
+        if (plan) {
+          newPrices[`${plan.id}_monthly`] = convertPrice(plan.price_monthly || 0, selectedCurrency)
+          if (plan.price_yearly) {
+            newPrices[`${plan.id}_yearly`] = convertPrice(plan.price_yearly, selectedCurrency)
+          }
         }
       })
       setConvertedPrices(newPrices)
     }
-  }, [selectedCurrency, allPlans])
+  }, [selectedCurrency, exchangeRates, allPlans])
+
+  const [convertedPrices, setConvertedPrices] = useState({})
 
   const handleSelectPlan = (plan) => {
     if (!isAuthenticated) {
@@ -279,31 +412,29 @@ const PlanStatus = () => {
   }
 
   const getPrice = (plan) => {
+    if (!plan) return { amount: 0, currency: 'USD', symbol: '$' }
+    
     const key = `${plan.id}_${billingCycle}`
     const converted = convertedPrices[key]
     
     if (converted) {
-      return {
-        amount: converted.price,
-        currency: converted.currency,
-        symbol: converted.symbol,
-        region: converted.region
-      }
+      return converted
     }
     
     const price = billingCycle === 'yearly' && plan.price_yearly
       ? plan.price_yearly
-      : plan.price_monthly
+      : plan.price_monthly || 0
       
     return {
       amount: price,
       currency: 'USD',
-      symbol: '$'
+      symbol: '$',
+      originalUSD: price
     }
   }
 
   const getSavings = (plan) => {
-    if (billingCycle === 'yearly' && plan.price_yearly && plan.price_monthly) {
+    if (billingCycle === 'yearly' && plan?.price_yearly && plan?.price_monthly) {
       const monthlyTotal = plan.price_monthly * 12
       const savings = monthlyTotal - plan.price_yearly
       return Math.round((savings / monthlyTotal) * 100)
@@ -311,40 +442,43 @@ const PlanStatus = () => {
     return 0
   }
 
-  // التحقق إذا كانت الباقة هي الباقة الحالية للمستخدم
   const isCurrentPlan = (planId) => {
     return planId === user?.plan_id
   }
 
-  // ============================================
-  // حالات التحميل المختلفة
-  // ============================================
-  
-  const isLoading = authLoading || plansLoading || detectingCountry
+  const getCountryFlag = (countryCode) => {
+    const flags = {
+      YE: '🇾🇪',
+      SA: '🇸🇦',
+      AE: '🇦🇪',
+      EG: '🇪🇬',
+      US: '🇺🇸',
+      GB: '🇬🇧'
+    }
+    return flags[countryCode] || '🌍'
+  }
 
-  // إذا كان في حالة تحميل، اعرض كل Skeleton
+  // حالات التحميل
+  const isLoading = authLoading || plansLoading || detectingCountry || loadingRates
+
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 p-6">
         <HeaderSkeleton />
         <LifetimeBadgeSkeleton />
         <CurrencyBarSkeleton />
         <ToggleSkeleton />
-        
-        {/* شبكة الباقات مع Skeleton */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
           <PlanCardSkeleton />
           <PlanCardSkeleton />
           <PlanCardSkeleton />
           <PlanCardSkeleton />
         </div>
-        
         <ContactSkeleton />
       </div>
     )
   }
 
-  // إذا لم تكن هناك باقات، عرض رسالة
   if (!allPlans || allPlans.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -354,7 +488,7 @@ const PlanStatus = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">الباقات والاشتراكات</h1>
@@ -372,111 +506,74 @@ const PlanStatus = () => {
       </div>
 
       {/* Country and Currency Bar */}
-      <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-4 border border-white/10 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Globe className="w-5 h-5 text-[#6366f1]" />
-          <span className="text-gray-400">موقعك:</span>
-          <span className="text-white font-medium">
-            {userCountry === 'YE' ? '🇾🇪 اليمن' : 
-             userCountry === 'SA' ? '🇸🇦 السعودية' :
-             userCountry === 'AE' ? '🇦🇪 الإمارات' :
-             userCountry === 'EG' ? '🇪🇬 مصر' : '🌍 أخرى'}
-          </span>
+      <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-4 border border-white/10">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Globe className="w-5 h-5 text-[#6366f1]" />
+            <span className="text-gray-400">موقعك:</span>
+            <span className="text-white font-medium flex items-center gap-1">
+              {getCountryFlag(userCountry)} {userCountryName}
+            </span>
+          </div>
+          
+          <div className="relative">
+            <button
+              onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
+              className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-white/15 transition-all"
+            >
+              <span className="text-white">
+                {CURRENCIES[selectedCurrency]?.symbol || '$'}
+              </span>
+              <span className="text-gray-300">
+                {CURRENCIES[selectedCurrency]?.name || 'USD'}
+              </span>
+            </button>
+            
+            {showCurrencyDropdown && (
+              <>
+                <div 
+                  className="fixed inset-0 bg-black/50 z-[100]" 
+                  onClick={() => setShowCurrencyDropdown(false)} 
+                />
+                <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 bg-gray-900 border border-white/10 rounded-xl shadow-xl z-[101] max-h-96 overflow-y-auto">
+                  <div className="px-3 py-2 text-xs text-gray-500 bg-white/5 sticky top-0">العملات المتاحة</div>
+                  
+                  {Object.entries(CURRENCIES).map(([code, currency]) => (
+                    <button
+                      key={code}
+                      onClick={() => {
+                        setSelectedCurrency(code)
+                        setShowCurrencyDropdown(false)
+                      }}
+                      className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all ${
+                        selectedCurrency === code ? 'bg-[#6366f1]/20' : ''
+                      }`}
+                    >
+                      <span className="text-white font-bold w-8">{currency.symbol}</span>
+                      <span className="flex-1 text-gray-300 text-right">{currency.name}</span>
+                      {exchangeRates && (
+                        <span className="text-xs text-gray-500">
+                          1 USD = {exchangeRates[code]?.toFixed(2) || '?'}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
         
-        <div className="relative">
-          <button
-            onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
-            className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-white/15 transition-all"
-          >
-            <span className="text-white">
-              {selectedCurrency === 'YER_ADEN' ? 'ر.ي' : 
-               selectedCurrency === 'YER_SANA' ? 'ر.ي' :
-               CURRENCIES[selectedCurrency]?.symbol || '$'}
-            </span>
-            <span className="text-gray-300">
-              {selectedCurrency === 'YER_ADEN' ? 'ريال يمني (عدن)' :
-               selectedCurrency === 'YER_SANA' ? 'ريال يمني (صنعاء)' :
-               CURRENCIES[selectedCurrency]?.name || 'USD'}
-            </span>
-          </button>
-          
-          {showCurrencyDropdown && (
-            <>
-              <div 
-                className="fixed inset-0 bg-black/50 z-[100]" 
-                onClick={() => setShowCurrencyDropdown(false)} 
-              />
-              <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 bg-gray-900 border border-white/10 rounded-xl shadow-xl z-[101] max-h-96 overflow-y-auto">
-                <div className="px-3 py-2 text-xs text-gray-500 bg-white/5 sticky top-0">🇾🇪 اليمن</div>
-                <button
-                  onClick={() => {
-                    setSelectedCurrency('YER_ADEN')
-                    setShowCurrencyDropdown(false)
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all ${
-                    selectedCurrency === 'YER_ADEN' ? 'bg-[#6366f1]/20' : ''
-                  }`}
-                >
-                  <span className="text-white font-bold w-8">ر.ي</span>
-                  <span className="flex-1 text-gray-300 text-right">ريال يمني (عدن)</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedCurrency('YER_SANA')
-                    setShowCurrencyDropdown(false)
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all ${
-                    selectedCurrency === 'YER_SANA' ? 'bg-[#6366f1]/20' : ''
-                  }`}
-                >
-                  <span className="text-white font-bold w-8">ر.ي</span>
-                  <span className="flex-1 text-gray-300 text-right">ريال يمني (صنعاء)</span>
-                </button>
-                
-                <div className="px-3 py-2 text-xs text-gray-500 bg-white/5 sticky top-0 mt-2">🇸🇦 دول الخليج</div>
-                <button
-                  onClick={() => {
-                    setSelectedCurrency('SAR')
-                    setShowCurrencyDropdown(false)
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all ${
-                    selectedCurrency === 'SAR' ? 'bg-[#6366f1]/20' : ''
-                  }`}
-                >
-                  <span className="text-white font-bold w-8">ر.س</span>
-                  <span className="flex-1 text-gray-300 text-right">ريال سعودي</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedCurrency('AED')
-                    setShowCurrencyDropdown(false)
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all ${
-                    selectedCurrency === 'AED' ? 'bg-[#6366f1]/20' : ''
-                  }`}
-                >
-                  <span className="text-white font-bold w-8">د.إ</span>
-                  <span className="flex-1 text-gray-300 text-right">درهم إماراتي</span>
-                </button>
-                
-                <div className="px-3 py-2 text-xs text-gray-500 bg-white/5 sticky top-0 mt-2">🌍 أخرى</div>
-                <button
-                  onClick={() => {
-                    setSelectedCurrency('USD')
-                    setShowCurrencyDropdown(false)
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all ${
-                    selectedCurrency === 'USD' ? 'bg-[#6366f1]/20' : ''
-                  }`}
-                >
-                  <span className="text-white font-bold w-8">$</span>
-                  <span className="flex-1 text-gray-300 text-right">دولار أمريكي</span>
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+        {/* مؤشر آخر تحديث للأسعار */}
+        {exchangeRates?.lastUpdated && (
+          <div className="flex justify-end mt-2">
+            <ExchangeRateIndicator 
+              rates={exchangeRates}
+              lastUpdated={exchangeRates.lastUpdated}
+              onRefresh={loadExchangeRates}
+            />
+          </div>
+        )}
       </div>
 
       {/* Billing Toggle */}
@@ -506,9 +603,11 @@ const PlanStatus = () => {
         </button>
       </div>
 
-      {/* Plans Grid - ديناميكي من قاعدة البيانات */}
+      {/* Plans Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
         {allPlans.map((plan) => {
+          if (!plan) return null
+          
           const PlanIcon = getPlanIcon(plan.name, plan.id)
           const planColor = getPlanColor(plan.id)
           const price = getPrice(plan)
@@ -559,9 +658,9 @@ const PlanStatus = () => {
                 {savings > 0 && (
                   <p className="text-xs text-green-400 mt-1">وفر {savings}% مع الاشتراك السنوي</p>
                 )}
-                {selectedCurrency !== 'USD' && plan.price_monthly > 0 && (
+                {selectedCurrency !== 'USD' && (
                   <p className="text-xs text-gray-500 mt-1">
-                    ≈ ${plan.price_monthly} USD
+                    ≈ ${price.originalUSD} USD
                   </p>
                 )}
               </div>
@@ -569,10 +668,8 @@ const PlanStatus = () => {
               {/* Features */}
               <div className="space-y-4 mb-8">
                 {features.map((feature, index) => {
-                  // حساب النسبة المئوية للاستخدام (للمستخدم الحالي)
                   const isCurrentUserPlan = user?.plan_id === plan.id
                   
-                  // تحديد المفتاح الصحيح للاستخدام
                   let usageKey = ''
                   if (feature.text.includes('المشاريع')) usageKey = 'projects'
                   else if (feature.text.includes('المهارات')) usageKey = 'skills'
@@ -608,7 +705,6 @@ const PlanStatus = () => {
                         </span>
                       </div>
                       
-                      {/* Progress bar for current user */}
                       {isCurrentUserPlan && usagePercent !== null && (
                         <div className="h-1 bg-white/10 rounded-full overflow-hidden">
                           <div 
@@ -677,6 +773,7 @@ const PlanStatus = () => {
           convertedPrice={getPrice(selectedPlan)}
           userCountry={userCountry}
           userRegion={userRegion}
+          exchangeRate={exchangeRates?.[selectedCurrency]}
           onClose={() => setShowPayment(false)}
         />
       )}
