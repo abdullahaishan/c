@@ -21,8 +21,114 @@ import {
   GraduationCap,
   Cpu,
   BarChart3,
-  Shield
+  Shield,
+  Loader
 } from 'lucide-react'
+
+// ============================================
+// مكونات Skeleton Loading (تأثير السراب)
+// ============================================
+
+// Skeleton للبطاقة الرئيسية
+const PlanCardSkeleton = () => (
+  <div className="relative bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-8 animate-pulse">
+    {/* شريط التحميل العلوي */}
+      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-white/10 rounded-full"></div>
+    
+    {/* أيقونة الباقة */}
+    <div className="mb-6">
+      <div className="w-12 h-12 rounded-xl bg-white/10"></div>
+    </div>
+    
+    {/* اسم الباقة */}
+    <div className="h-8 w-32 bg-white/10 rounded-lg mb-2"></div>
+    <div className="h-4 w-24 bg-white/10 rounded-lg mb-4"></div>
+    
+    {/* السعر */}
+    <div className="mb-6">
+      <div className="h-10 w-40 bg-white/10 rounded-lg"></div>
+      <div className="h-3 w-20 bg-white/5 rounded-lg mt-2"></div>
+    </div>
+    
+    {/* المميزات (5 أسطر) */}
+    <div className="space-y-4 mb-8">
+      {[1,2,3,4,5,6].map((i) => (
+        <div key={i} className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full bg-white/10"></div>
+              <div className="h-4 w-28 bg-white/10 rounded-lg"></div>
+            </div>
+            <div className="h-4 w-16 bg-white/10 rounded-lg"></div>
+          </div>
+          {/* شريط التقدم الوهمي */}
+          <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+            <div className="h-full w-3/4 bg-white/10 rounded-full"></div>
+          </div>
+        </div>
+      ))}
+    </div>
+    
+    {/* زر الإجراء */}
+    <div className="w-full h-12 bg-white/10 rounded-xl"></div>
+  </div>
+)
+
+// Skeleton لشريط العملات
+const CurrencyBarSkeleton = () => (
+  <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-4 border border-white/10 flex items-center justify-between animate-pulse">
+    <div className="flex items-center gap-2">
+      <div className="w-5 h-5 rounded-full bg-white/10"></div>
+      <div className="h-4 w-16 bg-white/10 rounded-lg"></div>
+      <div className="h-4 w-20 bg-white/10 rounded-lg"></div>
+    </div>
+    <div className="w-32 h-10 bg-white/10 rounded-lg"></div>
+  </div>
+)
+
+// Skeleton لشريط التبديل (شهري/سنوي)
+const ToggleSkeleton = () => (
+  <div className="flex items-center justify-center gap-4 animate-pulse">
+    <div className="w-20 h-10 bg-white/10 rounded-full"></div>
+    <div className="w-20 h-10 bg-white/10 rounded-full relative">
+      <div className="absolute -top-2 -right-2 w-12 h-5 bg-white/10 rounded-full"></div>
+    </div>
+  </div>
+)
+
+// Skeleton للشريط السفلي (تواصل مع الدعم)
+const ContactSkeleton = () => (
+  <div className="mt-8 p-6 bg-white/5 rounded-2xl border border-white/10 animate-pulse">
+    <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-full bg-white/10"></div>
+        <div>
+          <div className="h-5 w-32 bg-white/10 rounded-lg mb-2"></div>
+          <div className="h-4 w-48 bg-white/10 rounded-lg"></div>
+        </div>
+      </div>
+      <div className="w-40 h-12 bg-white/10 rounded-xl"></div>
+    </div>
+  </div>
+)
+
+// Skeleton للشريط العلوي (باقتك الحالية)
+const HeaderSkeleton = () => (
+  <div className="flex items-center justify-between animate-pulse">
+    <div className="h-8 w-48 bg-white/10 rounded-lg"></div>
+    <div className="h-5 w-32 bg-white/10 rounded-lg"></div>
+  </div>
+)
+
+// Skeleton للـ Badge (جميع الباقات مدى الحياة)
+const LifetimeBadgeSkeleton = () => (
+  <div className="mb-4 p-4 bg-white/5 rounded-xl border border-white/10 animate-pulse">
+    <div className="flex items-center gap-2">
+      <div className="w-5 h-5 rounded-full bg-white/10"></div>
+      <div className="h-5 w-64 bg-white/10 rounded-lg"></div>
+    </div>
+  </div>
+)
 
 // دالة مساعدة للحصول على الأيقونة المناسبة حسب اسم الباقة
 const getPlanIcon = (planName, planId) => {
@@ -119,23 +225,31 @@ const PlanStatus = () => {
   const [selectedCurrency, setSelectedCurrency] = useState('USD')
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false)
   const [convertedPrices, setConvertedPrices] = useState({})
+  const [detectingCountry, setDetectingCountry] = useState(true) // حالة تحميل كشف الدولة
   
-  const { user, isAuthenticated } = useAuth()
-  const { allPlans, currentPlan, usage, getUsagePercentage } = usePlan()
+  const { user, isAuthenticated, loading: authLoading } = useAuth()
+  const { allPlans, currentPlan, usage, getUsagePercentage, loading: plansLoading } = usePlan()
   const navigate = useNavigate()
 
   // كشف الدولة عند تحميل الصفحة
   useEffect(() => {
     const detectCountry = async () => {
-      const data = await detectCountryFromIP()
-      setUserCountry(data.country)
-      setUserRegion(data.region)
-      
-      // تحديد العملة حسب الدولة
-      if (data.country === 'YE') {
-        setSelectedCurrency('YER_ADEN')
-      } else if (data.currency) {
-        setSelectedCurrency(data.currency)
+      setDetectingCountry(true)
+      try {
+        const data = await detectCountryFromIP()
+        setUserCountry(data.country)
+        setUserRegion(data.region)
+        
+        // تحديد العملة حسب الدولة
+        if (data.country === 'YE') {
+          setSelectedCurrency('YER_ADEN')
+        } else if (data.currency) {
+          setSelectedCurrency(data.currency)
+        }
+      } catch (error) {
+        console.error('Error detecting country:', error)
+      } finally {
+        setDetectingCountry(false)
       }
     }
     detectCountry()
@@ -143,14 +257,16 @@ const PlanStatus = () => {
 
   // تحويل الأسعار عند تغيير العملة
   useEffect(() => {
-    const newPrices = {}
-    allPlans.forEach(plan => {
-      newPrices[`${plan.id}_monthly`] = convertPrice(plan.price_monthly || 0, selectedCurrency)
-      if (plan.price_yearly) {
-        newPrices[`${plan.id}_yearly`] = convertPrice(plan.price_yearly, selectedCurrency)
-      }
-    })
-    setConvertedPrices(newPrices)
+    if (allPlans && allPlans.length > 0) {
+      const newPrices = {}
+      allPlans.forEach(plan => {
+        newPrices[`${plan.id}_monthly`] = convertPrice(plan.price_monthly || 0, selectedCurrency)
+        if (plan.price_yearly) {
+          newPrices[`${plan.id}_yearly`] = convertPrice(plan.price_yearly, selectedCurrency)
+        }
+      })
+      setConvertedPrices(newPrices)
+    }
   }, [selectedCurrency, allPlans])
 
   const handleSelectPlan = (plan) => {
@@ -198,6 +314,34 @@ const PlanStatus = () => {
   // التحقق إذا كانت الباقة هي الباقة الحالية للمستخدم
   const isCurrentPlan = (planId) => {
     return planId === user?.plan_id
+  }
+
+  // ============================================
+  // حالات التحميل المختلفة
+  // ============================================
+  
+  const isLoading = authLoading || plansLoading || detectingCountry
+
+  // إذا كان في حالة تحميل، اعرض كل Skeleton
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <HeaderSkeleton />
+        <LifetimeBadgeSkeleton />
+        <CurrencyBarSkeleton />
+        <ToggleSkeleton />
+        
+        {/* شبكة الباقات مع Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+          <PlanCardSkeleton />
+          <PlanCardSkeleton />
+          <PlanCardSkeleton />
+          <PlanCardSkeleton />
+        </div>
+        
+        <ContactSkeleton />
+      </div>
+    )
   }
 
   // إذا لم تكن هناك باقات، عرض رسالة
