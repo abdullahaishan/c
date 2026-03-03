@@ -346,43 +346,43 @@ const PlanStatus = () => {
     }
   }
 
-  // تحميل البيانات عند بدء التشغيل
-  useEffect(() => {
-    detectCountry()
-    loadExchangeRates()
-    
-    // تحديث الأسعار كل 5 دقائق
-    const interval = setInterval(() => {
-      loadExchangeRates()
-    }, 5 * 60 * 1000)
-    
-    return () => clearInterval(interval)
-  }, [])
+useEffect(() => {
+  detectCountry().catch(() => {})
+  loadExchangeRates().catch(() => {})
+
+  const interval = setInterval(() => {
+    loadExchangeRates().catch(() => {})
+  }, 5 * 60 * 1000)
+
+  return () => clearInterval(interval)
+}, [])
 
   // ============================================
   // دالة تحويل العملة (تستخدم الأسعار الحقيقية)
   // ============================================
   const convertPrice = (priceInUSD, targetCurrency) => {
-    if (!exchangeRates) {
-      return {
-        price: priceInUSD,
-        currency: targetCurrency,
-        symbol: CURRENCIES[targetCurrency]?.symbol || '$',
-        originalUSD: priceInUSD
-      }
-    }
-    
-    const rate = exchangeRates[targetCurrency] || 1
-    const convertedPrice = priceInUSD * rate
-    
+  if (!exchangeRates || !exchangeRates[targetCurrency]) {
     return {
-      price: Math.round(convertedPrice * 100) / 100,
-      currency: targetCurrency,
-      symbol: CURRENCIES[targetCurrency]?.symbol || '$',
-      originalUSD: priceInUSD,
-      rate: rate
+      price: priceInUSD,
+      amount: priceInUSD,
+      currency: 'USD',
+      symbol: '$',
+      originalUSD: priceInUSD
     }
   }
+
+  const rate = exchangeRates[targetCurrency]
+  const convertedPrice = priceInUSD * rate
+
+  return {
+    price: Number(convertedPrice.toFixed(2)),
+    amount: Number(convertedPrice.toFixed(2)),
+    currency: targetCurrency,
+    symbol: CURRENCIES[targetCurrency]?.symbol || '$',
+    originalUSD: priceInUSD,
+    rate
+  }
+}
 
   // تحويل جميع الأسعار عند تغيير العملة أو تحديث الأسعار
   useEffect(() => {
