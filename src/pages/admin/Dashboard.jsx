@@ -54,7 +54,7 @@ const AdminDashboard = () => {
       paidSubscribers: subsStats.activeSubscribers || 0
     })
       setSubscriptionStats(subsStats)
-      setGrowthData(growth)
+      setGrowthData([])
     } catch (error) {
       console.error('Error loading stats:', error)
     } finally {
