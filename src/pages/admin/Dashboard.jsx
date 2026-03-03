@@ -43,7 +43,7 @@ const AdminDashboard = () => {
   //      adminStatsService.getDashboardStats(),
   //      adminSubscriptionService.getSubscriptionStats(),
   //      adminStatsService.getGrowthStats(7)
-      ])
+  //    ])
    //   setStats(dashboardStats)
       const subsStats = await adminSubscriptionService.getSubscriptionStats()
       setStats({
