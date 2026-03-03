@@ -39,12 +39,12 @@ const AdminDashboard = () => {
   const loadStats = async () => {
     setLoading(true)
     try {
-      const [dashboardStats, subsStats, growth] = await Promise.all([
-        adminStatsService.getDashboardStats(),
-        adminSubscriptionService.getSubscriptionStats(),
-        adminStatsService.getGrowthStats(7)
+//      const [dashboardStats, subsStats, growth] = await Promise.all([
+  //      adminStatsService.getDashboardStats(),
+  //      adminSubscriptionService.getSubscriptionStats(),
+  //      adminStatsService.getGrowthStats(7)
       ])
-      setStats(dashboardStats)
+   //   setStats(dashboardStats)
       setSubscriptionStats(subsStats)
       setGrowthData(growth)
     } catch (error) {
