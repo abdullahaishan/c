@@ -1,4 +1,3 @@
-الان عندما فتح انهارت الشاشه هل يكون السبب في AdminLayout لحيث علقت الاكواد او من هنا الانهيار او قد يكون من ملفات الاخرى import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { adminStatsService, adminSubscriptionService } from '../../lib/adminService'
 import {
