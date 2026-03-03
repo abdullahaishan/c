@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-// تم تعليق جميع الاستيرادات من adminService
-// import { adminStatsService, adminSubscriptionService } from '../../lib/adminService'
+import { adminStatsService, adminSubscriptionService } from '../../lib/adminService'
 import {
   Users,
   CreditCard,
@@ -18,40 +17,50 @@ import {
 } from 'lucide-react'
 
 const AdminDashboard = () => {
-  // بيانات ثابتة للتجربة
   const [stats, setStats] = useState({
-    totalDevelopers: 1250,
-    activeDevelopers: 890,
-    totalProjects: 3450,
-    totalRevenue: 45600,
-    paidSubscribers: 420
+    totalDevelopers: 0,
+    activeDevelopers: 0,
+    totalProjects: 0,
+    totalRevenue: 0,
+    paidSubscribers: 0
   })
-  
   const [subscriptionStats, setSubscriptionStats] = useState({
-    pendingSubscriptions: 3,
-    pendingUpgrades: 2,
-    activeSubscribers: 420
+    pendingSubscriptions: 0,
+    pendingUpgrades: 0,
+    activeSubscribers: 0
   })
-  
-  const [loading, setLoading] = useState(false)
-  const [growthData, setGrowthData] = useState([
-    { date: '2024-03-01', developers: 12, revenue: 450 },
-    { date: '2024-03-02', developers: 8, revenue: 320 },
-    { date: '2024-03-03', developers: 15, revenue: 680 },
-    { date: '2024-03-04', developers: 10, revenue: 520 },
-    { date: '2024-03-05', developers: 7, revenue: 290 },
-    { date: '2024-03-06', developers: 14, revenue: 720 },
-    { date: '2024-03-07', developers: 9, revenue: 410 }
-  ])
+  const [loading, setLoading] = useState(true)
+  const [growthData, setGrowthData] = useState([])
 
-  // useEffect معطل
   useEffect(() => {
-    // loadStats()  // معطل
-    setLoading(false)
+    loadStats()
   }, [])
 
-  // دالة loadStats معطلة
-  // const loadStats = async () => { ... }
+  const loadStats = async () => {
+    setLoading(true)
+    try {
+//      const [dashboardStats, subsStats, growth] = await Promise.all([
+  //      adminStatsService.getDashboardStats(),
+  //      adminSubscriptionService.getSubscriptionStats(),
+  //      adminStatsService.getGrowthStats(7)
+  //    ])
+   //   setStats(dashboardStats)
+      const subsStats = await adminSubscriptionService.getSubscriptionStats()
+      setStats({
+      totalDevelopers: 0,
+      activeDevelopers: 0,
+      totalProjects: 0,
+      totalRevenue: 0,
+      paidSubscribers: subsStats.activeSubscribers || 0
+    })
+      setSubscriptionStats(subsStats)
+      setGrowthData([])
+    } catch (error) {
+      console.error('Error loading stats:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const cards = [
     {
@@ -207,7 +216,7 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Growth Chart */}
+        {/* Growth Chart (بسيط) */}
         <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
           <h2 className="text-lg font-semibold text-white mb-4">النمو خلال آخر 7 أيام</h2>
           <div className="space-y-3">
