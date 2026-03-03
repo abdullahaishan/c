@@ -1,15 +1,8 @@
+// PlanStatus.jsx
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { usePlan } from '../../hooks/usePlan'
-import { PLANS } from '../../utils/constants'
-import { 
-  CURRENCIES, 
-  COUNTRIES, 
-  convertPrice, 
-  detectCountryFromIP,
-  getPaymentMethodsForRegion 
-} from '../../utils/currency'
 import PaymentModal from '../plans/PaymentModel'
 import {
   Check,
@@ -23,8 +16,99 @@ import {
   TrendingUp,
   HardDrive,
   MessageCircle,
-  Award
+  Award,
+  Briefcase,
+  GraduationCap,
+  Cpu,
+  BarChart3,
+  Shield
 } from 'lucide-react'
+
+// دالة مساعدة للحصول على الأيقونة المناسبة حسب اسم الباقة
+const getPlanIcon = (planName, planId) => {
+  const icons = {
+    1: Zap,
+    2: Sparkles,
+    3: Crown,
+    4: Infinity
+  }
+  return icons[planId] || Crown
+}
+
+// دالة مساعدة للحصول على لون الباقة
+const getPlanColor = (planId) => {
+  const colors = {
+    1: 'from-blue-500 to-cyan-500',
+    2: 'from-purple-500 to-pink-500',
+    3: 'from-yellow-500 to-orange-500',
+    4: 'from-green-500 to-emerald-500'
+  }
+  return colors[planId] || 'from-gray-500 to-gray-600'
+}
+
+// دالة لتوليد قائمة المميزات من بيانات الباقة
+const generateFeaturesFromPlan = (plan) => {
+  const features = [
+    {
+      text: 'عدد المشاريع',
+      limit: plan.max_projects === -1 ? 'غير محدود' : plan.max_projects,
+      value: plan.max_projects,
+      included: true
+    },
+    {
+      text: 'عدد المهارات',
+      limit: plan.max_skills === -1 ? 'غير محدود' : plan.max_skills,
+      value: plan.max_skills,
+      included: true
+    },
+    {
+      text: 'الشهادات',
+      limit: plan.max_certificates === -1 ? 'غير محدود' : plan.max_certificates,
+      value: plan.max_certificates,
+      included: true
+    },
+    {
+      text: 'الخبرات',
+      limit: plan.max_experience === -1 ? 'غير محدود' : plan.max_experience,
+      value: plan.max_experience,
+      included: true
+    },
+    {
+      text: 'التعليم',
+      limit: plan.max_education === -1 ? 'غير محدود' : plan.max_education,
+      value: plan.max_education,
+      included: true
+    },
+    {
+      text: 'تحليلات ذكاء اصطناعي',
+      limit: plan.max_ai_analyses === -1 ? 'غير محدود' : `${plan.max_ai_analyses} تحليل`,
+      value: plan.max_ai_analyses,
+      included: plan.ai_analysis
+    },
+    {
+      text: 'نطاق مخصص',
+      limit: plan.custom_domain ? 'متاح' : 'غير متاح',
+      included: plan.custom_domain
+    },
+    {
+      text: 'إحصائيات متقدمة',
+      limit: plan.has_advanced_stats ? 'متاح' : 'غير متاح',
+      included: plan.has_advanced_stats
+    },
+    {
+      text: 'إزالة العلامة التجارية',
+      limit: plan.has_remove_branding ? 'متاح' : 'غير متاح',
+      included: plan.has_remove_branding
+    },
+    {
+      text: 'دعم أولوية',
+      limit: plan.has_priority_support ? 'متاح' : 'غير متاح',
+      included: plan.has_priority_support
+    }
+  ]
+
+  return features
+}
 
 const PlanStatus = () => {
   const [selectedPlan, setSelectedPlan] = useState(null)
@@ -37,7 +121,7 @@ const PlanStatus = () => {
   const [convertedPrices, setConvertedPrices] = useState({})
   
   const { user, isAuthenticated } = useAuth()
-  const { planId, usage, limits, getUsagePercentage } = usePlan()
+  const { allPlans, currentPlan, usage, getUsagePercentage } = usePlan()
   const navigate = useNavigate()
 
   // كشف الدولة عند تحميل الصفحة
@@ -60,17 +144,14 @@ const PlanStatus = () => {
   // تحويل الأسعار عند تغيير العملة
   useEffect(() => {
     const newPrices = {}
-    PLANS.forEach(plan => {
-      const monthlyPrice = plan.price_monthly || plan.price
-      const yearlyPrice = plan.price_yearly
-      
-      newPrices[`${plan.id}_monthly`] = convertPrice(monthlyPrice, selectedCurrency)
-      if (yearlyPrice) {
-        newPrices[`${plan.id}_yearly`] = convertPrice(yearlyPrice, selectedCurrency)
+    allPlans.forEach(plan => {
+      newPrices[`${plan.id}_monthly`] = convertPrice(plan.price_monthly || 0, selectedCurrency)
+      if (plan.price_yearly) {
+        newPrices[`${plan.id}_yearly`] = convertPrice(plan.price_yearly, selectedCurrency)
       }
     })
     setConvertedPrices(newPrices)
-  }, [selectedCurrency])
+  }, [selectedCurrency, allPlans])
 
   const handleSelectPlan = (plan) => {
     if (!isAuthenticated) {
@@ -96,7 +177,7 @@ const PlanStatus = () => {
     
     const price = billingCycle === 'yearly' && plan.price_yearly
       ? plan.price_yearly
-      : plan.price_monthly || plan.price
+      : plan.price_monthly
       
     return {
       amount: price,
@@ -119,13 +200,22 @@ const PlanStatus = () => {
     return planId === user?.plan_id
   }
 
+  // إذا لم تكن هناك باقات، عرض رسالة
+  if (!allPlans || allPlans.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-gray-400">لا توجد باقات متاحة حالياً</p>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">الباقات والاشتراكات</h1>
         <div className="text-sm text-gray-400">
-          باقتك الحالية: {PLANS.find(p => p.id === user?.plan_id)?.name_ar || 'مجانية'}
+          باقتك الحالية: {currentPlan?.name_ar || 'مجانية'}
         </div>
       </div>
 
@@ -168,84 +258,80 @@ const PlanStatus = () => {
           </button>
           
           {showCurrencyDropdown && (
-  <>
-    {/* خلفية سوداء شفافة تغطي الشاشة */}
-    <div 
-      className="fixed inset-0 bg-black/50 z-[100]" 
-      onClick={() => setShowCurrencyDropdown(false)} 
-    />
-    
-    {/* القائمة - fixed في منتصف الشاشة */}
-    <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 bg-gray-900 border border-white/10 rounded-xl shadow-xl z-[101] max-h-96 overflow-y-auto">
-      {/* محتوى القائمة كما هو */}
-      <div className="px-3 py-2 text-xs text-gray-500 bg-white/5 sticky top-0">🇾🇪 اليمن</div>
-      <button
-        onClick={() => {
-          setSelectedCurrency('YER_ADEN')
-          setShowCurrencyDropdown(false)
-        }}
-        className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all ${
-          selectedCurrency === 'YER_ADEN' ? 'bg-[#6366f1]/20' : ''
-        }`}
-      >
-        <span className="text-white font-bold w-8">ر.ي</span>
-        <span className="flex-1 text-gray-300 text-right">ريال يمني (عدن) - 1620</span>
-      </button>
-      <button
-        onClick={() => {
-          setSelectedCurrency('YER_SANA')
-          setShowCurrencyDropdown(false)
-        }}
-        className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all ${
-          selectedCurrency === 'YER_SANA' ? 'bg-[#6366f1]/20' : ''
-        }`}
-      >
-        <span className="text-white font-bold w-8">ر.ي</span>
-        <span className="flex-1 text-gray-300 text-right">ريال يمني (صنعاء) - 530</span>
-      </button>
-      
-      <div className="px-3 py-2 text-xs text-gray-500 bg-white/5 sticky top-0 mt-2">🇸🇦 دول الخليج</div>
-      <button
-        onClick={() => {
-          setSelectedCurrency('SAR')
-          setShowCurrencyDropdown(false)
-        }}
-        className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all ${
-          selectedCurrency === 'SAR' ? 'bg-[#6366f1]/20' : ''
-        }`}
-      >
-        <span className="text-white font-bold w-8">ر.س</span>
-        <span className="flex-1 text-gray-300 text-right">ريال سعودي</span>
-      </button>
-      <button
-        onClick={() => {
-          setSelectedCurrency('AED')
-          setShowCurrencyDropdown(false)
-        }}
-        className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all ${
-          selectedCurrency === 'AED' ? 'bg-[#6366f1]/20' : ''
-        }`}
-      >
-        <span className="text-white font-bold w-8">د.إ</span>
-        <span className="flex-1 text-gray-300 text-right">درهم إماراتي</span>
-      </button>
-      
-      <div className="px-3 py-2 text-xs text-gray-500 bg-white/5 sticky top-0 mt-2">🌍 أخرى</div>
-      <button
-        onClick={() => {
-          setSelectedCurrency('USD')
-          setShowCurrencyDropdown(false)
-        }}
-        className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all ${
-          selectedCurrency === 'USD' ? 'bg-[#6366f1]/20' : ''
-        }`}
-      >
-        <span className="text-white font-bold w-8">$</span>
-        <span className="flex-1 text-gray-300 text-right">دولار أمريكي</span>
-      </button>
-    </div>
-  </>
-)}
+            <>
+              <div 
+                className="fixed inset-0 bg-black/50 z-[100]" 
+                onClick={() => setShowCurrencyDropdown(false)} 
+              />
+              <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 bg-gray-900 border border-white/10 rounded-xl shadow-xl z-[101] max-h-96 overflow-y-auto">
+                <div className="px-3 py-2 text-xs text-gray-500 bg-white/5 sticky top-0">🇾🇪 اليمن</div>
+                <button
+                  onClick={() => {
+                    setSelectedCurrency('YER_ADEN')
+                    setShowCurrencyDropdown(false)
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all ${
+                    selectedCurrency === 'YER_ADEN' ? 'bg-[#6366f1]/20' : ''
+                  }`}
+                >
+                  <span className="text-white font-bold w-8">ر.ي</span>
+                  <span className="flex-1 text-gray-300 text-right">ريال يمني (عدن)</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedCurrency('YER_SANA')
+                    setShowCurrencyDropdown(false)
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all ${
+                    selectedCurrency === 'YER_SANA' ? 'bg-[#6366f1]/20' : ''
+                  }`}
+                >
+                  <span className="text-white font-bold w-8">ر.ي</span>
+                  <span className="flex-1 text-gray-300 text-right">ريال يمني (صنعاء)</span>
+                </button>
+                
+                <div className="px-3 py-2 text-xs text-gray-500 bg-white/5 sticky top-0 mt-2">🇸🇦 دول الخليج</div>
+                <button
+                  onClick={() => {
+                    setSelectedCurrency('SAR')
+                    setShowCurrencyDropdown(false)
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all ${
+                    selectedCurrency === 'SAR' ? 'bg-[#6366f1]/20' : ''
+                  }`}
+                >
+                  <span className="text-white font-bold w-8">ر.س</span>
+                  <span className="flex-1 text-gray-300 text-right">ريال سعودي</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedCurrency('AED')
+                    setShowCurrencyDropdown(false)
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all ${
+                    selectedCurrency === 'AED' ? 'bg-[#6366f1]/20' : ''
+                  }`}
+                >
+                  <span className="text-white font-bold w-8">د.إ</span>
+                  <span className="flex-1 text-gray-300 text-right">درهم إماراتي</span>
+                </button>
+                
+                <div className="px-3 py-2 text-xs text-gray-500 bg-white/5 sticky top-0 mt-2">🌍 أخرى</div>
+                <button
+                  onClick={() => {
+                    setSelectedCurrency('USD')
+                    setShowCurrencyDropdown(false)
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-all ${
+                    selectedCurrency === 'USD' ? 'bg-[#6366f1]/20' : ''
+                  }`}
+                >
+                  <span className="text-white font-bold w-8">$</span>
+                  <span className="flex-1 text-gray-300 text-right">دولار أمريكي</span>
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -276,18 +362,21 @@ const PlanStatus = () => {
         </button>
       </div>
 
-      {/* Plans Grid */}
+      {/* Plans Grid - ديناميكي من قاعدة البيانات */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
-        {PLANS.map((plan) => {
+        {allPlans.map((plan) => {
+          const PlanIcon = getPlanIcon(plan.name, plan.id)
+          const planColor = getPlanColor(plan.id)
           const price = getPrice(plan)
           const savings = getSavings(plan)
           const current = isCurrentPlan(plan.id)
+          const features = generateFeaturesFromPlan(plan)
           
           return (
             <div
               key={plan.id}
               className={`relative bg-white/5 backdrop-blur-xl rounded-2xl border ${
-                plan.isPopular && !current
+                plan.is_popular && !current
                   ? 'border-[#a855f7] shadow-[0_0_30px_rgba(168,85,247,0.3)]'
                   : current
                   ? 'border-green-500/50 shadow-[0_0_20px_rgba(34,197,94,0.2)]'
@@ -295,7 +384,7 @@ const PlanStatus = () => {
               } p-8 hover:scale-105 transition-all duration-300 group`}
             >
               {/* Popular Badge */}
-              {plan.isPopular && !current && (
+              {plan.is_popular && !current && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white px-4 py-1 rounded-full text-sm font-bold whitespace-nowrap">
                   الأكثر طلباً
                 </div>
@@ -310,10 +399,7 @@ const PlanStatus = () => {
 
               {/* Plan Icon */}
               <div className="mb-6">
-                {plan.id === 1 && <Zap className="w-12 h-12 text-blue-400" />}
-                {plan.id === 2 && <Sparkles className="w-12 h-12 text-purple-400" />}
-                {plan.id === 3 && <Crown className="w-12 h-12 text-yellow-400" />}
-                {plan.id === 4 && <Infinity className="w-12 h-12 text-green-400" />}
+                <PlanIcon className={`w-12 h-12 bg-gradient-to-r ${planColor} bg-clip-text text-transparent`} />
               </div>
 
               {/* Plan Name */}
@@ -326,21 +412,19 @@ const PlanStatus = () => {
                   {price.symbol}{price.amount}
                 </span>
                 <span className="text-gray-400 text-sm mr-2">لمدى الحياة</span>
-                {plan.savings && (
-                  <p className="text-xs text-green-400 mt-1">{plan.savings}</p>
+                {savings > 0 && (
+                  <p className="text-xs text-green-400 mt-1">وفر {savings}% مع الاشتراك السنوي</p>
                 )}
-                {selectedCurrency !== 'USD' && plan.price > 0 && (
+                {selectedCurrency !== 'USD' && plan.price_monthly > 0 && (
                   <p className="text-xs text-gray-500 mt-1">
-                    ≈ ${plan.price} USD
+                    ≈ ${plan.price_monthly} USD
                   </p>
                 )}
               </div>
 
-              {/* =========================================== */}
-              {/* المميزات الرئيسية مع عرض الاستخدام - الكود المطلوب */}
-              {/* =========================================== */}
+              {/* Features */}
               <div className="space-y-4 mb-8">
-                {plan.features.map((feature, index) => {
+                {features.map((feature, index) => {
                   // حساب النسبة المئوية للاستخدام (للمستخدم الحالي)
                   const isCurrentUserPlan = user?.plan_id === plan.id
                   
@@ -371,28 +455,21 @@ const PlanStatus = () => {
                           </div>
                           <span className="text-sm">{feature.text}</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className={`text-sm font-medium ${
-                            feature.value === 0 ? 'text-gray-500' :
-                            feature.value === -1 ? 'text-purple-400' :
-                            'text-white'
-                          }`}>
-                            {feature.limit}
-                          </span>
-                          {feature.badge && (
-                            <span className="px-2 py-0.5 text-xs bg-blue-500/20 text-blue-400 rounded-full">
-                              {feature.badge}
-                            </span>
-                          )}
-                        </div>
+                        <span className={`text-sm font-medium ${
+                          feature.value === 0 ? 'text-gray-500' :
+                          feature.value === -1 ? 'text-purple-400' :
+                          'text-white'
+                        }`}>
+                          {feature.limit}
+                        </span>
                       </div>
                       
-                      {/* شريط التقدم للمستخدم الحالي */}
+                      {/* Progress bar for current user */}
                       {isCurrentUserPlan && usagePercent !== null && (
                         <div className="h-1 bg-white/10 rounded-full overflow-hidden">
                           <div 
                             className={`h-full transition-all duration-300 ${
-                              usagePercent > 90 ? 'bg-yellow-500' : 'bg-gradient-to-r ' + plan.color
+                              usagePercent > 90 ? 'bg-yellow-500' : `bg-gradient-to-r ${planColor}`
                             }`}
                             style={{ width: `${usagePercent}%` }}
                           />
