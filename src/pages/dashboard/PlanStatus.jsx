@@ -458,9 +458,7 @@ const PlanStatus = () => {
     return flags[countryCode] || '🌍'
   }
 
-  // حالات التحميل
-  const isLoading = authLoading || plansLoading || detectingCountry || loadingRates
-
+  const isLoading = authLoading || plansLoading
   if (isLoading) {
     return (
       <div className="space-y-6 p-6">
