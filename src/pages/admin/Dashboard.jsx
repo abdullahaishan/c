@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+الان عندما فتح انهارت الشاشه هل يكون السبب في AdminLayout لحيث علقت الاكواد او من هنا الانهيار او قد يكون من ملفات الاخرى import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { adminStatsService, adminSubscriptionService } from '../../lib/adminService'
 import {
@@ -39,22 +39,14 @@ const AdminDashboard = () => {
   const loadStats = async () => {
     setLoading(true)
     try {
-//      const [dashboardStats, subsStats, growth] = await Promise.all([
-  //      adminStatsService.getDashboardStats(),
-  //      adminSubscriptionService.getSubscriptionStats(),
-  //      adminStatsService.getGrowthStats(7)
-  //    ])
-   //   setStats(dashboardStats)
-      const subsStats = await adminSubscriptionService.getSubscriptionStats()
-      setStats({
-      totalDevelopers: 0,
-      activeDevelopers: 0,
-      totalProjects: 0,
-      totalRevenue: 0,
-      paidSubscribers: subsStats.activeSubscribers || 0
-    })
+      const [dashboardStats, subsStats, growth] = await Promise.all([
+        adminStatsService.getDashboardStats(),
+        adminSubscriptionService.getSubscriptionStats(),
+        adminStatsService.getGrowthStats(7)
+      ])
+      setStats(dashboardStats)
       setSubscriptionStats(subsStats)
-      setGrowthData([])
+      setGrowthData(growth)
     } catch (error) {
       console.error('Error loading stats:', error)
     } finally {
