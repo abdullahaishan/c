@@ -45,6 +45,13 @@ const AdminDashboard = () => {
   //      adminStatsService.getGrowthStats(7)
       ])
    //   setStats(dashboardStats)
+      setStats({
+      totalDevelopers: 0,
+      activeDevelopers: 0,
+      totalProjects: 0,
+      totalRevenue: 0,
+      paidSubscribers: subsStats.activeSubscribers || 0
+    })
       setSubscriptionStats(subsStats)
       setGrowthData(growth)
     } catch (error) {
