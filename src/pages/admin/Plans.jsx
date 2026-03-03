@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { adminPlanService } from '../../lib/adminService'
 import { useAdminAuth } from '../../hooks/useAdminAuth'
 import {
@@ -23,67 +23,57 @@ import {
   MessageCircle,
   Award,
   Shield,
-  List,
-  Star
+  Settings,
+  Sliders,
+  Cpu,
+  BarChart3,
+  HelpCircle
 } from 'lucide-react'
 
 const Plans = () => {
   const { admin } = useAdminAuth()
   const [plans, setPlans] = useState([])
   const [loading, setLoading] = useState(true)
-  const [hasMore, setHasMore] = useState(true)
-  const [page, setPage] = useState(0)
-  const [total, setTotal] = useState(0)
   const [editingId, setEditingId] = useState(null)
   const [editData, setEditData] = useState({})
   const [showAddModal, setShowAddModal] = useState(false)
   const [newPlan, setNewPlan] = useState({
     name: '',
     name_ar: '',
+    description: '',
     price_monthly: 0,
     price_yearly: null,
-    price_lifetime: null,
+    currency: 'USD',
     max_projects: 3,
     max_skills: 10,
     max_certificates: 3,
     max_experience: 5,
     max_education: 5,
-    storage_limit: 100,
+    storage_limit: 50,
     custom_domain: false,
     remove_branding: false,
     analytics: false,
     priority_support: false,
     ai_analysis: false,
-    description: '',
-    features: [],
-    sort_order: 0,
-    is_active: true
+    max_ai_analyses: 1,
+    has_advanced_stats: false,
+    has_reports: false,
+    has_priority_support: false,
+    has_remove_branding: false,
+    is_popular: false,
+    is_active: true,
+    sort_order: 0
   })
-  const [featureInput, setFeatureInput] = useState('')
-  const [editingFeatureIndex, setEditingFeatureIndex] = useState(null)
-  const [editingFeatureValue, setEditingFeatureValue] = useState('')
-  const observerRef = useRef()
 
   useEffect(() => {
-    loadPlans(0)
+    loadPlans()
   }, [])
 
-  const loadPlans = async (pageNum) => {
-    if (loading && pageNum > 0) return
-    
+  const loadPlans = async () => {
     setLoading(true)
     try {
-      const result = await adminPlanService.getAllPlans(pageNum, 10)
-      
-      if (pageNum === 0) {
-        setPlans(result.data)
-      } else {
-        setPlans(prev => [...prev, ...result.data])
-      }
-      
-      setHasMore(result.hasMore)
-      setTotal(result.count)
-      setPage(pageNum)
+      const result = await adminPlanService.getAllPlans(0, 100)
+      setPlans(result.data || [])
     } catch (error) {
       console.error('Error loading plans:', error)
     } finally {
@@ -91,52 +81,35 @@ const Plans = () => {
     }
   }
 
-  // Infinite scroll
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const first = entries[0]
-        if (first.isIntersecting && hasMore && !loading) {
-          loadPlans(page + 1)
-        }
-      },
-      { threshold: 0.1, rootMargin: '100px' }
-    )
-
-    const currentObserver = observerRef.current
-    if (currentObserver) {
-      observer.observe(currentObserver)
-    }
-
-    return () => {
-      if (currentObserver) {
-        observer.unobserve(currentObserver)
-      }
-    }
-  }, [hasMore, loading, page])
-
   const handleEdit = (plan) => {
     setEditingId(plan.id)
     setEditData({
+      id: plan.id,
       name: plan.name,
       name_ar: plan.name_ar,
+      description: plan.description || '',
       price_monthly: plan.price_monthly,
       price_yearly: plan.price_yearly,
-      price_lifetime: plan.price_lifetime,
+      currency: plan.currency || 'USD',
       max_projects: plan.max_projects,
       max_skills: plan.max_skills,
       max_certificates: plan.max_certificates,
       max_experience: plan.max_experience,
       max_education: plan.max_education,
       storage_limit: plan.storage_limit,
-      custom_domain: plan.custom_domain,
-      remove_branding: plan.remove_branding,
-      analytics: plan.analytics,
-      priority_support: plan.priority_support,
-      ai_analysis: plan.ai_analysis,
-      description: plan.description,
-      features: plan.features || [],
-      sort_order: plan.sort_order
+      custom_domain: plan.custom_domain || false,
+      remove_branding: plan.remove_branding || false,
+      analytics: plan.analytics || false,
+      priority_support: plan.priority_support || false,
+      ai_analysis: plan.ai_analysis || false,
+      max_ai_analyses: plan.max_ai_analyses || 1,
+      has_advanced_stats: plan.has_advanced_stats || false,
+      has_reports: plan.has_reports || false,
+      has_priority_support: plan.has_priority_support || false,
+      has_remove_branding: plan.has_remove_branding || false,
+      is_popular: plan.is_popular || false,
+      is_active: plan.is_active !== false,
+      sort_order: plan.sort_order || 0
     })
   }
 
@@ -144,7 +117,7 @@ const Plans = () => {
     try {
       await adminPlanService.updatePlan(editingId, editData, admin.id)
       setEditingId(null)
-      loadPlans(0)
+      loadPlans()
     } catch (error) {
       console.error('Error updating plan:', error)
       alert('حدث خطأ أثناء تحديث الباقة')
@@ -158,7 +131,7 @@ const Plans = () => {
   const handleToggleActive = async (planId, current) => {
     try {
       await adminPlanService.togglePlanStatus(planId, !current, admin.id)
-      loadPlans(0)
+      loadPlans()
     } catch (error) {
       console.error('Error toggling plan:', error)
       alert('حدث خطأ أثناء تغيير حالة الباقة')
@@ -170,7 +143,7 @@ const Plans = () => {
     
     try {
       await adminPlanService.deletePlan(plan.id)
-      loadPlans(0)
+      loadPlans()
     } catch (error) {
       console.error('Error deleting plan:', error)
       alert(error.message || 'حدث خطأ أثناء حذف الباقة')
@@ -180,79 +153,10 @@ const Plans = () => {
   const handleDuplicate = async (plan) => {
     try {
       await adminPlanService.duplicatePlan(plan.id, admin.id)
-      loadPlans(0)
+      loadPlans()
     } catch (error) {
       console.error('Error duplicating plan:', error)
       alert('حدث خطأ أثناء نسخ الباقة')
-    }
-  }
-
-  // وظائف إدارة الميزات
-  const handleAddFeature = () => {
-    if (featureInput.trim()) {
-      setEditData({
-        ...editData,
-        features: [...(editData.features || []), featureInput.trim()]
-      })
-      setFeatureInput('')
-    }
-  }
-
-  const handleRemoveFeature = (index) => {
-    if (window.confirm('هل أنت متأكد من حذف هذه الميزة؟')) {
-      setEditData({
-        ...editData,
-        features: editData.features.filter((_, i) => i !== index)
-      })
-    }
-  }
-
-  const handleEditFeature = (index) => {
-    setEditingFeatureIndex(index)
-    setEditingFeatureValue(editData.features[index])
-  }
-
-  const handleSaveFeature = () => {
-    if (editingFeatureValue.trim()) {
-      const updatedFeatures = [...editData.features]
-      updatedFeatures[editingFeatureIndex] = editingFeatureValue.trim()
-      setEditData({
-        ...editData,
-        features: updatedFeatures
-      })
-      setEditingFeatureIndex(null)
-      setEditingFeatureValue('')
-    }
-  }
-
-  const handleCancelEditFeature = () => {
-    setEditingFeatureIndex(null)
-    setEditingFeatureValue('')
-  }
-
-  const handleMoveFeatureUp = (index) => {
-    if (index > 0) {
-      const updatedFeatures = [...editData.features]
-      const temp = updatedFeatures[index]
-      updatedFeatures[index] = updatedFeatures[index - 1]
-      updatedFeatures[index - 1] = temp
-      setEditData({
-        ...editData,
-        features: updatedFeatures
-      })
-    }
-  }
-
-  const handleMoveFeatureDown = (index) => {
-    if (index < editData.features.length - 1) {
-      const updatedFeatures = [...editData.features]
-      const temp = updatedFeatures[index]
-      updatedFeatures[index] = updatedFeatures[index + 1]
-      updatedFeatures[index + 1] = temp
-      setEditData({
-        ...editData,
-        features: updatedFeatures
-      })
     }
   }
 
@@ -263,65 +167,75 @@ const Plans = () => {
       setNewPlan({
         name: '',
         name_ar: '',
+        description: '',
         price_monthly: 0,
         price_yearly: null,
-        price_lifetime: null,
+        currency: 'USD',
         max_projects: 3,
         max_skills: 10,
         max_certificates: 3,
         max_experience: 5,
         max_education: 5,
-        storage_limit: 100,
+        storage_limit: 50,
         custom_domain: false,
         remove_branding: false,
         analytics: false,
         priority_support: false,
         ai_analysis: false,
-        description: '',
-        features: [],
-        sort_order: plans.length,
-        is_active: true
+        max_ai_analyses: 1,
+        has_advanced_stats: false,
+        has_reports: false,
+        has_priority_support: false,
+        has_remove_branding: false,
+        is_popular: false,
+        is_active: true,
+        sort_order: plans.length
       })
-      loadPlans(0)
+      loadPlans()
     } catch (error) {
       console.error('Error creating plan:', error)
       alert('حدث خطأ أثناء إنشاء الباقة')
     }
   }
 
-  const handleReorder = async (planId, direction) => {
-    const index = plans.findIndex(p => p.id === planId)
-    if (direction === 'up' && index > 0) {
-      const newPlans = [...plans]
-      const temp = newPlans[index]
-      newPlans[index] = newPlans[index - 1]
-      newPlans[index - 1] = temp
-      
-      try {
-        await adminPlanService.reorderPlans(
-          newPlans.map(p => p.id),
-          admin.id
-        )
-        setPlans(newPlans)
-      } catch (error) {
-        console.error('Error reordering plans:', error)
-      }
-    } else if (direction === 'down' && index < plans.length - 1) {
-      const newPlans = [...plans]
-      const temp = newPlans[index]
-      newPlans[index] = newPlans[index + 1]
-      newPlans[index + 1] = temp
-      
-      try {
-        await adminPlanService.reorderPlans(
-          newPlans.map(p => p.id),
-          admin.id
-        )
-        setPlans(newPlans)
-      } catch (error) {
-        console.error('Error reordering plans:', error)
-      }
-    }
+  const FeatureToggle = ({ label, field, icon: Icon, color = 'text-purple-400' }) => (
+    <label className="flex items-center gap-2 p-2 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10 transition">
+      <input
+        type="checkbox"
+        checked={editData[field]}
+        onChange={(e) => setEditData({ ...editData, [field]: e.target.checked })}
+        className="w-4 h-4"
+      />
+      <Icon className={`w-4 h-4 ${color}`} />
+      <span className="text-sm text-gray-300 flex-1">{label}</span>
+      {editData[field] ? (
+        <Check className="w-4 h-4 text-green-400" />
+      ) : (
+        <X className="w-4 h-4 text-red-400" />
+      )}
+    </label>
+  )
+
+  const FeatureDisplay = ({ label, value, icon: Icon, color = 'text-gray-400' }) => (
+    <div className="flex items-center gap-2 p-2 bg-white/5 rounded-lg">
+      <Icon className={`w-4 h-4 ${color}`} />
+      <span className="text-sm text-gray-300 flex-1">{label}</span>
+      {value === true ? (
+        <Check className="w-4 h-4 text-green-400" />
+      ) : value === false ? (
+        <X className="w-4 h-4 text-red-400" />
+      ) : (
+        <span className="text-sm text-white">{value}</span>
+      )}
+    </div>
+  )
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader className="w-8 h-8 animate-spin text-purple-400" />
+      </div>
+    )
   }
 
   return (
@@ -339,235 +253,180 @@ const Plans = () => {
       </div>
 
       {/* Plans Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {plans.map((plan, index) => (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {plans.map((plan) => (
           <div
             key={plan.id}
             className={`bg-white/5 backdrop-blur-xl rounded-2xl p-6 border ${
               !plan.is_active ? 'border-red-500/30 opacity-60' :
-              plan.id === 1 ? 'border-gray-500/30' :
-              plan.id === 2 ? 'border-blue-500/30' :
-              plan.id === 3 ? 'border-yellow-500/30' :
-              'border-purple-500/30'
+              plan.is_popular ? 'border-yellow-500/50 shadow-lg shadow-yellow-500/10' :
+              'border-white/10'
             }`}
           >
             {editingId === plan.id ? (
-              // Edit Mode
+              // ==================== وضع التعديل ====================
               <div className="space-y-4">
-                <input
-                  type="text"
-                  value={editData.name}
-                  onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                  className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white"
-                  placeholder="اسم الباقة (إنجليزي)"
-                />
-                <input
-                  type="text"
-                  value={editData.name_ar}
-                  onChange={(e) => setEditData({ ...editData, name_ar: e.target.value })}
-                  className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white"
-                  placeholder="اسم الباقة (عربي)"
-                />
-
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="number"
-                    value={editData.price_monthly}
-                    onChange={(e) => setEditData({ ...editData, price_monthly: parseFloat(e.target.value) })}
-                    className="p-2 bg-white/10 border border-white/20 rounded-lg text-white"
-                    placeholder="شهري"
-                  />
-                  <input
-                    type="number"
-                    value={editData.price_yearly || ''}
-                    onChange={(e) => setEditData({ ...editData, price_yearly: e.target.value ? parseFloat(e.target.value) : null })}
-                    className="p-2 bg-white/10 border border-white/20 rounded-lg text-white"
-                    placeholder="سنوي"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="number"
-                    value={editData.max_projects}
-                    onChange={(e) => setEditData({ ...editData, max_projects: parseInt(e.target.value) })}
-                    className="p-2 bg-white/10 border border-white/20 rounded-lg text-white"
-                    placeholder="المشاريع"
-                  />
-                  <input
-                    type="number"
-                    value={editData.max_skills}
-                    onChange={(e) => setEditData({ ...editData, max_skills: parseInt(e.target.value) })}
-                    className="p-2 bg-white/10 border border-white/20 rounded-lg text-white"
-                    placeholder="المهارات"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="number"
-                    value={editData.max_certificates}
-                    onChange={(e) => setEditData({ ...editData, max_certificates: parseInt(e.target.value) })}
-                    className="p-2 bg-white/10 border border-white/20 rounded-lg text-white"
-                    placeholder="الشهادات"
-                  />
-                  <input
-                    type="number"
-                    value={editData.storage_limit}
-                    onChange={(e) => setEditData({ ...editData, storage_limit: parseInt(e.target.value) })}
-                    className="p-2 bg-white/10 border border-white/20 rounded-lg text-white"
-                    placeholder="التخزين (MB)"
-                  />
-                </div>
-
-                {/* قسم الميزات المحسن مع إمكانية التعديل والترتيب */}
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2 flex items-center gap-2">
-                    <List className="w-4 h-4" />
-                    الميزات
-                  </label>
-                  
-                  <div className="flex gap-2 mb-2">
+                <h2 className="text-lg font-semibold text-white mb-4">تعديل الباقة</h2>
+                
+                {/* المعلومات الأساسية */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">الاسم (إنجليزي)</label>
                     <input
                       type="text"
-                      value={featureInput}
-                      onChange={(e) => setFeatureInput(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleAddFeature()}
-                      className="flex-1 p-2 bg-white/10 border border-white/20 rounded-lg text-white"
-                      placeholder="أضف ميزة جديدة..."
+                      value={editData.name}
+                      onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                      className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
                     />
-                    <button
-                      onClick={handleAddFeature}
-                      className="px-3 py-2 bg-[#6366f1] text-white rounded-lg hover:bg-[#a855f7] transition"
-                    >
-                      إضافة
-                    </button>
                   </div>
-
-                  <div className="space-y-2 max-h-60 overflow-y-auto p-2 bg-white/5 rounded-lg">
-                    {editData.features?.length > 0 ? (
-                      editData.features.map((feature, idx) => (
-                        <div key={idx} className="flex items-center gap-2 p-2 bg-white/5 rounded-lg group hover:bg-white/10 transition">
-                          {editingFeatureIndex === idx ? (
-                            // وضع التعديل
-                            <>
-                              <input
-                                type="text"
-                                value={editingFeatureValue}
-                                onChange={(e) => setEditingFeatureValue(e.target.value)}
-                                className="flex-1 p-1 bg-white/10 border border-white/20 rounded text-white text-sm"
-                                autoFocus
-                              />
-                              <button
-                                onClick={handleSaveFeature}
-                                className="p-1 text-green-400 hover:bg-green-500/10 rounded"
-                              >
-                                <Check className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={handleCancelEditFeature}
-                                className="p-1 text-red-400 hover:bg-red-500/10 rounded"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </>
-                          ) : (
-                            // وضع العرض
-                            <>
-                              <span className="flex-1 text-sm text-gray-300">{feature}</span>
-                              
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-                                <button
-                                  onClick={() => handleMoveFeatureUp(idx)}
-                                  disabled={idx === 0}
-                                  className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded disabled:opacity-30"
-                                >
-                                  ↑
-                                </button>
-                                <button
-                                  onClick={() => handleMoveFeatureDown(idx)}
-                                  disabled={idx === editData.features.length - 1}
-                                  className="p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded disabled:opacity-30"
-                                >
-                                  ↓
-                                </button>
-                                <button
-                                  onClick={() => handleEditFeature(idx)}
-                                  className="p-1 text-blue-400 hover:bg-blue-500/10 rounded"
-                                >
-                                  <Edit className="w-3 h-3" />
-                                </button>
-                                <button
-                                  onClick={() => handleRemoveFeature(idx)}
-                                  className="p-1 text-red-400 hover:bg-red-500/10 rounded"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </button>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-center text-gray-500 text-sm py-4">لا توجد ميزات مضافة</p>
-                    )}
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">الاسم (عربي)</label>
+                    <input
+                      type="text"
+                      value={editData.name_ar}
+                      onChange={(e) => setEditData({ ...editData, name_ar: e.target.value })}
+                      className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                    />
                   </div>
                 </div>
 
-                {/* المميزات الإضافية (Toggles) */}
-                <div className="space-y-2 pt-2">
-                  <h3 className="text-sm font-medium text-gray-400 mb-2">المميزات الإضافية</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="flex items-center gap-2 p-2 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10">
-                      <input
-                        type="checkbox"
-                        checked={editData.custom_domain}
-                        onChange={(e) => setEditData({ ...editData, custom_domain: e.target.checked })}
-                        className="w-4 h-4"
-                      />
-                      <span className="text-sm text-gray-300">نطاق مخصص</span>
-                    </label>
-                    <label className="flex items-center gap-2 p-2 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10">
-                      <input
-                        type="checkbox"
-                        checked={editData.remove_branding}
-                        onChange={(e) => setEditData({ ...editData, remove_branding: e.target.checked })}
-                        className="w-4 h-4"
-                      />
-                      <span className="text-sm text-gray-300">إزالة العلامة</span>
-                    </label>
-                    <label className="flex items-center gap-2 p-2 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10">
-                      <input
-                        type="checkbox"
-                        checked={editData.analytics}
-                        onChange={(e) => setEditData({ ...editData, analytics: e.target.checked })}
-                        className="w-4 h-4"
-                      />
-                      <span className="text-sm text-gray-300">تحليلات</span>
-                    </label>
-                    <label className="flex items-center gap-2 p-2 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10">
-                      <input
-                        type="checkbox"
-                        checked={editData.priority_support}
-                        onChange={(e) => setEditData({ ...editData, priority_support: e.target.checked })}
-                        className="w-4 h-4"
-                      />
-                      <span className="text-sm text-gray-300">دعم أولوية</span>
-                    </label>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">الوصف</label>
+                  <textarea
+                    value={editData.description}
+                    onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+                    rows="2"
+                    className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm resize-none"
+                  />
+                </div>
+
+                {/* الأسعار */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">السعر الشهري ($)</label>
+                    <input
+                      type="number"
+                      value={editData.price_monthly}
+                      onChange={(e) => setEditData({ ...editData, price_monthly: parseFloat(e.target.value) })}
+                      className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">السعر السنوي ($)</label>
+                    <input
+                      type="number"
+                      value={editData.price_yearly || ''}
+                      onChange={(e) => setEditData({ ...editData, price_yearly: e.target.value ? parseFloat(e.target.value) : null })}
+                      className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                      placeholder="اختياري"
+                    />
                   </div>
                 </div>
 
-                <div className="flex gap-2 pt-4">
+                {/* الحدود الكمية */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">المشاريع</label>
+                    <input
+                      type="number"
+                      value={editData.max_projects}
+                      onChange={(e) => setEditData({ ...editData, max_projects: parseInt(e.target.value) })}
+                      className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">المهارات</label>
+                    <input
+                      type="number"
+                      value={editData.max_skills}
+                      onChange={(e) => setEditData({ ...editData, max_skills: parseInt(e.target.value) })}
+                      className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">الشهادات</label>
+                    <input
+                      type="number"
+                      value={editData.max_certificates}
+                      onChange={(e) => setEditData({ ...editData, max_certificates: parseInt(e.target.value) })}
+                      className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">الخبرات</label>
+                    <input
+                      type="number"
+                      value={editData.max_experience}
+                      onChange={(e) => setEditData({ ...editData, max_experience: parseInt(e.target.value) })}
+                      className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">التعليم</label>
+                    <input
+                      type="number"
+                      value={editData.max_education}
+                      onChange={(e) => setEditData({ ...editData, max_education: parseInt(e.target.value) })}
+                      className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">التخزين (MB)</label>
+                    <input
+                      type="number"
+                      value={editData.storage_limit}
+                      onChange={(e) => setEditData({ ...editData, storage_limit: parseInt(e.target.value) })}
+                      className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* المميزات (Boolean) */}
+                <div className="grid grid-cols-2 gap-3">
+                  <FeatureToggle label="نطاق مخصص" field="custom_domain" icon={Globe} />
+                  <FeatureToggle label="إزالة العلامة" field="remove_branding" icon={Shield} />
+                  <FeatureToggle label="تحليلات" field="analytics" icon={TrendingUp} />
+                  <FeatureToggle label="دعم أولوية" field="priority_support" icon={MessageCircle} />
+                  <FeatureToggle label="تحليل ذكاء اصطناعي" field="ai_analysis" icon={Cpu} />
+                  <FeatureToggle label="إحصائيات متقدمة" field="has_advanced_stats" icon={BarChart3} />
+                  <FeatureToggle label="تقارير" field="has_reports" icon={Award} />
+                  <FeatureToggle label="دعم VIP" field="has_priority_support" icon={Star} />
+                </div>
+
+                {/* خيارات إضافية */}
+                <div className="flex items-center gap-4 pt-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={editData.is_popular}
+                      onChange={(e) => setEditData({ ...editData, is_popular: e.target.checked })}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm text-gray-300">باقة شائعة</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={editData.is_active}
+                      onChange={(e) => setEditData({ ...editData, is_active: e.target.checked })}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm text-gray-300">مفعلة</span>
+                  </label>
+                </div>
+
+                {/* أزرار الحفظ */}
+                <div className="flex gap-3 pt-4">
                   <button
                     onClick={handleSave}
-                    className="flex-1 px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition flex items-center justify-center gap-2"
+                    className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center justify-center gap-2"
                   >
                     <Save className="w-4 h-4" />
-                    حفظ
+                    حفظ التغييرات
                   </button>
                   <button
                     onClick={handleCancel}
-                    className="flex-1 px-3 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition flex items-center justify-center gap-2"
+                    className="flex-1 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition flex items-center justify-center gap-2"
                   >
                     <X className="w-4 h-4" />
                     إلغاء
@@ -575,50 +434,35 @@ const Plans = () => {
                 </div>
               </div>
             ) : (
-              // View Mode
-              <>
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${
-                    plan.id === 1 ? 'from-gray-500 to-gray-600' :
-                    plan.id === 2 ? 'from-blue-500 to-cyan-500' :
-                    plan.id === 3 ? 'from-yellow-500 to-orange-500' :
-                    'from-purple-500 to-pink-500'
-                  } flex items-center justify-center`}>
-                    <Crown className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => handleReorder(plan.id, 'up')}
-                      disabled={index === 0}
-                      className="p-1 text-gray-400 hover:text-white disabled:opacity-30"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      onClick={() => handleReorder(plan.id, 'down')}
-                      disabled={index === plans.length - 1}
-                      className="p-1 text-gray-400 hover:text-white disabled:opacity-30"
-                    >
-                      ↓
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h3 className="text-xl font-bold text-white">{plan.name}</h3>
-                    <p className="text-sm text-gray-400">{plan.name_ar}</p>
+              // ==================== وضع العرض ====================
+              <div>
+                {/* Header with actions */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${
+                      plan.id === 1 ? 'from-gray-500 to-gray-600' :
+                      plan.id === 2 ? 'from-blue-500 to-cyan-500' :
+                      plan.id === 3 ? 'from-purple-500 to-pink-500' :
+                      'from-yellow-500 to-orange-500'
+                    } flex items-center justify-center`}>
+                      <Crown className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">{plan.name}</h3>
+                      <p className="text-sm text-gray-400">{plan.name_ar}</p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleEdit(plan)}
-                      className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg"
+                      className="p-2 text-blue-400 hover:bg-blue-500/10 rounded-lg"
+                      title="تعديل"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDuplicate(plan)}
-                      className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg"
+                      className="p-2 text-green-400 hover:bg-green-500/10 rounded-lg"
                       title="نسخ"
                     >
                       <Copy className="w-4 h-4" />
@@ -626,91 +470,81 @@ const Plans = () => {
                     <button
                       onClick={() => handleToggleActive(plan.id, plan.is_active)}
                       className={`p-2 ${
-                        plan.is_active ? 'text-green-400 hover:bg-green-500/10' : 'text-red-400 hover:bg-red-500/10'
+                        plan.is_active ? 'text-yellow-400 hover:bg-yellow-500/10' : 'text-green-400 hover:bg-green-500/10'
                       } rounded-lg`}
+                      title={plan.is_active ? 'تعطيل' : 'تفعيل'}
                     >
-                      {plan.is_active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                      {plan.is_active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                     <button
                       onClick={() => handleDelete(plan)}
                       className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg"
+                      title="حذف"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
 
-                <div className="mt-4 space-y-3">
-                  <div className="flex items-center gap-2 text-2xl font-bold text-white">
-                    <DollarSign className="w-5 h-5 text-green-400" />
-                    {plan.price_monthly}
-                    <span className="text-sm text-gray-400 font-normal">/شهر</span>
+                {/* Price */}
+                <div className="mb-4">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold text-white">${plan.price_monthly}</span>
+                    <span className="text-sm text-gray-400">/شهر</span>
                   </div>
                   {plan.price_yearly && (
-                    <div className="flex items-center gap-2 text-lg text-gray-300">
-                      <Calendar className="w-4 h-4 text-blue-400" />
-                      ${plan.price_yearly}/سنة
-                    </div>
-                  )}
-
-                  <div className="pt-3 border-t border-white/10 space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-400 flex items-center gap-1">
-                        <Users className="w-4 h-4" /> المشتركين
-                      </span>
-                      <span className="text-white">{plan.subscribers || 0}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-400 flex items-center gap-1">
-                        <HardDrive className="w-4 h-4" /> التخزين
-                      </span>
-                      <span className="text-white">{plan.storage_limit}MB</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-400">المشاريع</span>
-                      <span className="text-white">{plan.max_projects}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-400">المهارات</span>
-                      <span className="text-white">{plan.max_skills}</span>
-                    </div>
-                  </div>
-
-                  {/* عرض الميزات بشكل كامل */}
-                  {plan.features?.length > 0 && (
-                    <div className="pt-3 border-t border-white/10">
-                      <div className="flex items-center gap-2 mb-3">
-                        <List className="w-4 h-4 text-purple-400" />
-                        <p className="text-sm text-white font-medium">المميزات ({plan.features.length})</p>
-                      </div>
-                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {plan.features.map((feature, idx) => (
-                          <div key={idx} className="flex items-start gap-2 p-2 bg-white/5 rounded-lg">
-                            <Check className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm text-gray-300">{feature}</span>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="text-sm text-green-400">
+                      ${plan.price_yearly}/سنة (وفر {Math.round((1 - plan.price_yearly/(plan.price_monthly*12)) * 100)}%)
                     </div>
                   )}
                 </div>
-              </>
+
+                {/* Limits */}
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <FeatureDisplay label="المشاريع" value={plan.max_projects} icon={Award} />
+                  <FeatureDisplay label="المهارات" value={plan.max_skills} icon={Sparkles} />
+                  <FeatureDisplay label="الشهادات" value={plan.max_certificates} icon={Award} />
+                  <FeatureDisplay label="الخبرات" value={plan.max_experience} icon={Briefcase} />
+                  <FeatureDisplay label="التعليم" value={plan.max_education} icon={GraduationCap} />
+                  <FeatureDisplay label="التخزين" value={`${plan.storage_limit}MB`} icon={HardDrive} />
+                </div>
+
+                {/* Features */}
+                <div className="grid grid-cols-2 gap-2">
+                  <FeatureDisplay label="نطاق مخصص" value={plan.custom_domain} icon={Globe} color="text-blue-400" />
+                  <FeatureDisplay label="إزالة العلامة" value={plan.remove_branding} icon={Shield} color="text-green-400" />
+                  <FeatureDisplay label="تحليلات" value={plan.analytics} icon={TrendingUp} color="text-purple-400" />
+                  <FeatureDisplay label="دعم أولوية" value={plan.priority_support} icon={MessageCircle} color="text-yellow-400" />
+                  <FeatureDisplay label="تحليل ذكاء" value={plan.ai_analysis} icon={Cpu} color="text-pink-400" />
+                  <FeatureDisplay label="إحصائيات متقدمة" value={plan.has_advanced_stats} icon={BarChart3} color="text-indigo-400" />
+                </div>
+
+                {/* Badges */}
+                <div className="flex items-center gap-2 mt-4">
+                  {plan.is_popular && (
+                    <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs">
+                      ★ شائع
+                    </span>
+                  )}
+                  {!plan.is_active && (
+                    <span className="px-2 py-1 bg-red-500/20 text-red-400 rounded-full text-xs">
+                      معطل
+                    </span>
+                  )}
+                  <span className="text-xs text-gray-500">
+                    عدد المشتركين: {plan.subscribers || 0}
+                  </span>
+                </div>
+              </div>
             )}
           </div>
         ))}
       </div>
 
-      {/* Loading Indicator */}
-      <div ref={observerRef} className="h-10 flex justify-center">
-        {loading && (
-          <Loader className="w-6 h-6 animate-spin text-purple-400" />
-        )}
-      </div>
-
       {/* Add Plan Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-[#030014] rounded-2xl border border-white/10 max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+          <div className="bg-[#030014] rounded-2xl border border-white/10 max-w-3xl w-full p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-white">إضافة باقة جديدة</h2>
               <button
@@ -722,9 +556,11 @@ const Plans = () => {
             </div>
 
             <div className="space-y-4">
+              {/* نفس حقول التعديل ولكن لإنشاء جديد */}
+              {/* يمكن نسخ نفس الحقول من وضع التعديل */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">اسم الباقة (إنجليزي)</label>
+                  <label className="block text-sm text-gray-400 mb-2">الاسم (إنجليزي)</label>
                   <input
                     type="text"
                     value={newPlan.name}
@@ -733,7 +569,7 @@ const Plans = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">اسم الباقة (عربي)</label>
+                  <label className="block text-sm text-gray-400 mb-2">الاسم (عربي)</label>
                   <input
                     type="text"
                     value={newPlan.name_ar}
@@ -741,6 +577,16 @@ const Plans = () => {
                     className="w-full p-3 bg-white/5 border border-white/10 rounded-lg text-white"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">الوصف</label>
+                <textarea
+                  value={newPlan.description}
+                  onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })}
+                  rows="2"
+                  className="w-full p-3 bg-white/5 border border-white/10 rounded-lg text-white"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -764,73 +610,129 @@ const Plans = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">الحد الأقصى للمشاريع</label>
+                  <label className="block text-xs text-gray-400 mb-1">المشاريع</label>
                   <input
                     type="number"
                     value={newPlan.max_projects}
                     onChange={(e) => setNewPlan({ ...newPlan, max_projects: parseInt(e.target.value) })}
-                    className="w-full p-3 bg-white/5 border border-white/10 rounded-lg text-white"
+                    className="w-full p-2 bg-white/5 border border-white/10 rounded-lg text-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-2">الحد الأقصى للمهارات</label>
+                  <label className="block text-xs text-gray-400 mb-1">المهارات</label>
                   <input
                     type="number"
                     value={newPlan.max_skills}
                     onChange={(e) => setNewPlan({ ...newPlan, max_skills: parseInt(e.target.value) })}
-                    className="w-full p-3 bg-white/5 border border-white/10 rounded-lg text-white"
+                    className="w-full p-2 bg-white/5 border border-white/10 rounded-lg text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">الشهادات</label>
+                  <input
+                    type="number"
+                    value={newPlan.max_certificates}
+                    onChange={(e) => setNewPlan({ ...newPlan, max_certificates: parseInt(e.target.value) })}
+                    className="w-full p-2 bg-white/5 border border-white/10 rounded-lg text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">الخبرات</label>
+                  <input
+                    type="number"
+                    value={newPlan.max_experience}
+                    onChange={(e) => setNewPlan({ ...newPlan, max_experience: parseInt(e.target.value) })}
+                    className="w-full p-2 bg-white/5 border border-white/10 rounded-lg text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">التعليم</label>
+                  <input
+                    type="number"
+                    value={newPlan.max_education}
+                    onChange={(e) => setNewPlan({ ...newPlan, max_education: parseInt(e.target.value) })}
+                    className="w-full p-2 bg-white/5 border border-white/10 rounded-lg text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">التخزين (MB)</label>
+                  <input
+                    type="number"
+                    value={newPlan.storage_limit}
+                    onChange={(e) => setNewPlan({ ...newPlan, storage_limit: parseInt(e.target.value) })}
+                    className="w-full p-2 bg-white/5 border border-white/10 rounded-lg text-white"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">الوصف</label>
-                <textarea
-                  value={newPlan.description}
-                  onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })}
-                  rows="3"
-                  className="w-full p-3 bg-white/5 border border-white/10 rounded-lg text-white resize-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <label className="flex items-center gap-2">
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex items-center gap-2 p-2 bg-white/5 rounded-lg">
                   <input
                     type="checkbox"
                     checked={newPlan.custom_domain}
                     onChange={(e) => setNewPlan({ ...newPlan, custom_domain: e.target.checked })}
                     className="w-4 h-4"
                   />
-                  <span className="text-gray-300">نطاق مخصص</span>
+                  <span className="text-sm text-gray-300">نطاق مخصص</span>
                 </label>
-                <label className="flex items-center gap-2">
+                <label className="flex items-center gap-2 p-2 bg-white/5 rounded-lg">
                   <input
                     type="checkbox"
                     checked={newPlan.remove_branding}
                     onChange={(e) => setNewPlan({ ...newPlan, remove_branding: e.target.checked })}
                     className="w-4 h-4"
                   />
-                  <span className="text-gray-300">إزالة العلامة التجارية</span>
+                  <span className="text-sm text-gray-300">إزالة العلامة</span>
                 </label>
-                <label className="flex items-center gap-2">
+                <label className="flex items-center gap-2 p-2 bg-white/5 rounded-lg">
                   <input
                     type="checkbox"
                     checked={newPlan.analytics}
                     onChange={(e) => setNewPlan({ ...newPlan, analytics: e.target.checked })}
                     className="w-4 h-4"
                   />
-                  <span className="text-gray-300">تحليلات متقدمة</span>
+                  <span className="text-sm text-gray-300">تحليلات</span>
                 </label>
-                <label className="flex items-center gap-2">
+                <label className="flex items-center gap-2 p-2 bg-white/5 rounded-lg">
                   <input
                     type="checkbox"
                     checked={newPlan.priority_support}
                     onChange={(e) => setNewPlan({ ...newPlan, priority_support: e.target.checked })}
                     className="w-4 h-4"
                   />
-                  <span className="text-gray-300">دعم ذو أولوية</span>
+                  <span className="text-sm text-gray-300">دعم أولوية</span>
+                </label>
+                <label className="flex items-center gap-2 p-2 bg-white/5 rounded-lg">
+                  <input
+                    type="checkbox"
+                    checked={newPlan.ai_analysis}
+                    onChange={(e) => setNewPlan({ ...newPlan, ai_analysis: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm text-gray-300">تحليل ذكاء</span>
+                </label>
+                <label className="flex items-center gap-2 p-2 bg-white/5 rounded-lg">
+                  <input
+                    type="checkbox"
+                    checked={newPlan.has_advanced_stats}
+                    onChange={(e) => setNewPlan({ ...newPlan, has_advanced_stats: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm text-gray-300">إحصائيات متقدمة</span>
+                </label>
+              </div>
+
+              <div className="flex items-center gap-4 pt-2">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={newPlan.is_popular}
+                    onChange={(e) => setNewPlan({ ...newPlan, is_popular: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm text-gray-300">باقة شائعة</span>
                 </label>
               </div>
 
@@ -855,5 +757,9 @@ const Plans = () => {
     </div>
   )
 }
+
+// استيراد الأيقونات المفقودة
+const Briefcase = (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+const GraduationCap = (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5-10-5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
 
 export default Plans
