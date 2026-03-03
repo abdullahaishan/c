@@ -27,7 +27,9 @@ import {
   Sliders,
   Cpu,
   BarChart3,
-  HelpCircle
+  HelpCircle,
+  Briefcase,
+  GraduationCap
 } from 'lucide-react'
 
 const Plans = () => {
@@ -82,21 +84,24 @@ const Plans = () => {
   }
 
   const handleEdit = (plan) => {
+    if (!plan) return
+    
+    // ✅ التحقق من وجود البيانات قبل استخدامها
     setEditingId(plan.id)
     setEditData({
-      id: plan.id,
-      name: plan.name,
-      name_ar: plan.name_ar,
+      id: plan.id || '',
+      name: plan.name || '',
+      name_ar: plan.name_ar || '',
       description: plan.description || '',
-      price_monthly: plan.price_monthly,
-      price_yearly: plan.price_yearly,
+      price_monthly: plan.price_monthly || 0,
+      price_yearly: plan.price_yearly || null,
       currency: plan.currency || 'USD',
-      max_projects: plan.max_projects,
-      max_skills: plan.max_skills,
-      max_certificates: plan.max_certificates,
-      max_experience: plan.max_experience,
-      max_education: plan.max_education,
-      storage_limit: plan.storage_limit,
+      max_projects: plan.max_projects || 3,
+      max_skills: plan.max_skills || 10,
+      max_certificates: plan.max_certificates || 3,
+      max_experience: plan.max_experience || 5,
+      max_education: plan.max_education || 5,
+      storage_limit: plan.storage_limit || 50,
       custom_domain: plan.custom_domain || false,
       remove_branding: plan.remove_branding || false,
       analytics: plan.analytics || false,
@@ -109,13 +114,16 @@ const Plans = () => {
       has_remove_branding: plan.has_remove_branding || false,
       is_popular: plan.is_popular || false,
       is_active: plan.is_active !== false,
-      sort_order: plan.sort_order || 0
+      sort_order: plan.sort_order || 0,
+      subscribers: plan.subscribers || 0
     })
   }
 
   const handleSave = async () => {
+    if (!editingId) return
+    
     try {
-      await adminPlanService.updatePlan(editingId, editData, admin.id)
+      await adminPlanService.updatePlan(editingId, editData, admin?.id)
       setEditingId(null)
       loadPlans()
     } catch (error) {
@@ -126,11 +134,14 @@ const Plans = () => {
 
   const handleCancel = () => {
     setEditingId(null)
+    setEditData({})
   }
 
   const handleToggleActive = async (planId, current) => {
+    if (!planId) return
+    
     try {
-      await adminPlanService.togglePlanStatus(planId, !current, admin.id)
+      await adminPlanService.togglePlanStatus(planId, !current, admin?.id)
       loadPlans()
     } catch (error) {
       console.error('Error toggling plan:', error)
@@ -139,7 +150,8 @@ const Plans = () => {
   }
 
   const handleDelete = async (plan) => {
-    if (!window.confirm(`هل أنت متأكد من حذف باقة ${plan.name}؟`)) return
+    if (!plan?.id) return
+    if (!window.confirm(`هل أنت متأكد من حذف باقة ${plan.name || 'هذه'}؟`)) return
     
     try {
       await adminPlanService.deletePlan(plan.id)
@@ -151,8 +163,10 @@ const Plans = () => {
   }
 
   const handleDuplicate = async (plan) => {
+    if (!plan?.id) return
+    
     try {
-      await adminPlanService.duplicatePlan(plan.id, admin.id)
+      await adminPlanService.duplicatePlan(plan.id, admin?.id)
       loadPlans()
     } catch (error) {
       console.error('Error duplicating plan:', error)
@@ -162,7 +176,7 @@ const Plans = () => {
 
   const handleAddNewPlan = async () => {
     try {
-      await adminPlanService.createPlan(newPlan, admin.id)
+      await adminPlanService.createPlan(newPlan, admin?.id)
       setShowAddModal(false)
       setNewPlan({
         name: '',
@@ -202,7 +216,7 @@ const Plans = () => {
     <label className="flex items-center gap-2 p-2 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10 transition">
       <input
         type="checkbox"
-        checked={editData[field]}
+        checked={editData[field] || false}
         onChange={(e) => setEditData({ ...editData, [field]: e.target.checked })}
         className="w-4 h-4"
       />
@@ -239,7 +253,7 @@ const Plans = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">إدارة الباقات</h1>
@@ -274,7 +288,7 @@ const Plans = () => {
                     <label className="block text-xs text-gray-400 mb-1">الاسم (إنجليزي)</label>
                     <input
                       type="text"
-                      value={editData.name}
+                      value={editData.name || ''}
                       onChange={(e) => setEditData({ ...editData, name: e.target.value })}
                       className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
                     />
@@ -283,7 +297,7 @@ const Plans = () => {
                     <label className="block text-xs text-gray-400 mb-1">الاسم (عربي)</label>
                     <input
                       type="text"
-                      value={editData.name_ar}
+                      value={editData.name_ar || ''}
                       onChange={(e) => setEditData({ ...editData, name_ar: e.target.value })}
                       className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
                     />
@@ -293,7 +307,7 @@ const Plans = () => {
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">الوصف</label>
                   <textarea
-                    value={editData.description}
+                    value={editData.description || ''}
                     onChange={(e) => setEditData({ ...editData, description: e.target.value })}
                     rows="2"
                     className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm resize-none"
@@ -306,8 +320,8 @@ const Plans = () => {
                     <label className="block text-xs text-gray-400 mb-1">السعر الشهري ($)</label>
                     <input
                       type="number"
-                      value={editData.price_monthly}
-                      onChange={(e) => setEditData({ ...editData, price_monthly: parseFloat(e.target.value) })}
+                      value={editData.price_monthly || 0}
+                      onChange={(e) => setEditData({ ...editData, price_monthly: parseFloat(e.target.value) || 0 })}
                       className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
                     />
                   </div>
@@ -329,8 +343,8 @@ const Plans = () => {
                     <label className="block text-xs text-gray-400 mb-1">المشاريع</label>
                     <input
                       type="number"
-                      value={editData.max_projects}
-                      onChange={(e) => setEditData({ ...editData, max_projects: parseInt(e.target.value) })}
+                      value={editData.max_projects || 0}
+                      onChange={(e) => setEditData({ ...editData, max_projects: parseInt(e.target.value) || 0 })}
                       className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
                     />
                   </div>
@@ -338,8 +352,8 @@ const Plans = () => {
                     <label className="block text-xs text-gray-400 mb-1">المهارات</label>
                     <input
                       type="number"
-                      value={editData.max_skills}
-                      onChange={(e) => setEditData({ ...editData, max_skills: parseInt(e.target.value) })}
+                      value={editData.max_skills || 0}
+                      onChange={(e) => setEditData({ ...editData, max_skills: parseInt(e.target.value) || 0 })}
                       className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
                     />
                   </div>
@@ -347,8 +361,8 @@ const Plans = () => {
                     <label className="block text-xs text-gray-400 mb-1">الشهادات</label>
                     <input
                       type="number"
-                      value={editData.max_certificates}
-                      onChange={(e) => setEditData({ ...editData, max_certificates: parseInt(e.target.value) })}
+                      value={editData.max_certificates || 0}
+                      onChange={(e) => setEditData({ ...editData, max_certificates: parseInt(e.target.value) || 0 })}
                       className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
                     />
                   </div>
@@ -356,8 +370,8 @@ const Plans = () => {
                     <label className="block text-xs text-gray-400 mb-1">الخبرات</label>
                     <input
                       type="number"
-                      value={editData.max_experience}
-                      onChange={(e) => setEditData({ ...editData, max_experience: parseInt(e.target.value) })}
+                      value={editData.max_experience || 0}
+                      onChange={(e) => setEditData({ ...editData, max_experience: parseInt(e.target.value) || 0 })}
                       className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
                     />
                   </div>
@@ -365,8 +379,8 @@ const Plans = () => {
                     <label className="block text-xs text-gray-400 mb-1">التعليم</label>
                     <input
                       type="number"
-                      value={editData.max_education}
-                      onChange={(e) => setEditData({ ...editData, max_education: parseInt(e.target.value) })}
+                      value={editData.max_education || 0}
+                      onChange={(e) => setEditData({ ...editData, max_education: parseInt(e.target.value) || 0 })}
                       className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
                     />
                   </div>
@@ -374,8 +388,8 @@ const Plans = () => {
                     <label className="block text-xs text-gray-400 mb-1">التخزين (MB)</label>
                     <input
                       type="number"
-                      value={editData.storage_limit}
-                      onChange={(e) => setEditData({ ...editData, storage_limit: parseInt(e.target.value) })}
+                      value={editData.storage_limit || 0}
+                      onChange={(e) => setEditData({ ...editData, storage_limit: parseInt(e.target.value) || 0 })}
                       className="w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
                     />
                   </div>
@@ -398,7 +412,7 @@ const Plans = () => {
                   <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
-                      checked={editData.is_popular}
+                      checked={editData.is_popular || false}
                       onChange={(e) => setEditData({ ...editData, is_popular: e.target.checked })}
                       className="w-4 h-4"
                     />
@@ -407,7 +421,7 @@ const Plans = () => {
                   <label className="flex items-center gap-2">
                     <input
                       type="checkbox"
-                      checked={editData.is_active}
+                      checked={editData.is_active !== false}
                       onChange={(e) => setEditData({ ...editData, is_active: e.target.checked })}
                       className="w-4 h-4"
                     />
@@ -556,8 +570,6 @@ const Plans = () => {
             </div>
 
             <div className="space-y-4">
-              {/* نفس حقول التعديل ولكن لإنشاء جديد */}
-              {/* يمكن نسخ نفس الحقول من وضع التعديل */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">الاسم (إنجليزي)</label>
@@ -595,7 +607,7 @@ const Plans = () => {
                   <input
                     type="number"
                     value={newPlan.price_monthly}
-                    onChange={(e) => setNewPlan({ ...newPlan, price_monthly: parseFloat(e.target.value) })}
+                    onChange={(e) => setNewPlan({ ...newPlan, price_monthly: parseFloat(e.target.value) || 0 })}
                     className="w-full p-3 bg-white/5 border border-white/10 rounded-lg text-white"
                   />
                 </div>
@@ -616,7 +628,7 @@ const Plans = () => {
                   <input
                     type="number"
                     value={newPlan.max_projects}
-                    onChange={(e) => setNewPlan({ ...newPlan, max_projects: parseInt(e.target.value) })}
+                    onChange={(e) => setNewPlan({ ...newPlan, max_projects: parseInt(e.target.value) || 0 })}
                     className="w-full p-2 bg-white/5 border border-white/10 rounded-lg text-white"
                   />
                 </div>
@@ -625,7 +637,7 @@ const Plans = () => {
                   <input
                     type="number"
                     value={newPlan.max_skills}
-                    onChange={(e) => setNewPlan({ ...newPlan, max_skills: parseInt(e.target.value) })}
+                    onChange={(e) => setNewPlan({ ...newPlan, max_skills: parseInt(e.target.value) || 0 })}
                     className="w-full p-2 bg-white/5 border border-white/10 rounded-lg text-white"
                   />
                 </div>
@@ -634,7 +646,7 @@ const Plans = () => {
                   <input
                     type="number"
                     value={newPlan.max_certificates}
-                    onChange={(e) => setNewPlan({ ...newPlan, max_certificates: parseInt(e.target.value) })}
+                    onChange={(e) => setNewPlan({ ...newPlan, max_certificates: parseInt(e.target.value) || 0 })}
                     className="w-full p-2 bg-white/5 border border-white/10 rounded-lg text-white"
                   />
                 </div>
@@ -643,7 +655,7 @@ const Plans = () => {
                   <input
                     type="number"
                     value={newPlan.max_experience}
-                    onChange={(e) => setNewPlan({ ...newPlan, max_experience: parseInt(e.target.value) })}
+                    onChange={(e) => setNewPlan({ ...newPlan, max_experience: parseInt(e.target.value) || 0 })}
                     className="w-full p-2 bg-white/5 border border-white/10 rounded-lg text-white"
                   />
                 </div>
@@ -652,7 +664,7 @@ const Plans = () => {
                   <input
                     type="number"
                     value={newPlan.max_education}
-                    onChange={(e) => setNewPlan({ ...newPlan, max_education: parseInt(e.target.value) })}
+                    onChange={(e) => setNewPlan({ ...newPlan, max_education: parseInt(e.target.value) || 0 })}
                     className="w-full p-2 bg-white/5 border border-white/10 rounded-lg text-white"
                   />
                 </div>
@@ -661,7 +673,7 @@ const Plans = () => {
                   <input
                     type="number"
                     value={newPlan.storage_limit}
-                    onChange={(e) => setNewPlan({ ...newPlan, storage_limit: parseInt(e.target.value) })}
+                    onChange={(e) => setNewPlan({ ...newPlan, storage_limit: parseInt(e.target.value) || 0 })}
                     className="w-full p-2 bg-white/5 border border-white/10 rounded-lg text-white"
                   />
                 </div>
@@ -758,8 +770,25 @@ const Plans = () => {
   )
 }
 
-// استيراد الأيقونات المفقودة
-const Briefcase = (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
-const GraduationCap = (props) => <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5-10-5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
+// تعريف الأيقونات المفقودة
+const Briefcase = (props) => (
+  <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+  </svg>
+)
+
+const GraduationCap = (props) => (
+  <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M22 10v6M2 10l10-5 10 5-10 5-10-5z"></path>
+    <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+  </svg>
+)
+
+const Star = (props) => (
+  <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+  </svg>
+)
 
 export default Plans
