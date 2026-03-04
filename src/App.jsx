@@ -5,7 +5,7 @@ import { AnimatePresence } from 'framer-motion'
 import "./index.css"
 import VerifyOtp from './pages/auth/VerifyOtp'
 import AdminProtectedRoute from './components/AdminProtectedRoute'
-import AdminRoute from './components/AdminRoute'
+//import AdminRoute from './components/AdminRoute'
 
 // الصفحات العامة
 import WelcomeScreen from './pages/WelcomeScreen'
