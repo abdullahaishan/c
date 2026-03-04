@@ -41,21 +41,24 @@ import {
   Youtube,
   MapPin,
   Phone,
-  Send
+  Send,
+  LogOut
 } from 'lucide-react'
 import AOS from 'aos'
 import 'aos/dist/aos.css'
 import { developerService, likeService } from '../lib/supabase'
 import Swal from 'sweetalert2'
 import Komentar from '../components/Commentar'
+import { useAuth } from '../hooks/useAuth' // ✅ استيراد useAuth
 
 // مكون الرقم المتحرك
+// مكون الرقم المتحرك المعدل
 const AnimatedNumber = ({ value }) => {
   const [count, setCount] = useState(0)
   const { ref, inView } = useInView({ triggerOnce: true })
 
   useEffect(() => {
-    if (inView) {
+    if (inView && value > 0) {
       let start = 0
       const end = parseInt(value.toString().replace(/[^0-9]/g, ''))
       const duration = 2000
@@ -75,6 +78,15 @@ const AnimatedNumber = ({ value }) => {
     }
   }, [inView, value])
 
+  // ✅ إذا كانت القيمة 0 أو أقل، اعرض "جاري التحميل"
+  if (!value || value === 0) {
+    return (
+      <span ref={ref} className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-400">
+        جاري التحميل...
+      </span>
+    )
+  }
+
   return (
     <span ref={ref} className="text-3xl sm:text-4xl md:text-5xl font-bold">
       {count.toLocaleString()}
@@ -82,7 +94,6 @@ const AnimatedNumber = ({ value }) => {
     </span>
   )
 }
-
 // مكون البطاقة المتحركة
 const AnimatedCard = ({ children, delay = 0, className = "" }) => {
   return (
@@ -252,10 +263,12 @@ const ProfileCard = ({ profile, index, onLike }) => {
   )
 }
 
-// مكون الـ Navbar
+// ✅ مكون الـ Navbar المحسن
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const { user, logout } = useAuth() // ✅ استخدام useAuth
+  const navigate = useNavigate()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -264,6 +277,12 @@ const Navbar = () => {
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  const handleLogout = () => {
+    logout()
+    navigate('/')
+    setIsOpen(false)
+  }
 
   return (
     <motion.nav
@@ -304,22 +323,52 @@ const Navbar = () => {
             </Link>
           </div>
 
-          {/* Auth Buttons */}
+          {/* ✅ Auth Buttons - يظهر حسب حالة المستخدم */}
           <div className="hidden md:flex items-center gap-3">
-            <Link
-              to="/login"
-              className="px-4 py-2 text-gray-300 hover:text-white transition flex items-center gap-2"
-            >
-              <LogIn className="w-4 h-4" />
-              <span>Login</span>
-            </Link>
-            <Link
-              to="/register"
-              className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:scale-105 transition flex items-center gap-2"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>Sign Up</span>
-            </Link>
+            {user ? (
+              // ✅ المستخدم مسجل دخول
+              <>
+                <Link
+                  to="/dashboard"
+                  className="px-4 py-2 text-gray-300 hover:text-white transition flex items-center gap-2"
+                >
+                  <UserCircle2 className="w-4 h-4" />
+                  <span>Dashboard</span>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition flex items-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logout</span>
+                </button>
+                {/* صورة المستخدم الصغيرة */}
+                <img
+                  src={user?.profile_image || '/default-avatar.png'}
+                  alt={user?.full_name}
+                  className="w-8 h-8 rounded-full object-cover border-2 border-indigo-500/30"
+                  onError={(e) => e.target.src = '/default-avatar.png'}
+                />
+              </>
+            ) : (
+              // ✅ زائر - أظهر أزرار التسجيل
+              <>
+                <Link
+                  to="/login"
+                  className="px-4 py-2 text-gray-300 hover:text-white transition flex items-center gap-2"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Login</span>
+                </Link>
+                <Link
+                  to="/register"
+                  className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:scale-105 transition flex items-center gap-2"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Sign Up</span>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -368,22 +417,52 @@ const Navbar = () => {
           >
             Contact
           </Link>
-          <div className="pt-3 border-t border-white/10 flex gap-3">
-            <Link
-              to="/login"
-              className="flex-1 py-2 text-center text-gray-300 border border-white/20 rounded-lg hover:bg-white/5 transition"
-              onClick={() => setIsOpen(false)}
-            >
-              Login
-            </Link>
-            <Link
-              to="/register"
-              className="flex-1 py-2 text-center bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:scale-105 transition"
-              onClick={() => setIsOpen(false)}
-            >
-              Sign Up
-            </Link>
-          </div>
+          
+          {/* ✅ Mobile Auth Buttons */}
+          {user ? (
+            // ✅ مستخدم مسجل
+            <>
+              <Link
+                to="/dashboard"
+                className="block py-2 text-gray-300 hover:text-white transition"
+                onClick={() => setIsOpen(false)}
+              >
+                <div className="flex items-center gap-2">
+                  <UserCircle2 className="w-4 h-4" />
+                  <span>Dashboard</span>
+                </div>
+              </Link>
+              <div className="pt-3 border-t border-white/10">
+                <button
+                  onClick={handleLogout}
+                  className="w-full py-2 text-center bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <LogOut className="w-4 h-4" />
+                    <span>Logout</span>
+                  </div>
+                </button>
+              </div>
+            </>
+          ) : (
+            // ✅ زائر
+            <div className="pt-3 border-t border-white/10 flex gap-3">
+              <Link
+                to="/login"
+                className="flex-1 py-2 text-center text-gray-300 border border-white/20 rounded-lg hover:bg-white/5 transition"
+                onClick={() => setIsOpen(false)}
+              >
+                Login
+              </Link>
+              <Link
+                to="/register"
+                className="flex-1 py-2 text-center bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:scale-105 transition"
+                onClick={() => setIsOpen(false)}
+              >
+                Sign Up
+              </Link>
+            </div>
+          )}
         </div>
       </motion.div>
     </motion.nav>
