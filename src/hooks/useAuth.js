@@ -96,34 +96,34 @@ const fetchDeveloperData = async (userId) => {
 
   return () => subscription?.unsubscribe()
 }, [])
-  
-  const login = async (email, password) => {
+
+
+  // useAuth.js - عدل دالة login فقط
+const login = async (email, password) => {
   try {
     setLoading(true)
     setError(null)
 
+    // ✅ 1. سجل الدخول أولاً (سريع)
     const result = await authService.login(email, password)
-    
-    if (!result.success) {
-      throw new Error('Login failed')
-    }
+    if (!result.success) throw new Error('Login failed')
 
-    // ✅ استخدم fetchDeveloperData
-    const developer = await fetchDeveloperData(result.user.id)
-    
-    if (!developer) {
-      throw new Error('User not found in developers table')
-    }
+    // ✅ 2. جلب البيانات في الخلفية (بدون await)
+    setTimeout(() => {
+      fetchDeveloperData(result.user.id)  // تشتغل في الخلفية
+    }, 0)
 
-    return { success: true, user: developer }
+    // ✅ 3. أرجع نجاح فوراً (بدون انتظار البيانات)
+    return { success: true, user: result.user }
 
   } catch (err) {
     setError(err.message)
     return { success: false, error: err.message }
   } finally {
-    setLoading(false) // ❌ لا تؤخرها
+    setLoading(false)  // ← التحميل يخلص بسرعة
   }
 }
+  
 
   const register = async (formData) => {
     try {
