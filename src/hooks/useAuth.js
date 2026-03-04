@@ -8,131 +8,122 @@ export const useAuth = () => {
   const [error, setError] = useState(null)
   const [hasPortfolio, setHasPortfolio] = useState(false)
   const initialLoadRef = useRef(true) // لمنع التحميل المزدوج
-
-  const checkPortfolio = async (userId) => {
-    if (!userId) {
-      setHasPortfolio(false)
-      return false
+// ✅ دالة جلب بيانات المطور (قبل useEffect)
+const fetchDeveloperData = async (userId) => {
+  try {
+    const { data: developer, error } = await supabase
+      .from('developers')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle()
+    
+    if (error) throw error
+    
+    if (developer) {
+      setUser(developer)
+      localStorage.setItem('developer', JSON.stringify(developer))
     }
-
+    return developer
+  } catch (err) {
+    console.error('Error fetching developer:', err)
+    return null
+  }
+}
+  useEffect(() => {
+  const initAuth = async () => {
     try {
-      const { data, error } = await supabase
-        .from('portfolios')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle()
-
-      if (error) {
-        console.error('Portfolio error:', error)
-        setHasPortfolio(false)
-        return false
+      // ✅ 1. تحقق من localStorage أولاً
+      const cachedUser = localStorage.getItem('developer')
+      if (cachedUser) {
+        setUser(JSON.parse(cachedUser))
+        setLoading(false)
+        
+        // ✅ 2. تحديث في الخلفية
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user) {
+          fetchDeveloperData(session.user.id) // بدون await
+        }
+        return
       }
 
-      const exists = !!data
-      setHasPortfolio(exists)
-      return exists
+      // ✅ 3. إذا مافي كاش، جلب من الجلسة
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (session?.user) {
+        // جلب من developers فقط (لا pending)
+        const { data: developer } = await supabase
+          .from('developers')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle()
+
+        if (developer) {
+          setUser(developer)
+          localStorage.setItem('developer', JSON.stringify(developer))
+        }
+        // ❌ لا تتحقق من pending
+      }
     } catch (err) {
-      console.error('Error checking portfolio:', err)
-      setHasPortfolio(false)
-      return false
+      console.error('Init auth error:', err)
+      setError(err.message)
+    } finally {
+      setLoading(false)
     }
   }
 
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        
-        if (session?.user) {
-          const { data: developer } = await supabase
-            .from('developers')
-            .select('*')
-            .eq('id', session.user.id)
-            .maybeSingle()
+  initAuth()
 
-          if (developer) {
-            setUser(developer)
-            await checkPortfolio(developer.id)
-          } else {
-            const { data: pending } = await supabase
-              .from('pending_developers')
-              .select('*')
-              .eq('id', session.user.id)
-              .maybeSingle()
-
-            if (pending) {
-              setUser({ ...pending, pending: true })
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Init auth error:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    initAuth()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      // التحقق من أن هذا ليس التحميل الأولي
-      if (!initialLoadRef.current) {
-        if (session?.user) {
-          // لا نعيد التحميل إذا تم تسجيل الدخول يدوياً
-          // يمكننا تحديث الحالة فقط إذا لزم الأمر
-          setLoading(false)
-        } else {
-          setUser(null)
-          setHasPortfolio(false)
-          setLoading(false)
-        }
-      }
-      initialLoadRef.current = false
-    })
-
-    return () => subscription?.unsubscribe()
-  }, [])
-
-  const login = async (email, password) => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      const result = await authService.login(email, password)
-      
-      if (!result.success) {
-        throw new Error('Login failed')
-      }
-
-      const userFromAuth = result.user
-
-      // جلب بيانات إضافية من developers
-      const { data: developer } = await supabase
+  // ✅ onAuthStateChange مبسط
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (session?.user) {
+      // جلب البيانات في الخلفية
+      supabase
         .from('developers')
         .select('*')
-        .eq('id', userFromAuth.id)
+        .eq('id', session.user.id)
         .maybeSingle()
-
-      const userData = developer || userFromAuth
-
-      setUser(userData)
-      localStorage.setItem('developer', JSON.stringify(userData))
-
-      await checkPortfolio(userData.id)
-      
-      // تأخير بسيط لضمان تحديث الحالة قبل إيقاف التحميل
-      setTimeout(() => {
-        setLoading(false)
-      }, 100)
-
-      return { success: true, user: userData }
-
-    } catch (err) {
-      setError(err.message)
-      setLoading(false)
-      return { success: false, error: err.message }
+        .then(({ data }) => {
+          if (data) {
+            setUser(data)
+            localStorage.setItem('developer', JSON.stringify(data))
+          }
+        })
+    } else {
+      setUser(null)
+      localStorage.removeItem('developer')
     }
+  })
+
+  return () => subscription?.unsubscribe()
+}, [])
+  
+  const login = async (email, password) => {
+  try {
+    setLoading(true)
+    setError(null)
+
+    const result = await authService.login(email, password)
+    
+    if (!result.success) {
+      throw new Error('Login failed')
+    }
+
+    // ✅ استخدم fetchDeveloperData
+    const developer = await fetchDeveloperData(result.user.id)
+    
+    if (!developer) {
+      throw new Error('User not found in developers table')
+    }
+
+    return { success: true, user: developer }
+
+  } catch (err) {
+    setError(err.message)
+    return { success: false, error: err.message }
+  } finally {
+    setLoading(false) // ❌ لا تؤخرها
   }
+}
 
   const register = async (formData) => {
     try {
@@ -160,17 +151,13 @@ export const useAuth = () => {
   }
 
   const logout = async () => {
-    try {
-      setLoading(true)
-      await supabase.auth.signOut()
-      setUser(null)
-      setHasPortfolio(false)
-      localStorage.removeItem('developer')
-    } catch (err) {
-      console.error('Logout error:', err)
-    } finally {
-      setLoading(false)
-    }
+  try {
+    await supabase.auth.signOut()
+    setUser(null)
+    localStorage.removeItem('developer')
+  } catch (err) {
+    console.error('Logout error:', err)
+  }
   }
 
   const refreshPortfolioStatus = async () => {
