@@ -1,3 +1,4 @@
+// Overview.jsx
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePlan } from '../../hooks/usePlan'
@@ -26,6 +27,217 @@ import {
   Zap
 } from 'lucide-react'
 
+// ============================================
+// مكونات Skeleton Loading
+// ============================================
+
+// Skeleton للبطاقة الرئيسية (التحية)
+const GreetingCardSkeleton = () => (
+  <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
+    <div className="flex items-start justify-between">
+      <div className="space-y-3 flex-1">
+        <div className="h-8 w-64 bg-white/10 rounded-lg"></div>
+        <div className="h-4 w-48 bg-white/10 rounded-lg"></div>
+        <div className="max-w-md mt-4">
+          <div className="flex items-center justify-between mb-1">
+            <div className="h-4 w-24 bg-white/10 rounded-lg"></div>
+            <div className="h-4 w-8 bg-white/10 rounded-lg"></div>
+          </div>
+          <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+            <div className="h-full w-3/4 bg-white/10 rounded-full"></div>
+          </div>
+        </div>
+      </div>
+      <div className="w-10 h-10 bg-white/10 rounded-xl"></div>
+    </div>
+  </div>
+)
+
+// Skeleton لبطاقة الإحصائيات الرئيسية
+const StatCardSkeleton = () => (
+  <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
+    <div className="flex items-start justify-between mb-4">
+      <div className="w-12 h-12 bg-white/10 rounded-xl"></div>
+      <div className="w-16 h-5 bg-white/10 rounded-full"></div>
+    </div>
+    <div className="h-8 w-20 bg-white/10 rounded-lg mb-2"></div>
+    <div className="h-4 w-24 bg-white/10 rounded-lg"></div>
+    <div className="h-3 w-32 bg-white/10 rounded-lg mt-2"></div>
+  </div>
+)
+
+// Skeleton لبطاقة المحتوى المصغرة
+const ContentMiniCardSkeleton = () => (
+  <div className="bg-white/5 rounded-xl p-4 border border-white/10 animate-pulse">
+    <div className="w-10 h-10 bg-white/10 rounded-lg mb-3"></div>
+    <div className="h-4 w-16 bg-white/10 rounded-lg mb-2"></div>
+    <div className="h-6 w-20 bg-white/10 rounded-lg mb-2"></div>
+    <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+      <div className="h-full w-3/4 bg-white/10 rounded-full"></div>
+    </div>
+  </div>
+)
+
+// Skeleton لقسم تحليلات الذكاء الاصطناعي
+const AISectionSkeleton = () => (
+  <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
+    <div className="flex items-center gap-2 mb-4">
+      <div className="w-5 h-5 bg-white/10 rounded-lg"></div>
+      <div className="h-6 w-40 bg-white/10 rounded-lg"></div>
+    </div>
+    <div className="space-y-4">
+      <div>
+        <div className="h-4 w-24 bg-white/10 rounded-lg mb-2"></div>
+        <div className="h-8 w-16 bg-white/10 rounded-lg"></div>
+      </div>
+      <div>
+        <div className="h-4 w-32 bg-white/10 rounded-lg mb-2"></div>
+        <div className="space-y-2">
+          {[1,2,3].map((i) => (
+            <div key={i} className="flex items-start gap-2">
+              <div className="w-4 h-4 bg-white/10 rounded-full"></div>
+              <div className="h-4 w-full bg-white/10 rounded-lg"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="h-10 w-full bg-white/10 rounded-lg"></div>
+    </div>
+  </div>
+)
+
+// Skeleton لأحدث المشاريع
+const LatestProjectsSkeleton = () => (
+  <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
+    <div className="h-6 w-32 bg-white/10 rounded-lg mb-4"></div>
+    <div className="space-y-3">
+      {[1,2,3].map((i) => (
+        <div key={i} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg">
+          <div className="w-10 h-10 bg-white/10 rounded-lg"></div>
+          <div className="flex-1">
+            <div className="h-4 w-32 bg-white/10 rounded-lg mb-2"></div>
+            <div className="h-3 w-20 bg-white/10 rounded-lg"></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)
+
+// Skeleton لتحليلات الزوار
+const VisitorStatsSkeleton = () => (
+  <>
+    <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
+      <div className="flex items-center justify-between mb-6">
+        <div className="h-6 w-32 bg-white/10 rounded-lg"></div>
+        <div className="flex gap-2">
+          <div className="w-16 h-8 bg-white/10 rounded-lg"></div>
+          <div className="w-16 h-8 bg-white/10 rounded-lg"></div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {[1,2,3,4].map((i) => (
+          <div key={i} className="text-center">
+            <div className="w-5 h-5 bg-white/10 rounded-full mx-auto mb-2"></div>
+            <div className="h-6 w-8 bg-white/10 rounded-lg mx-auto mb-1"></div>
+            <div className="h-3 w-12 bg-white/10 rounded-lg mx-auto"></div>
+          </div>
+        ))}
+      </div>
+
+      <div>
+        <div className="h-4 w-24 bg-white/10 rounded-lg mb-3"></div>
+        <div className="space-y-2">
+          {[1,2,3,4,5].map((i) => (
+            <div key={i} className="flex items-center gap-2">
+              <div className="h-4 w-24 bg-white/10 rounded-lg"></div>
+              <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-full w-3/4 bg-white/10 rounded-full"></div>
+              </div>
+              <div className="h-4 w-8 bg-white/10 rounded-lg"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
+      <div className="h-6 w-32 bg-white/10 rounded-lg mb-4"></div>
+      <div className="space-y-3">
+        {[1,2,3].map((i) => (
+          <div key={i} className="flex items-center justify-between">
+            <div className="h-4 w-24 bg-white/10 rounded-lg"></div>
+            <div className="flex items-center gap-3">
+              <div className="w-32 h-2 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-full w-3/4 bg-white/10 rounded-full"></div>
+              </div>
+              <div className="h-4 w-6 bg-white/10 rounded-lg"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </>
+)
+
+// Skeleton لصفحة Overview كاملة
+const OverviewSkeleton = () => {
+  const [selectedPeriod, setSelectedPeriod] = useState('week')
+  
+  return (
+    <div className="space-y-6" dir="rtl">
+      <GreetingCardSkeleton />
+      
+      {/* بطاقات الإحصائيات الرئيسية */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCardSkeleton />
+        <StatCardSkeleton />
+        <StatCardSkeleton />
+        <StatCardSkeleton />
+      </div>
+
+      {/* بطاقات المحتوى المصغرة */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <ContentMiniCardSkeleton />
+        <ContentMiniCardSkeleton />
+        <ContentMiniCardSkeleton />
+        <ContentMiniCardSkeleton />
+        <ContentMiniCardSkeleton />
+      </div>
+
+      {/* قسمين رئيسيين */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* القسم الأيسر */}
+        <div className="lg:col-span-1 space-y-6">
+          <AISectionSkeleton />
+          <LatestProjectsSkeleton />
+        </div>
+
+        {/* القسم الأيمن */}
+        <div className="lg:col-span-2 space-y-6">
+          <VisitorStatsSkeleton />
+        </div>
+      </div>
+
+      {/* Banner للمجانيين */}
+      <div className="bg-white/5 rounded-2xl p-4 border border-white/10 animate-pulse">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 bg-white/10 rounded-lg"></div>
+            <div className="h-5 w-96 bg-white/10 rounded-lg"></div>
+          </div>
+          <div className="w-24 h-9 bg-white/10 rounded-lg"></div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================
+// المكونات الأصلية
+// ============================================
+
 const Overview = () => {
   const { user } = useAuth()
   const { 
@@ -35,7 +247,8 @@ const Overview = () => {
     getUsagePercentage,
     canUseFeature, 
     isFree,
-    getRemainingAnalyses 
+    getRemainingAnalyses,
+    loading: planLoading 
   } = usePlan()
   
   const [stats, setStats] = useState(null)
@@ -45,6 +258,7 @@ const Overview = () => {
   const [remainingAnalyses, setRemainingAnalyses] = useState(0)
   const [loading, setLoading] = useState(true)
   const [selectedPeriod, setSelectedPeriod] = useState('week')
+  const [dataLoaded, setDataLoaded] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -74,10 +288,16 @@ const Overview = () => {
         setAiStats(ai)
       }
 
+      // تأخير بسيط لإظهار الـ Skeleton
+      setTimeout(() => {
+        setDataLoaded(true)
+        setLoading(false)
+      }, 500)
+
     } catch (error) {
       console.error('Error fetching stats:', error)
-    } finally {
       setLoading(false)
+      setDataLoaded(true)
     }
   }
 
@@ -103,15 +323,9 @@ const Overview = () => {
     return 'مساء الخير'
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-[500px] flex items-center justify-center">
-        <div className="text-center">
-          <Loader className="w-12 h-12 text-[#6366f1] animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">جاري تحميل لوحة التحكم...</p>
-        </div>
-      </div>
-    )
+  // عرض Skeleton أثناء التحميل
+  if (loading || !dataLoaded || planLoading) {
+    return <OverviewSkeleton />
   }
 
   return (
