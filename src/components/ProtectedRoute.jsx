@@ -72,9 +72,9 @@ const ProtectedRoute = ({ children }) => {
     checkConfirmation()
   }, [user])
 
-//  if (loading || checking) {
-  //  return <LoadingScreen />
-//  }
+ if (loading || checking) {
+   return <LoadingScreen />
+  }
 
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />
