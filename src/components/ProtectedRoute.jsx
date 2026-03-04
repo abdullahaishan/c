@@ -1,3 +1,4 @@
+// ProtectedRoute.jsx
 import React, { useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
@@ -9,22 +10,24 @@ const ProtectedRoute = ({ children }) => {
   const location = useLocation()
   const [checking, setChecking] = useState(true)
   const [isConfirmed, setIsConfirmed] = useState(false)
+  const [showDashboard, setShowDashboard] = useState(false)
 
   useEffect(() => {
     const checkConfirmation = async () => {
+      // إذا ما في user، نوقف التحقق
       if (!user) {
         setChecking(false)
         return
       }
 
       try {
-        // التحقق من تأكيد البريد
+        // ✅ التحقق من تأكيد البريد
         const { data: { user: userData } } = await supabase.auth.getUser()
-        setIsConfirmed(!!userData?.email_confirmed_at)
+        const confirmed = !!userData?.email_confirmed_at
+        setIsConfirmed(confirmed)
 
-        // إذا كان مؤكداً، تحقق من وجوده في جدول developers
-        if (userData?.email_confirmed_at) {
-          // ✅ استخدم maybeSingle بدلاً من single
+        // ✅ إذا كان مؤكداً، تحقق من وجوده في جدول developers
+        if (confirmed) {
           const { data: developer } = await supabase
             .from('developers')
             .select('id')
@@ -33,7 +36,6 @@ const ProtectedRoute = ({ children }) => {
 
           // إذا لم يكن في developers، حاول نقله من pending
           if (!developer) {
-            // ✅ استخدم maybeSingle هنا أيضاً
             const { data: pending } = await supabase
               .from('pending_developers')
               .select('*')
@@ -62,8 +64,13 @@ const ProtectedRoute = ({ children }) => {
             }
           }
         }
+
+        // ✅ بعد كل هذا، نسمح بعرض المحتوى فوراً للمستخدمين المسجلين
+        setShowDashboard(true)
+
       } catch (error) {
         console.error('Error checking confirmation:', error)
+        setShowDashboard(true) // في حالة الخطأ، اعرض المحتوى
       } finally {
         setChecking(false)
       }
@@ -72,17 +79,18 @@ const ProtectedRoute = ({ children }) => {
     checkConfirmation()
   }, [user])
 
- if (loading || checking) {
-   return <LoadingScreen />
+  // ✅ أولوية 1: إذا في user، اعرض المحتوى فوراً (حتى لو التحقق ما زال جارياً)
+  if (user) {
+    return children  // 🎯 Dashboard يظهر فوراً!
   }
 
-  if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+  // ✅ أولوية 2: إذا في loading، انتظر
+  if (loading) {
+    return <LoadingScreen />
   }
 
-  
-
-  return children
+  // ✅ أولوية 3: إذا ما في user، اذهب لصفحة تسجيل الدخول
+  return <Navigate to="/" state={{ from: location }} replace />
 }
 
 export default ProtectedRoute
