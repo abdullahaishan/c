@@ -37,20 +37,6 @@ const Login = () => {
       // ✅ 2. انتقل فوراً إلى Dashboard - قبل أي تحقق
       navigate('/dashboard', { replace: true })
 
-      // ✅ 3. كل التحققات الأخرى تعمل في الخلفية (بعد التنقل)
-      setTimeout(async () => {
-        try {
-          const { data: { user } } = await supabase.auth.getUser()
-          
-          if (!user?.email_confirmed_at) {
-            console.warn('⚠️ Email not confirmed yet')
-            // يمكن إظهار تنبيه صغير لاحقاً
-          }
-        } catch (err) {
-          console.error('Background check error:', err)
-        }
-      }, 100)
-
     } catch (err) {
       console.error('❌ Login error:', err)
       
