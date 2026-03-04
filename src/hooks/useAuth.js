@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { authService } from '../lib/supabase'
 import { supabase } from '../lib/supabase'
 
@@ -7,6 +7,7 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [hasPortfolio, setHasPortfolio] = useState(false)
+  const initialLoadRef = useRef(true) // لمنع التحميل المزدوج
 
   const checkPortfolio = async (userId) => {
     if (!userId) {
@@ -73,19 +74,25 @@ export const useAuth = () => {
 
     initAuth()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        initAuth()
-      } else {
-        setUser(null)
-        setHasPortfolio(false)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      // التحقق من أن هذا ليس التحميل الأولي
+      if (!initialLoadRef.current) {
+        if (session?.user) {
+          // لا نعيد التحميل إذا تم تسجيل الدخول يدوياً
+          // يمكننا تحديث الحالة فقط إذا لزم الأمر
+          setLoading(false)
+        } else {
+          setUser(null)
+          setHasPortfolio(false)
+          setLoading(false)
+        }
       }
+      initialLoadRef.current = false
     })
 
     return () => subscription?.unsubscribe()
   }, [])
 
-  // ✅ دالة login المصححة
   const login = async (email, password) => {
     try {
       setLoading(true)
@@ -112,14 +119,18 @@ export const useAuth = () => {
       localStorage.setItem('developer', JSON.stringify(userData))
 
       await checkPortfolio(userData.id)
+      
+      // تأخير بسيط لضمان تحديث الحالة قبل إيقاف التحميل
+      setTimeout(() => {
+        setLoading(false)
+      }, 100)
 
       return { success: true, user: userData }
 
     } catch (err) {
       setError(err.message)
-      return { success: false, error: err.message }
-    } finally {
       setLoading(false)
+      return { success: false, error: err.message }
     }
   }
 
@@ -134,6 +145,7 @@ export const useAuth = () => {
         throw new Error(result.message || 'Registration failed')
       }
 
+      setLoading(false) // إيقاف التحميل فوراً للتسجيل
       return { 
         success: true, 
         user: result.user,
@@ -142,20 +154,22 @@ export const useAuth = () => {
 
     } catch (err) {
       setError(err.message)
-      return { success: false, error: err.message }
-    } finally {
       setLoading(false)
+      return { success: false, error: err.message }
     }
   }
 
   const logout = async () => {
     try {
+      setLoading(true)
       await supabase.auth.signOut()
       setUser(null)
       setHasPortfolio(false)
       localStorage.removeItem('developer')
     } catch (err) {
       console.error('Logout error:', err)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -164,6 +178,7 @@ export const useAuth = () => {
       await checkPortfolio(user.id)
     }
   }
+
   return {
     user,
     loading,
