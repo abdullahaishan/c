@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePlan } from '../../hooks/usePlan'
-import { useDashboardData } from '../../context/DashboardDataContext' // ✅ استخدام Context
+import { statsService } from '../../lib/supabase'
 import { Link } from 'react-router-dom'
 import {
   Eye,
@@ -21,17 +21,17 @@ import {
   Globe,
   Smartphone,
   Monitor,
+  Calendar,
+  Clock,
   Target,
-  Zap,
-  Crown,
-  Lock,
-  RefreshCw
+  Zap
 } from 'lucide-react'
 
 // ============================================
 // مكونات Skeleton Loading
 // ============================================
 
+// Skeleton للبطاقة الرئيسية (التحية)
 const GreetingCardSkeleton = () => (
   <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
     <div className="flex items-start justify-between">
@@ -53,6 +53,7 @@ const GreetingCardSkeleton = () => (
   </div>
 )
 
+// Skeleton لبطاقة الإحصائيات الرئيسية
 const StatCardSkeleton = () => (
   <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
     <div className="flex items-start justify-between mb-4">
@@ -65,6 +66,7 @@ const StatCardSkeleton = () => (
   </div>
 )
 
+// Skeleton لبطاقة المحتوى المصغرة
 const ContentMiniCardSkeleton = () => (
   <div className="bg-white/5 rounded-xl p-4 border border-white/10 animate-pulse">
     <div className="w-10 h-10 bg-white/10 rounded-lg mb-3"></div>
@@ -76,6 +78,7 @@ const ContentMiniCardSkeleton = () => (
   </div>
 )
 
+// Skeleton لقسم تحليلات الذكاء الاصطناعي
 const AISectionSkeleton = () => (
   <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
     <div className="flex items-center gap-2 mb-4">
@@ -103,6 +106,25 @@ const AISectionSkeleton = () => (
   </div>
 )
 
+// Skeleton لأحدث المشاريع
+const LatestProjectsSkeleton = () => (
+  <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
+    <div className="h-6 w-32 bg-white/10 rounded-lg mb-4"></div>
+    <div className="space-y-3">
+      {[1,2,3].map((i) => (
+        <div key={i} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg">
+          <div className="w-10 h-10 bg-white/10 rounded-lg"></div>
+          <div className="flex-1">
+            <div className="h-4 w-32 bg-white/10 rounded-lg mb-2"></div>
+            <div className="h-3 w-20 bg-white/10 rounded-lg"></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)
+
+// Skeleton لتحليلات الزوار
 const VisitorStatsSkeleton = () => (
   <>
     <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
@@ -159,179 +181,124 @@ const VisitorStatsSkeleton = () => (
   </>
 )
 
-const OverviewSkeleton = () => (
-  <div className="space-y-6" dir="rtl">
-    <GreetingCardSkeleton />
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <StatCardSkeleton />
-      <StatCardSkeleton />
-      <StatCardSkeleton />
-      <StatCardSkeleton />
-    </div>
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-      <ContentMiniCardSkeleton />
-      <ContentMiniCardSkeleton />
-      <ContentMiniCardSkeleton />
-      <ContentMiniCardSkeleton />
-      <ContentMiniCardSkeleton />
-    </div>
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-1 space-y-6">
-        <AISectionSkeleton />
-      </div>
-      <div className="lg:col-span-2 space-y-6">
-        <VisitorStatsSkeleton />
-      </div>
-    </div>
-  </div>
-)
-
-// ============================================
-// المكونات الرئيسية
-// ============================================
-
-// ✅ بطاقة الإحصائيات الرئيسية
-const StatCard = ({ icon: Icon, label, value, trend, badge, subValue, color, locked = false }) => (
-  <div className={`bg-white/5 backdrop-blur-xl rounded-2xl p-6 border transition-all group ${locked ? 'border-gray-500/20 opacity-75' : 'border-white/10 hover:border-white/20'}`}>
-    <div className="flex items-start justify-between mb-4">
-      <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${color} flex items-center justify-center ${locked ? 'opacity-50' : ''}`}>
-        {locked ? <Lock className="w-6 h-6 text-white" /> : <Icon className="w-6 h-6 text-white" />}
-      </div>
-      {badge && (
-        <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
-          {badge}
-        </span>
-      )}
-    </div>
-    <p className="text-2xl font-bold text-white mb-1">{locked ? '—' : value}</p>
-    <p className="text-sm text-gray-400">{label}</p>
-    {!locked && trend > 0 && (
-      <p className="text-xs text-green-400 mt-2">+{trend} هذا الأسبوع</p>
-    )}
-    {subValue && (
-      <p className="text-xs text-gray-500 mt-2">{subValue}</p>
-    )}
-  </div>
-)
-
-// ✅ بطاقة المحتوى المصغرة - تعرض العدد فقط، لا تجلب المشاريع
-const ContentMiniCard = ({ icon: Icon, label, count, max, color, link, locked = false }) => {
-  const percentage = max === -1 ? 0 : Math.min(100, Math.round((count / max) * 100))
-  const isUnlimited = max === -1
+// Skeleton لصفحة Overview كاملة
+const OverviewSkeleton = () => {
+  const [selectedPeriod, setSelectedPeriod] = useState('week')
   
   return (
-    <Link to={locked ? '#' : link} className={`block group ${locked ? 'cursor-not-allowed' : ''}`}>
-      <div className={`bg-white/5 backdrop-blur-xl rounded-xl p-4 border transition-all ${locked ? 'border-gray-500/20 opacity-60' : 'border-white/10 hover:border-white/20'}`}>
-        <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${color} flex items-center justify-center mb-3 ${locked ? 'opacity-50' : ''}`}>
-          {locked ? <Lock className="w-5 h-5 text-white" /> : <Icon className="w-5 h-5 text-white" />}
-        </div>
-        <p className="text-white font-medium text-sm mb-1">{label}</p>
-        <p className="text-lg text-white mb-2">
-          {locked ? '—' : `${count} / ${isUnlimited ? '∞' : max}`}
-        </p>
-        {!locked && max !== -1 && (
-          <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-            <div 
-              className={`h-full bg-gradient-to-r ${color} transition-all duration-300`}
-              style={{ width: `${percentage}%` }}
-            />
-          </div>
-        )}
-        {locked && (
-          <div className="flex items-center gap-1 mt-2">
-            <Crown className="w-3 h-3 text-yellow-500" />
-            <span className="text-xs text-yellow-500">متوفر في الباقات المدفوعة</span>
-          </div>
-        )}
+    <div className="space-y-6" dir="rtl">
+      <GreetingCardSkeleton />
+      
+      {/* بطاقات الإحصائيات الرئيسية */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCardSkeleton />
+        <StatCardSkeleton />
+        <StatCardSkeleton />
+        <StatCardSkeleton />
       </div>
-    </Link>
+
+      {/* بطاقات المحتوى المصغرة */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <ContentMiniCardSkeleton />
+        <ContentMiniCardSkeleton />
+        <ContentMiniCardSkeleton />
+        <ContentMiniCardSkeleton />
+        <ContentMiniCardSkeleton />
+      </div>
+
+      {/* قسمين رئيسيين */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* القسم الأيسر */}
+        <div className="lg:col-span-1 space-y-6">
+          <AISectionSkeleton />
+          <LatestProjectsSkeleton />
+        </div>
+
+        {/* القسم الأيمن */}
+        <div className="lg:col-span-2 space-y-6">
+          <VisitorStatsSkeleton />
+        </div>
+      </div>
+
+      {/* Banner للمجانيين */}
+      <div className="bg-white/5 rounded-2xl p-4 border border-white/10 animate-pulse">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 bg-white/10 rounded-lg"></div>
+            <div className="h-5 w-96 bg-white/10 rounded-lg"></div>
+          </div>
+          <div className="w-24 h-9 bg-white/10 rounded-lg"></div>
+        </div>
+      </div>
+    </div>
   )
 }
 
-// ✅ بطاقة الميزة في قسم الذكاء الاصطناعي
-const FeatureBadge = ({ available, children }) => (
-  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
-    available ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-500/20 text-gray-400'
-  }`}>
-    {available ? <Zap className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-    {children}
-  </span>
-)
+// ============================================
+// المكونات الأصلية
+// ============================================
 
-// ✅ المكون الرئيسي
 const Overview = () => {
   const { user } = useAuth()
   const { 
     planId, 
     limits, 
+    usage,
+    getUsagePercentage,
     canUseFeature, 
     isFree,
+    getRemainingAnalyses,
     loading: planLoading 
   } = usePlan()
-  
-  // ✅ استخدام DashboardDataContext
-  const { 
-    getDashboardStats, 
-    getContentStats, 
-    getAdvancedStats, 
-    getAIAnalysisStats,
-    invalidateCache,
-    loading: contextLoading 
-  } = useDashboardData()
   
   const [stats, setStats] = useState(null)
   const [contentStats, setContentStats] = useState(null)
   const [visitorStats, setVisitorStats] = useState(null)
   const [aiStats, setAiStats] = useState(null)
   const [remainingAnalyses, setRemainingAnalyses] = useState(0)
-  const [pageLoading, setPageLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [selectedPeriod, setSelectedPeriod] = useState('week')
+  const [dataLoaded, setDataLoaded] = useState(false)
 
   useEffect(() => {
     if (user) {
-      loadDashboardData()
+      fetchAllStats()
     }
   }, [user])
 
-  const loadDashboardData = async () => {
-    setPageLoading(true)
+  const fetchAllStats = async () => {
+    setLoading(true)
     try {
-      // ✅ جلب البيانات الأساسية فقط - لا مشاريع مفصلة
-      const [basic, content] = await Promise.all([
-        getDashboardStats(),
-        getContentStats()  // ✅ هذا يجلب counts فقط، no latestProjects
-      ])
+      const basicStats = await statsService.getDeveloperStats(user.id)
+      setStats(basicStats)
 
-      setStats(basic)
+      const content = await statsService.getContentStats(user.id)
       setContentStats(content)
 
-      // ✅ جلب البيانات المتقدمة حسب الباقة
+      const remaining = await getRemainingAnalyses()
+      setRemainingAnalyses(remaining)
+
       if (canUseFeature('analytics')) {
-        const advanced = await getAdvancedStats()
+        const advanced = await statsService.getAdvancedVisitorStats(user.id)
         setVisitorStats(advanced)
       }
 
       if (planId >= 3) {
-        const ai = await getAIAnalysisStats()
+        const ai = await statsService.getAIAnalysisStats(user.id)
         setAiStats(ai)
       }
 
-    } catch (error) {
-      console.error('Error loading dashboard:', error)
-    } finally {
-      setPageLoading(false)
-    }
-  }
+      // تأخير بسيط لإظهار الـ Skeleton
+      setTimeout(() => {
+        setDataLoaded(true)
+        setLoading(false)
+      }, 500)
 
-  // ✅ دالة التحديث اليدوي
-  const handleRefresh = async () => {
-    setRefreshing(true)
-    // مسح الكاش وجلب جديد
-    invalidateCache('dashboard')
-    invalidateCache('content')
-    await loadDashboardData()
-    setRefreshing(false)
+    } catch (error) {
+      console.error('Error fetching stats:', error)
+      setLoading(false)
+      setDataLoaded(true)
+    }
   }
 
   const calculateOverallProgress = () => {
@@ -356,38 +323,13 @@ const Overview = () => {
     return 'مساء الخير'
   }
 
-  const getPlanName = () => {
-    const plans = {
-      1: { name: 'مجانية', color: 'text-gray-400' },
-      2: { name: 'أساسية', color: 'text-blue-400' },
-      3: { name: 'محترف', color: 'text-purple-400' },
-      4: { name: 'مؤسسات', color: 'text-yellow-400' }
-    }
-    return plans[planId] || plans[1]
-  }
-
-  // ✅ حالة التحميل
-  if (pageLoading || planLoading) {
+  // عرض Skeleton أثناء التحميل
+  if (loading || !dataLoaded || planLoading) {
     return <OverviewSkeleton />
   }
 
-  const plan = getPlanName()
-
   return (
     <div className="space-y-6" dir="rtl">
-      {/* Header with Refresh Button */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">لوحة التحكم</h1>
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="flex items-center gap-2 px-3 py-2 bg-white/5 rounded-lg hover:bg-white/10 transition-all disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          <span className="text-sm text-gray-400">تحديث</span>
-        </button>
-      </div>
-
       {/* التحية ومعلومات المستخدم */}
       <div className="bg-gradient-to-r from-[#6366f1]/20 to-[#a855f7]/20 rounded-2xl p-6 border border-white/10">
         <div className="flex items-start justify-between">
@@ -396,8 +338,8 @@ const Overview = () => {
               {getGreeting()}، {user?.full_name?.split(' ')[0] || 'مستخدم'}! 👋
             </h1>
             <p className="text-gray-400 mb-4">
-              أنت مشترك في باقة <span className={`font-semibold ${plan.color}`}>
-                {plan.name}
+              أنت مشترك في باقة <span className="text-[#a855f7] font-semibold">
+                {planId === 1 ? 'مجانية' : planId === 2 ? 'أساسية' : planId === 3 ? 'محترف' : 'مؤسسات'}
               </span>
             </p>
             
@@ -456,17 +398,16 @@ const Overview = () => {
           value={stats?.visitors?.toLocaleString() || '0'}
           subValue={!canUseFeature('analytics') ? '🔒 متاح في الباقات المدفوعة' : null}
           color="from-green-500 to-emerald-500"
-          locked={!canUseFeature('analytics')}
         />
       </div>
 
-      {/* ✅ إحصائيات المحتوى - الأعداد فقط، لا مشاريع مفصلة */}
+      {/* إحصائيات المحتوى */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <ContentMiniCard
           icon={FolderKanban}
           label="المشاريع"
           count={contentStats?.counts?.projects || 0}
-          max={limits?.maxProjects || 3}
+          max={limits?.maxProjects || 1}
           color="from-blue-500 to-cyan-500"
           link="/dashboard/projects"
         />
@@ -474,7 +415,7 @@ const Overview = () => {
           icon={Code}
           label="المهارات"
           count={contentStats?.counts?.skills || 0}
-          max={limits?.maxSkills || 10}
+          max={limits?.maxSkills || 2}
           color="from-purple-500 to-pink-500"
           link="/dashboard/skills"
         />
@@ -482,7 +423,7 @@ const Overview = () => {
           icon={Award}
           label="الشهادات"
           count={contentStats?.counts?.certificates || 0}
-          max={limits?.maxCertificates || 3}
+          max={limits?.maxCertificates || 1}
           color="from-yellow-500 to-orange-500"
           link="/dashboard/certificates"
         />
@@ -490,7 +431,7 @@ const Overview = () => {
           icon={Briefcase}
           label="الخبرات"
           count={contentStats?.counts?.experience || 0}
-          max={limits?.maxExperience || 5}
+          max={limits?.maxExperience || 1}
           color="from-green-500 to-emerald-500"
           link="/dashboard/experience"
         />
@@ -498,7 +439,7 @@ const Overview = () => {
           icon={GraduationCap}
           label="التعليم"
           count={contentStats?.counts?.education || 0}
-          max={limits?.maxEducation || 5}
+          max={limits?.maxEducation || 1}
           color="from-red-500 to-rose-500"
           link="/dashboard/education"
         />
@@ -506,9 +447,9 @@ const Overview = () => {
 
       {/* قسمين رئيسيين */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* تحليلات الذكاء الاصطناعي - متاح للباقات المدفوعة فقط */}
+        {/* تحليلات الذكاء الاصطناعي */}
         <div className="lg:col-span-1 space-y-6">
-          {planId >= 3 && aiStats ? (
+          {planId >= 3 && aiStats && (
             <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
               <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                 <Zap className="w-5 h-5 text-[#a855f7]" />
@@ -518,7 +459,7 @@ const Overview = () => {
               <div className="space-y-4">
                 <div>
                   <p className="text-sm text-gray-400">عدد التحليلات</p>
-                  <p className="text-2xl text-white">{aiStats.totalAnalyses || 0}</p>
+                  <p className="text-2xl text-white">{aiStats.totalAnalyses}</p>
                 </div>
                 
                 {aiStats.suggestions?.length > 0 && (
@@ -543,29 +484,36 @@ const Overview = () => {
                 </Link>
               </div>
             </div>
-          ) : (
+          )}
+
+          {/* أحدث المشاريع */}
+          {contentStats?.latestProjects?.length > 0 && (
             <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-              <div className="flex items-center gap-2 mb-4">
-                <Zap className="w-5 h-5 text-gray-400" />
-                <h3 className="text-lg font-semibold text-white">الذكاء الاصطناعي</h3>
-              </div>
-              <div className="text-center py-6">
-                <Crown className="w-12 h-12 text-yellow-500/50 mx-auto mb-3" />
-                <p className="text-gray-400 text-sm mb-4">
-                  ميزة حصرية لباقة المحترف فما فوق
-                </p>
-                <Link
-                  to="/plans"
-                  className="inline-block px-4 py-2 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg text-sm"
-                >
-                  عرض الباقات
-                </Link>
+              <h3 className="text-lg font-semibold text-white mb-4">أحدث المشاريع</h3>
+              <div className="space-y-3">
+                {contentStats.latestProjects.map((project, i) => (
+                  <div key={i} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg">
+                    {project.image ? (
+                      <img src={project.image} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                    ) : (
+                      <div className="w-10 h-10 bg-[#6366f1]/20 rounded-lg flex items-center justify-center">
+                        <FolderKanban className="w-5 h-5 text-[#6366f1]" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white truncate">{project.title}</p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(project.created_at).toLocaleDateString('ar-SA')}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
         </div>
 
-        {/* إحصائيات الزوار - متاحة للمستخدمين مع analytics */}
+        {/* إحصائيات الزوار */}
         <div className="lg:col-span-2 space-y-6">
           {canUseFeature('analytics') && visitorStats ? (
             <>
@@ -698,6 +646,81 @@ const Overview = () => {
         </div>
       )}
     </div>
+  )
+}
+
+// ===========================================
+// المكونات المساعدة (في نهاية الملف)
+// ===========================================
+
+// مكون بطاقة الاستخدام
+const UsageCard = ({ label, current, max, color }) => {
+  const percentage = max === -1 ? 0 : Math.min(100, (current / max) * 100)
+  
+  return (
+    <div className="bg-white/5 backdrop-blur-xl rounded-xl p-4 border border-white/10">
+      <p className="text-sm text-gray-400 mb-2">{label}</p>
+      <p className="text-xl font-bold text-white mb-2">
+        {current} / {max === -1 ? '∞' : max}
+      </p>
+      {max !== -1 && (
+        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div 
+            className={`h-full bg-gradient-to-r ${color} transition-all duration-300`}
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// مكون بطاقة الإحصائيات الرئيسية
+const StatCard = ({ icon: Icon, label, value, trend, badge, subValue, color }) => (
+  <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all group">
+    <div className="flex items-start justify-between mb-4">
+      <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${color} flex items-center justify-center`}>
+        <Icon className="w-6 h-6 text-white" />
+      </div>
+      {badge && (
+        <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
+          {badge}
+        </span>
+      )}
+    </div>
+    <p className="text-2xl font-bold text-white mb-1">{value}</p>
+    <p className="text-sm text-gray-400">{label}</p>
+    {trend > 0 && (
+      <p className="text-xs text-green-400 mt-2">+{trend} هذا الأسبوع</p>
+    )}
+    {subValue && (
+      <p className="text-xs text-gray-500 mt-2">{subValue}</p>
+    )}
+  </div>
+)
+
+// مكون البطاقات المصغرة للمحتوى
+const ContentMiniCard = ({ icon: Icon, label, count, max, color, link }) => {
+  const percentage = max === -1 ? 0 : Math.min(100, Math.round((count / max) * 100))
+  
+  return (
+    <Link to={link} className="block group">
+      <div className="bg-white/5 backdrop-blur-xl rounded-xl p-4 border border-white/10 hover:border-white/20 transition-all">
+        <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${color} flex items-center justify-center mb-3`}>
+          <Icon className="w-5 h-5 text-white" />
+        </div>
+        <p className="text-white font-medium text-sm mb-1">{label}</p>
+        <p className="text-lg text-white mb-2">{count} / {max === -1 ? '∞' : max}</p>
+        {max !== -1 && (
+          <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+            <div 
+              className={`h-full bg-gradient-to-r ${color} transition-all duration-300`}
+              style={{ width: `${percentage}%` }}
+            />
+          </div>
+        )}
+      </div>
+    </Link>
   )
 }
 
