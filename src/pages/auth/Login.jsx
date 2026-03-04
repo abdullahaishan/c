@@ -1,7 +1,7 @@
+// Login.jsx - بعد التعديل
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { authService } from '../../lib/supabase'
-import { supabase } from '../../lib/supabase'  // ✅ أضف هذا
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react'
 import AnimatedBackground from '../../components/AnimatedBackground'
 
@@ -25,39 +25,37 @@ const Login = () => {
     setError('')
 
     try {
-      // ✅ استخدم النتيجة بشكل صحيح
+      // ✅ 1. فقط سجل الدخول - لا شيء آخر!
       const result = await authService.login(email, password)
       
       if (!result.success) {
         throw new Error(result.error || 'Login failed')
       }
 
-      console.log('✅ Logged in successfully:', result.user)
+      console.log('✅ Logged in successfully')
 
-      // ✅ التحقق من حالة المستخدم في Auth
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user?.email_confirmed_at) {
-        setError('❌ Please confirm your email first')
-        setLoading(false)
-        return
-      }
+      // ✅ 2. انتقل فوراً إلى Dashboard - قبل أي تحقق
+      navigate('/dashboard', { replace: true })
 
-      // ✅ جلب بيانات المطور للتحقق من صلاحية الأدمن
-const { data: developer } = await supabase
-  .from('developers')
-  .select('*')
-  .eq('id', user.id)
-  .maybeSingle()
-  navigate('/dashboard')
+      // ✅ 3. كل التحققات الأخرى تعمل في الخلفية (بعد التنقل)
+      setTimeout(async () => {
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          
+          if (!user?.email_confirmed_at) {
+            console.warn('⚠️ Email not confirmed yet')
+            // يمكن إظهار تنبيه صغير لاحقاً
+          }
+        } catch (err) {
+          console.error('Background check error:', err)
+        }
+      }, 100)
 
     } catch (err) {
       console.error('❌ Login error:', err)
       
       if (err.message.includes('Invalid login credentials')) {
         setError('❌ Invalid email or password')
-      } else if (err.message.includes('Email not confirmed')) {
-        setError('❌ Please confirm your email before logging in')
       } else {
         setError(err.message || 'Login failed')
       }
@@ -70,67 +68,59 @@ const { data: developer } = await supabase
     <div className="relative min-h-screen bg-[#030014] overflow-hidden">
       <AnimatedBackground />
       
-      {/* Back Button */}
       <Link
         to="/"
-        className="absolute top-4 right-4 sm:top-6 sm:right-6 lg:top-8 lg:right-8 z-20 flex items-center gap-2 px-3 py-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl text-gray-300 hover:text-white transition-all group"
+        className="absolute top-4 right-4 z-20 flex items-center gap-2 px-3 py-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl text-gray-300 hover:text-white"
       >
-        <span className="text-sm sm:text-base">Back to Home</span>
+        <span className="text-sm">Back to Home</span>
       </Link>
 
-      {/* Main Content */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center px-3 sm:px-4 py-12 sm:py-16">
-        <div className="w-full max-w-[90%] sm:max-w-md">
-          {/* Header */}
-          <div className="text-center mb-6 sm:mb-8">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6366f1] to-[#a855f7] mb-2">
+      <div className="relative z-10 min-h-screen flex items-center justify-center px-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#6366f1] to-[#a855f7] mb-2">
               Welcome Back
             </h2>
-            <p className="text-sm sm:text-base text-gray-400">Sign in to your account</p>
+            <p className="text-gray-400">Sign in to your account</p>
           </div>
 
-          {/* Form Card */}
-          <div className="bg-white/5 backdrop-blur-xl rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 border border-white/10">
-            {/* Error Message */}
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10">
             {error && (
-              <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-500/10 border border-red-500/20 rounded-lg sm:rounded-xl text-red-400 text-xs sm:text-sm flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
-            {/* Form */}
-            <form className="space-y-4 sm:space-y-5" onSubmit={handleSubmit}>
-              {/* Email */}
+            <form className="space-y-5" onSubmit={handleSubmit}>
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-3 bg-white/10 border border-white/20 rounded-lg sm:rounded-xl text-white text-sm sm:text-base placeholder-gray-400 focus:outline-none focus:border-[#6366f1] focus:ring-2 focus:ring-[#6366f1]/20 transition-all"
+                    className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-[#6366f1] focus:ring-2 focus:ring-[#6366f1]/20"
                     placeholder="your@email.com"
                     disabled={loading}
                   />
                 </div>
               </div>
 
-              {/* Password */}
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-9 sm:pl-10 pr-12 py-2 sm:py-3 bg-white/10 border border-white/20 rounded-lg sm:rounded-xl text-white text-sm sm:text-base placeholder-gray-400 focus:outline-none focus:border-[#6366f1] focus:ring-2 focus:ring-[#6366f1]/20 transition-all"
+                    className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-[#6366f1] focus:ring-2 focus:ring-[#6366f1]/20"
                     placeholder="••••••••"
                     disabled={loading}
                   />
@@ -139,16 +129,15 @@ const { data: developer } = await supabase
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
 
-              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 sm:py-3 px-4 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base flex items-center justify-center gap-2 hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:hover:scale-100"
+                className="w-full py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold flex items-center justify-center gap-2 hover:scale-[1.02] transition-all disabled:opacity-50"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -158,10 +147,9 @@ const { data: developer } = await supabase
               </button>
             </form>
 
-            {/* Register Link */}
-            <p className="mt-4 sm:mt-6 text-center text-xs sm:text-sm text-gray-400">
+            <p className="mt-6 text-center text-sm text-gray-400">
               Don't have an account?{' '}
-              <Link to="/register" className="text-[#a855f7] hover:text-[#6366f1] transition-colors font-medium">
+              <Link to="/register" className="text-[#a855f7] hover:text-[#6366f1] font-medium">
                 Create one now
               </Link>
             </p>
