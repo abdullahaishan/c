@@ -1779,57 +1779,88 @@ export const statsService = {
     }
   },
 
-  // 🌍 إحصائيات الزوار المتقدمة (للمستخدمين المدفوعين)
+  
+  // 📊 إحصائيات متقدمة للزوار (للمستخدمين المدفوعين)
   async getAdvancedVisitorStats(developerId) {
     try {
       // جلب آخر 30 يوم
       const last30Days = new Date()
       last30Days.setDate(last30Days.getDate() - 30)
 
-      const { data: visitors } = await supabase
+      const { data: visitors, error } = await supabase
         .from('visitors')
         .select('*')
         .eq('developer_id', developerId)
         .gte('visited_at', last30Days.toISOString())
+        .order('visited_at', { ascending: false })
+
+      if (error) throw error
+
+      if (!visitors || visitors.length === 0) {
+        return {
+          total: 0,
+          countries: [],
+          devices: { mobile: 0, desktop: 0, tablet: 0 },
+          browsers: [],
+          referrers: [],
+          daily: {}
+        }
+      }
 
       // تحليل الدول
-      const countries = {}
+      const countriesMap = {}
       // تحليل الأجهزة
-      const devices = { mobile: 0, desktop: 0, tablet: 0 }
+      const devicesMap = { mobile: 0, desktop: 0, tablet: 0 }
       // تحليل المتصفحات
-      const browsers = {}
+      const browsersMap = {}
       // تحليل مصادر الزيارات
-      const referrers = {}
+      const referrersMap = {}
+      // تحليل الزيارات اليومية
+      const dailyMap = {}
 
-      visitors?.forEach(visitor => {
+      visitors.forEach(visitor => {
+        // الدول
         if (visitor.visitor_country) {
-          countries[visitor.visitor_country] = (countries[visitor.visitor_country] || 0) + 1
+          countriesMap[visitor.visitor_country] = (countriesMap[visitor.visitor_country] || 0) + 1
         }
+
+        // الأجهزة
         if (visitor.device_type) {
-          devices[visitor.device_type] = (devices[visitor.device_type] || 0) + 1
+          devicesMap[visitor.device_type] = (devicesMap[visitor.device_type] || 0) + 1
         }
+
+        // المتصفحات
         if (visitor.browser) {
-          browsers[visitor.browser] = (browsers[visitor.browser] || 0) + 1
+          browsersMap[visitor.browser] = (browsersMap[visitor.browser] || 0) + 1
         }
+
+        // مصادر الزيارات
         if (visitor.referrer) {
           const source = this.extractReferrerSource(visitor.referrer)
-          referrers[source] = (referrers[source] || 0) + 1
+          referrersMap[source] = (referrersMap[source] || 0) + 1
+        } else {
+          referrersMap['مباشر'] = (referrersMap['مباشر'] || 0) + 1
         }
+
+        // الزيارات اليومية
+        const date = new Date(visitor.visited_at).toLocaleDateString('ar-SA')
+        dailyMap[date] = (dailyMap[date] || 0) + 1
       })
 
       return {
-        total: visitors?.length || 0,
-        countries: Object.entries(countries).sort((a, b) => b[1] - a[1]),
-        devices,
-        browsers: Object.entries(browsers).sort((a, b) => b[1] - a[1]),
-        referrers: Object.entries(referrers).sort((a, b) => b[1] - a[1]),
-        daily: this.aggregateDailyVisits(visitors || [])
+        total: visitors.length,
+        countries: Object.entries(countriesMap).sort((a, b) => b[1] - a[1]),
+        devices: devicesMap,
+        browsers: Object.entries(browsersMap).sort((a, b) => b[1] - a[1]),
+        referrers: Object.entries(referrersMap).sort((a, b) => b[1] - a[1]),
+        daily: dailyMap
       }
     } catch (error) {
       console.error('Error in getAdvancedVisitorStats:', error)
       return null
     }
   },
+
 
   // 🤖 تحليلات الذكاء الاصطناعي (للمستخدمين مع AI Analysis)
   async getAIAnalysisStats(developerId) {
@@ -1868,13 +1899,16 @@ export const statsService = {
     }
   },
 
-  // دوال مساعدة
+    // دوال مساعدة
   extractReferrerSource(referrer) {
     if (!referrer) return 'مباشر'
     if (referrer.includes('google')) return 'Google'
+    if (referrer.includes('facebook')) return 'Facebook'
     if (referrer.includes('linkedin')) return 'LinkedIn'
     if (referrer.includes('github')) return 'GitHub'
     if (referrer.includes('twitter')) return 'Twitter'
+    if (referrer.includes('instagram')) return 'Instagram'
+    if (referrer.includes('whatsapp')) return 'WhatsApp'
     return 'آخر'
   },
 
