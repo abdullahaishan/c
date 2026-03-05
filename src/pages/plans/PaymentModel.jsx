@@ -143,82 +143,91 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
     setTimeout(() => setCopied(false), 2000)
   }
 
-  // ✅ دالة إرسال الإشعارات (بدون رفع صور)
-  const sendNotifications = async () => {
-    try {
-      // 1️⃣ إشعار للمستخدم
-      await supabase
-        .from('notifications')
-        .insert([{
-          user_id: user?.id,
-          title: 'تم استلام طلب الدفع',
-          message: `تم استلام طلب ترقية إلى باقة ${plan?.name_ar || 'الباقة'}. الرجاء التواصل مع الدعم عبر واتساب لإرسال صورة التحويل.`,
-          type: 'payment',
-          metadata: {
-            plan_id: plan?.id,
-            amount: convertedPrice?.price || plan?.price_monthly,
-            currency,
-            payment_method: method,
-            whatsapp_link: createWhatsAppLink()
-          },
-          created_at: new Date().toISOString()
-        }])
-
-      // 2️⃣ إشعار للأدمن
-      await supabase
-        .from('admin_notifications')
-        .insert([{
-          title: '🚀 طلب دفع جديد - انتظار صورة التحويل',
-          message: `طلب جديد من ${user?.full_name || user?.email} لشراء باقة ${plan?.name_ar}. الرجاء متابعة المحادثة عبر واتساب.`,
-          type: 'payment_request',
-          user_id: user?.id,
-          metadata: {
-            plan_id: plan?.id,
-            plan_name: plan?.name_ar,
-            amount: convertedPrice?.price || plan?.price_monthly,
-            currency,
-            payment_method: method,
-            crypto_type: cryptoType,
-            bank_name: selectedBank,
-            transfer_details: transferDetails,
-            billing_cycle: billingCycle,
-            user_name: user?.full_name,
-            user_email: user?.email,
-            whatsapp_link: createWhatsAppLink()
-          },
-          priority: 'high',
-          created_at: new Date().toISOString()
-        }])
-
-      // 3️⃣ حفظ بيانات الدفع في جدول payments
-      await supabase
-        .from('payments')
-        .insert([{
-          developer_id: user?.id,
+// ✅ دالة إرسال الإشعارات (مصححة)
+const sendNotifications = async () => {
+  try {
+    // 1️⃣ إشعار للمستخدم - ✅ مع التحقق من النتيجة
+    const { error: userNotifError } = await supabase
+      .from('notifications')
+      .insert([{
+        user_id: user?.id,
+        title: 'تم استلام طلب الدفع',
+        message: `تم استلام طلب ترقية إلى باقة ${plan?.name_ar || 'الباقة'}. الرجاء التواصل مع الدعم عبر واتساب لإرسال صورة التحويل.`,
+        type: 'payment',
+        metadata: {
           plan_id: plan?.id,
           amount: convertedPrice?.price || plan?.price_monthly,
-          currency: currency || 'USD',
+          currency,
+          payment_method: method,
+          whatsapp_link: createWhatsAppLink()
+        },
+        created_at: new Date().toISOString()
+      }])
+
+    if (userNotifError) throw new Error(`فشل في إنشاء إشعار المستخدم: ${userNotifError.message}`)
+
+    // 2️⃣ إشعار للأدمن - ✅ مع التحقق من النتيجة
+    const { error: adminNotifError } = await supabase
+      .from('admin_notifications')
+      .insert([{
+        title: '🚀 طلب دفع جديد - انتظار صورة التحويل',
+        message: `طلب جديد من ${user?.full_name || user?.email} لشراء باقة ${plan?.name_ar}. الرجاء متابعة المحادثة عبر واتساب.`,
+        type: 'payment_request',
+        user_id: user?.id,
+        metadata: {
+          plan_id: plan?.id,
+          plan_name: plan?.name_ar,
+          amount: convertedPrice?.price || plan?.price_monthly,
+          currency,
           payment_method: method,
           crypto_type: cryptoType,
           bank_name: selectedBank,
           transfer_details: transferDetails,
           billing_cycle: billingCycle,
-          status: 'pending',
-          metadata: {
-            requires_image: true,
-            whatsapp_contact: ADMIN_WHATSAPP
-          },
-          created_at: new Date().toISOString()
-        }])
+          user_name: user?.full_name,
+          user_email: user?.email,
+          whatsapp_link: createWhatsAppLink()
+        },
+        priority: 'high',
+        created_at: new Date().toISOString()
+      }])
 
-      setNotificationSent(true)
-      return true
-    } catch (err) {
-      console.error('Error sending notifications:', err)
-      throw err
-    }
+    if (adminNotifError) throw new Error(`فشل في إنشاء إشعار الأدمن: ${adminNotifError.message}`)
+
+    // 3️⃣ حفظ بيانات الدفع في جدول payments - ✅ مع التحقق من النتيجة
+    const { error: paymentError } = await supabase
+      .from('payments')
+      .insert([{
+        developer_id: user?.id,
+        plan_id: plan?.id,
+        amount: convertedPrice?.price || plan?.price_monthly,
+        currency: currency || 'USD',
+        payment_method: method,
+        crypto_type: cryptoType,
+        bank_name: selectedBank,
+        transfer_details: transferDetails,
+        billing_cycle: billingCycle,
+        status: 'pending',
+        metadata: {
+          requires_image: true,
+          whatsapp_contact: ADMIN_WHATSAPP
+        },
+        created_at: new Date().toISOString()
+      }])
+
+    if (paymentError) throw new Error(`فشل في حفظ بيانات الدفع: ${paymentError.message}`)
+
+    setNotificationSent(true)
+    
+    // ✅ تأكيد الحفظ
+    console.log('✅ تم حفظ جميع البيانات بنجاح')
+    return true
+    
+  } catch (err) {
+    console.error('❌ Error sending notifications:', err)
+    throw err // رمي الخطأ ليتم معالجته في handleSubmit
   }
-
+        }
   const handleSubmit = async () => {
     setLoading(true)
     setError('')
@@ -670,3 +679,4 @@ const CryptoOption = ({ type, name, address, onSelect, onCopy, copied }) => (
 )
 
 export default PaymentModal
+
