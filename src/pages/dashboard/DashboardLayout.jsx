@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { messagesService, developersService } from '../../lib/supabase'
+import { supabase } from '../../lib/supabaseClient'
 import {
   LayoutDashboard,
   FolderKanban,
@@ -27,19 +27,102 @@ import {
 const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
-  const [unreadCount, setUnreadCount] = useState(0)
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0)
   const [showShareTooltip, setShowShareTooltip] = useState(false)
   const [copied, setCopied] = useState(false)
   const [essentialDataLoaded, setEssentialDataLoaded] = useState(false)
   const [loadingError, setLoadingError] = useState(null)
   const [retryCount, setRetryCount] = useState(0)
+  const [developerData, setDeveloperData] = useState(null)
   
-  const { user, logout, refreshUser } = useAuth()
+  const { user, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const loadingRef = useRef(false)
 
-  // دالة لجلب البيانات الأساسية بشكل إجباري
+  // =========== الدوال المحلية للجلب من Supabase ===========
+  
+  // جلب بيانات المطور كاملة
+  const fetchDeveloperData = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from('developers')
+        .select(`
+          *,
+          plan:plans(*)
+        `)
+        .eq('id', userId)
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error fetching developer data:', error)
+      throw error
+    }
+  }
+
+  // جلب عدد الرسائل غير المقروءة
+  const fetchUnreadMessagesCount = async (userId) => {
+    try {
+      const { count, error } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('developer_id', userId)
+        .eq('is_read', false)
+
+      if (error) throw error
+      return count || 0
+    } catch (error) {
+      console.error('Error fetching unread messages:', error)
+      throw error
+    }
+  }
+
+  // جلب عدد الإشعارات غير المقروءة
+  const fetchUnreadNotificationsCount = async (userId) => {
+    try {
+      const { count, error } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('is_read', false)
+
+      if (error) throw error
+      return count || 0
+    } catch (error) {
+      console.error('Error fetching unread notifications:', error)
+      throw error
+    }
+  }
+
+  // جلب إحصائيات المطور
+  const fetchDeveloperStats = async (userId) => {
+    try {
+      const [projects, skills, certificates, experience, education] = await Promise.all([
+        supabase.from('projects').select('*', { count: 'exact', head: true }).eq('developer_id', userId),
+        supabase.from('skills').select('*', { count: 'exact', head: true }).eq('developer_id', userId),
+        supabase.from('certificates').select('*', { count: 'exact', head: true }).eq('developer_id', userId),
+        supabase.from('experience').select('*', { count: 'exact', head: true }).eq('developer_id', userId),
+        supabase.from('education').select('*', { count: 'exact', head: true }).eq('developer_id', userId)
+      ])
+
+      return {
+        projects: projects.count || 0,
+        skills: skills.count || 0,
+        certificates: certificates.count || 0,
+        experience: experience.count || 0,
+        education: education.count || 0
+      }
+    } catch (error) {
+      console.error('Error fetching developer stats:', error)
+      throw error
+    }
+  }
+
+  // =========== دالة تحميل البيانات الأساسية ===========
+  
   const loadEssentialData = async () => {
     if (loadingRef.current || !user?.id) return
     
@@ -48,19 +131,23 @@ const DashboardLayout = () => {
     try {
       setLoadingError(null)
       
-      // تحميل البيانات الأساسية للمستخدم
-      const userData = await developersService.getById(user.id)
-      if (userData) {
-        // تحديث بيانات المستخدم في الـ Auth context
-        await refreshUser(userData)
-      }
+      // 1. جلب بيانات المطور كاملة
+      const developerFullData = await fetchDeveloperData(user.id)
+      setDeveloperData(developerFullData)
 
-      // تحميل عدد الرسائل غير المقروءة
-      const count = await messagesService.getUnreadCount(user.id)
-      setUnreadCount(count)
+      // 2. جلب عدد الرسائل غير المقروءة
+      const messagesCount = await fetchUnreadMessagesCount(user.id)
+      setUnreadMessagesCount(messagesCount)
 
-      // هنا يمكن إضافة المزيد من البيانات الأساسية
-      // مثل: إشعارات، بيانات الخطة، إلخ
+      // 3. جلب عدد الإشعارات غير المقروءة
+      const notificationsCount = await fetchUnreadNotificationsCount(user.id)
+      setUnreadNotificationsCount(notificationsCount)
+
+      // 4. جلب الإحصائيات (اختياري)
+      const stats = await fetchDeveloperStats(user.id)
+      
+      // يمكن تخزين الإحصائيات في حالة إذا أردت استخدامها
+      // setDeveloperStats(stats)
       
       setEssentialDataLoaded(true)
       
@@ -68,12 +155,12 @@ const DashboardLayout = () => {
       console.error('Error loading essential data:', error)
       setLoadingError(error.message)
       
-      // محاولة إعادة التحميل إذا فشلت
+      // محاولة إعادة التحميل إذا فشلت (حتى 3 مرات)
       if (retryCount < 3) {
         setTimeout(() => {
           setRetryCount(prev => prev + 1)
           loadingRef.current = false
-        }, 2000 * (retryCount + 1)) // زيادة وقت الانتظار مع كل محاولة
+        }, 2000 * (retryCount + 1)) // 2s, 4s, 6s
       }
     } finally {
       loadingRef.current = false
@@ -87,7 +174,59 @@ const DashboardLayout = () => {
     }
   }, [user?.id, essentialDataLoaded, retryCount])
 
-  // إذا فشل التحميل 3 مرات، نعرض خطأ
+  // تحديث دوري للرسائل والإشعارات بعد التحميل
+  useEffect(() => {
+    if (user?.id && essentialDataLoaded) {
+      const interval = setInterval(async () => {
+        try {
+          const messagesCount = await fetchUnreadMessagesCount(user.id)
+          setUnreadMessagesCount(messagesCount)
+          
+          const notificationsCount = await fetchUnreadNotificationsCount(user.id)
+          setUnreadNotificationsCount(notificationsCount)
+        } catch (error) {
+          console.error('Error fetching counts:', error)
+        }
+      }, 30000) // كل 30 ثانية
+      
+      return () => clearInterval(interval)
+    }
+  }, [user?.id, essentialDataLoaded])
+
+  const navigation = [
+    { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
+    { name: 'Skills', href: '/dashboard/skills', icon: Code },
+    { name: 'Certificates', href: '/dashboard/certificates', icon: Award },
+    { name: 'Experience', href: '/dashboard/experience', icon: Briefcase },
+    { name: 'Education', href: '/dashboard/education', icon: GraduationCap },
+    { name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
+    { name: 'AI Builder', href: '/app/builder', icon: Sparkles },
+    { name: 'Plan Status', href: '/dashboard/plan-status', icon: Crown },
+    { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+  ]
+
+  const handleLogout = () => {
+    logout()
+    navigate('/')
+  }
+
+  const handleNotificationClick = () => {
+    navigate('/dashboard/notifications')
+  }
+
+  const copyPortfolioLink = () => {
+    if (!developerData?.username && !user?.username) return
+    const username = developerData?.username || user?.username
+    const portfolioUrl = `${window.location.origin}/u/${username}`
+    navigator.clipboard.writeText(portfolioUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const isActive = (path) => location.pathname === path
+
+  // عرض شاشة الخطأ بعد 3 محاولات فاشلة
   if (retryCount >= 3 && !essentialDataLoaded) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center">
@@ -114,17 +253,17 @@ const DashboardLayout = () => {
     )
   }
 
-  // أثناء تحميل البيانات الأساسية
+  // عرض شاشة التحميل حتى تكتمل البيانات الأساسية
   if (!essentialDataLoaded && user?.id) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center">
         <div className="text-center">
           <div className="relative mb-8">
-            {/* Animated rings */}
+            {/* حلقات متحركة */}
             <div className="absolute inset-0 rounded-full animate-ping opacity-20 bg-gradient-to-r from-[#6366f1] to-[#a855f7]"></div>
             <div className="absolute inset-0 rounded-full animate-pulse opacity-40 bg-gradient-to-r from-[#6366f1] to-[#a855f7]"></div>
             
-            {/* Logo or icon */}
+            {/* شعار متحرك */}
             <div className="relative w-24 h-24 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-2xl flex items-center justify-center">
               <Loader2 className="w-12 h-12 text-white animate-spin" />
             </div>
@@ -140,7 +279,7 @@ const DashboardLayout = () => {
             )}
           </p>
           
-          {/* Progress indicator */}
+          {/* شريط التقدم */}
           <div className="w-64 h-2 bg-white/10 rounded-full overflow-hidden">
             <div 
               className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-full transition-all duration-500"
@@ -152,10 +291,10 @@ const DashboardLayout = () => {
     )
   }
 
-  // بعد اكتمال التحميل، نعرض المحتوى
+  // بعد اكتمال التحميل، نعرض لوحة التحكم مع البيانات الكاملة
   return (
     <div className="min-h-screen bg-[#030014]">
-      {/* Mobile sidebar backdrop */}
+      {/* خلفية القائمة الجانبية للجوال */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
@@ -163,13 +302,13 @@ const DashboardLayout = () => {
         />
       )}
 
-      {/* Sidebar */}
+      {/* القائمة الجانبية */}
       <div
         className={`fixed inset-y-0 left-0 w-64 bg-white/5 backdrop-blur-xl border-r border-white/10 transform transition-transform duration-300 ease-in-out z-50 lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* Logo */}
+        {/* الشعار */}
         <div className="h-16 flex items-center justify-center border-b border-white/10">
           <Link to="/" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-lg flex items-center justify-center">
@@ -179,7 +318,7 @@ const DashboardLayout = () => {
           </Link>
         </div>
 
-        {/* Navigation */}
+        {/* روابط التنقل */}
         <nav className="p-4 space-y-1">
           {navigation.map((item) => {
             const Icon = item.icon
@@ -199,9 +338,10 @@ const DashboardLayout = () => {
                 <Icon className="w-5 h-5" />
                 <span>{item.name}</span>
                 
-                {isMessagesPage && unreadCount > 0 && (
+                {/* عداد الرسائل غير المقروءة */}
+                {isMessagesPage && unreadMessagesCount > 0 && (
                   <span className="absolute left-2 top-1/2 -translate-y-1/2 min-w-[20px] h-[20px] flex items-center justify-center bg-red-500 text-white text-xs rounded-full px-1">
-                    {unreadCount > 9 ? '9+' : unreadCount}
+                    {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
                   </span>
                 )}
               </Link>
@@ -209,12 +349,12 @@ const DashboardLayout = () => {
           })}
         </nav>
 
-        {/* User info - الآن البيانات محملة بالكامل */}
+        {/* معلومات المستخدم - الآن مع البيانات الكاملة */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
           <div className="flex items-center gap-3">
             <img
-              src={user?.avatar || '/default-avatar.png'}
-              alt={user?.full_name}
+              src={developerData?.profile_image || user?.avatar || '/default-avatar.png'}
+              alt={developerData?.full_name || user?.full_name}
               className="w-10 h-10 rounded-full object-cover border-2 border-[#a855f7]/30"
               onError={(e) => {
                 e.target.src = '/default-avatar.png'
@@ -223,22 +363,27 @@ const DashboardLayout = () => {
             
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">
-                {user?.full_name || 'مستخدم'}
+                {developerData?.full_name || user?.full_name || 'مستخدم'}
               </p>
               <p className="text-xs text-gray-400 truncate">
-                {user?.email || 'user@example.com'}
+                {developerData?.email || user?.email || 'user@example.com'}
               </p>
+              {developerData?.plan && (
+                <p className="text-xs text-[#a855f7] truncate">
+                  خطة {developerData.plan.name}
+                </p>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main content */}
+      {/* المحتوى الرئيسي */}
       <div className="lg:pl-64">
-        {/* Top navbar */}
+        {/* الشريط العلوي */}
         <header className="sticky top-0 z-30 bg-white/5 backdrop-blur-xl border-b border-white/10">
           <div className="flex items-center justify-between h-16 px-4">
-            {/* Mobile menu button */}
+            {/* زر القائمة للجوال */}
             <button
               onClick={() => setSidebarOpen(true)}
               className="lg:hidden p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg"
@@ -246,18 +391,17 @@ const DashboardLayout = () => {
               <Menu className="w-6 h-6" />
             </button>
 
-            {/* Right side */}
+            {/* الجانب الأيمن - الأزرار */}
             <div className="flex items-center gap-4 ml-auto">
               
-              {/* Share button */}
+              {/* زر مشاركة الموقع */}
               <div className="relative">
                 <button
                   onClick={copyPortfolioLink}
                   onMouseEnter={() => setShowShareTooltip(true)}
                   onMouseLeave={() => setShowShareTooltip(false)}
                   className="relative p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all"
-                  title="مشاركة الموقع"
-                  disabled={!user?.username}
+                  disabled={!developerData?.username && !user?.username}
                 >
                   {copied ? (
                     <Check className="w-5 h-5 text-green-400" />
@@ -266,12 +410,14 @@ const DashboardLayout = () => {
                   )}
                 </button>
                 
+                {/* تلميح المشاركة */}
                 {showShareTooltip && !copied && (
                   <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 px-3 py-1 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap border border-white/10">
                     مشاركة الموقع
                   </div>
                 )}
                 
+                {/* رسالة تم النسخ */}
                 {copied && (
                   <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 px-3 py-1 bg-green-600 text-white text-xs rounded-lg whitespace-nowrap">
                     تم نسخ الرابط!
@@ -279,44 +425,44 @@ const DashboardLayout = () => {
                 )}
               </div>
 
-              {/* Notifications */}
+              {/* زر الإشعارات مع العداد */}
               <button 
                 onClick={handleNotificationClick}
                 className="relative p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg"
               >
                 <Bell className="w-5 h-5" />
-                {unreadCount > 0 && (
+                {unreadNotificationsCount > 0 && (
                   <span className="absolute top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-xs rounded-full px-1">
-                    {unreadCount > 9 ? '9+' : unreadCount}
+                    {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
                   </span>
                 )}
               </button>
 
-              {/* Profile dropdown */}
+              {/* القائمة المنسدلة للملف الشخصي */}
               <div className="relative">
                 <button
                   onClick={() => setProfileMenuOpen(!profileMenuOpen)}
                   className="flex items-center gap-2 p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg"
                 >
                   <img
-                    src={user?.avatar || '/default-avatar.png'}
-                    alt={user?.full_name}
+                    src={developerData?.profile_image || user?.avatar || '/default-avatar.png'}
+                    alt={developerData?.full_name || user?.full_name}
                     className="w-8 h-8 rounded-full object-cover"
                     onError={(e) => {
                       e.target.src = '/default-avatar.png'
                     }}
                   />
                   <span className="hidden sm:block text-sm">
-                    {user?.full_name?.split(' ')[0] || 'User'}
+                    {(developerData?.full_name || user?.full_name || 'User').split(' ')[0]}
                   </span>
                   <ChevronDown className="w-4 h-4" />
                 </button>
 
-                {/* Dropdown menu */}
+                {/* قائمة الملف الشخصي */}
                 {profileMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-gray-900 border border-white/10 rounded-xl shadow-xl z-50">
                     <Link
-                      to={`/u/${user?.username || ''}`}
+                      to={`/u/${developerData?.username || user?.username || ''}`}
                       className="flex items-center gap-2 px-4 py-3 text-sm text-gray-300 hover:bg-white/5 hover:text-white"
                       onClick={() => setProfileMenuOpen(false)}
                     >
@@ -346,9 +492,9 @@ const DashboardLayout = () => {
           </div>
         </header>
 
-        {/* Page content */}
+        {/* محتوى الصفحة */}
         <main className="p-6">
-          <Outlet />
+          <Outlet context={{ developerData, unreadMessagesCount, unreadNotificationsCount }} />
         </main>
       </div>
     </div>
