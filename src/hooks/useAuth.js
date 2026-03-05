@@ -3,24 +3,25 @@ import { authService } from '../lib/supabase'
 import { supabase } from '../lib/supabase'
 
 export const useAuth = () => {
-  const [user, setUser] = useState(null)
+  const [user, setUser] = useState(null)      // ✅ { id: "uuid" } فقط في البداية
+  const [fullData, setFullData] = useState(null) // ✅ البيانات الكاملة
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  // ✅ دالة جلب بيانات المطور
+  // ✅ دالة جلب البيانات الكاملة (تشتغل في الخلفية)
   const fetchDeveloperData = async (userId) => {
     try {
       const { data: developer, error } = await supabase
         .from('developers')
         .select('*')
         .eq('id', userId)
-        .single()
+        .maybeSingle()
       
       if (error) throw error
       
       if (developer) {
-        setUser(developer)
-        localStorage.setItem('developer', JSON.stringify(developer))
+        setFullData(developer)
+        localStorage.setItem('developer_full', JSON.stringify(developer))
       }
       return developer
     } catch (err) {
@@ -32,34 +33,38 @@ export const useAuth = () => {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // ✅ 1. تحقق من localStorage أولاً
-        const cachedUser = localStorage.getItem('developer')
-        if (cachedUser) {
-          setUser(JSON.parse(cachedUser))
-          setLoading(false)
+        // ✅ 1. جرب UUID من localStorage أولاً
+        const storedUserId = localStorage.getItem('user_id')
+        if (storedUserId) {
+          setUser({ id: storedUserId }) // ✅ UUID فقط فوراً
           
-          // ✅ 2. تحديث في الخلفية
-          const { data: { session } } = await supabase.auth.getSession()
-          if (session?.user) {
-            fetchDeveloperData(session.user.id)
+          // ✅ جرب البيانات الكاملة من localStorage
+          const storedFullData = localStorage.getItem('developer_full')
+          if (storedFullData) {
+            setFullData(JSON.parse(storedFullData))
           }
-          return
         }
 
-        // ✅ 3. إذا مافي كاش، جلب من الجلسة
+        // ✅ 2. تحقق من الجلسة الحقيقية (في الخلفية)
         const { data: { session } } = await supabase.auth.getSession()
         
         if (session?.user) {
-          const { data: developer } = await supabase
-            .from('developers')
-            .select('*')
-            .eq('id', session.user.id)
-            .single()
-
-          if (developer) {
-            setUser(developer)
-            localStorage.setItem('developer', JSON.stringify(developer))
+          const uuid = session.user.id
+          
+          // ✅ حدث UUID إذا اختلف
+          if (storedUserId !== uuid) {
+            setUser({ id: uuid })
+            localStorage.setItem('user_id', uuid)
           }
+          
+          // ✅ جلب البيانات الكاملة في الخلفية (دائماً)
+          fetchDeveloperData(uuid)
+        } else if (storedUserId) {
+          // إذا كان UUID موجود بس مافي جلسة → امسح كل شيء
+          setUser(null)
+          setFullData(null)
+          localStorage.removeItem('user_id')
+          localStorage.removeItem('developer_full')
         }
       } catch (err) {
         console.error('Init auth error:', err)
@@ -71,18 +76,29 @@ export const useAuth = () => {
 
     initAuth()
 
+    // ✅ استماع لتغييرات المصادقة
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        fetchDeveloperData(session.user.id)
+        const uuid = session.user.id
+        
+        // ✅ حدث UUID فوراً
+        setUser({ id: uuid })
+        localStorage.setItem('user_id', uuid)
+        
+        // ✅ جلب البيانات الكاملة في الخلفية
+        fetchDeveloperData(uuid)
       } else {
         setUser(null)
-        localStorage.removeItem('developer')
+        setFullData(null)
+        localStorage.removeItem('user_id')
+        localStorage.removeItem('developer_full')
       }
     })
 
     return () => subscription?.unsubscribe()
   }, [])
 
+  // ✅ دالة تسجيل الدخول
   const login = async (email, password) => {
     try {
       setLoading(true)
@@ -91,10 +107,16 @@ export const useAuth = () => {
       const result = await authService.login(email, password)
       if (!result.success) throw new Error('Login failed')
 
-      // ✅ جلب البيانات في الخلفية
-      fetchDeveloperData(result.user.id)
+      const uuid = result.user.id
 
-      return { success: true, user: result.user }
+      // ✅ 1. حدث UUID فوراً (Dashboard يظهر)
+      setUser({ id: uuid })
+      localStorage.setItem('user_id', uuid)
+
+      // ✅ 2. جلب البيانات الكاملة في الخلفية
+      fetchDeveloperData(uuid)
+
+      return { success: true, user: { id: uuid } }
 
     } catch (err) {
       setError(err.message)
@@ -104,7 +126,7 @@ export const useAuth = () => {
     }
   }
 
-  const register = async (formData) => {
+const register = async (formData) => {
     try {
       setLoading(true)
       setError(null)
@@ -128,23 +150,27 @@ export const useAuth = () => {
     }
   }
 
+  // ✅ دالة تسجيل الخروج
   const logout = async () => {
     try {
       await supabase.auth.signOut()
       setUser(null)
-      localStorage.removeItem('developer')
+      setFullData(null)
+      localStorage.removeItem('user_id')
+      localStorage.removeItem('developer_full')
     } catch (err) {
       console.error('Logout error:', err)
     }
   }
 
   return {
-    user,
+    user,        // ✅ { id: "uuid" } - يظهر فوراً
+    fullData,    // ✅ البيانات الكاملة (تظهر بعدين)
     loading,
     error,
     login,
     register,
     logout,
-    isAuthenticated: !!user, 
+    isAuthenticated: !!user,
   }
 }
