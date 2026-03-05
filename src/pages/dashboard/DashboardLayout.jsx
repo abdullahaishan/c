@@ -34,15 +34,30 @@ const DashboardLayout = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [loadingError, setLoadingError] = useState(null)
   const [loadingProgress, setLoadingProgress] = useState(0)
+  const [authChecked, setAuthChecked] = useState(false)
   
-  // البيانات الأساسية
+  // البيانات الكاملة
   const [developerData, setDeveloperData] = useState(null)
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0)
   
-  const { user, logout } = useAuth()
+  const { user, loading: authLoading } = useAuth() // user فقط { id }
   const location = useLocation()
   const navigate = useNavigate()
+
+  // =========== التحقق من المصادقة أولاً ===========
+  
+  useEffect(() => {
+    // ننتظر حتى ينتهي تحميل المصادقة
+    if (!authLoading) {
+      setAuthChecked(true)
+      
+      // إذا لا يوجد مستخدم بعد التأكد، نوجه لتسجيل الدخول
+      if (!user) {
+        navigate('/login', { state: { from: location.pathname } })
+      }
+    }
+  }, [authLoading, user, navigate, location])
 
   // =========== دوال جلب البيانات من Supabase ===========
   
@@ -97,22 +112,18 @@ const DashboardLayout = () => {
     }
   }
 
-  // =========== تحميل جميع البيانات الأساسية ===========
+  // =========== تحميل البيانات بعد التأكد من وجود مستخدم ===========
   
   useEffect(() => {
     const loadAllEssentialData = async () => {
-      if (!user?.id) {
-        // إذا لا يوجد مستخدم، نوجه لتسجيل الدخول
-        navigate('/login')
-        return
-      }
+      if (!user?.id || !authChecked) return
 
       try {
         setIsLoading(true)
         setLoadingError(null)
         setLoadingProgress(10)
 
-        // 1. جلب بيانات المطور
+        // 1. جلب بيانات المطور كاملة
         setLoadingProgress(30)
         const developerFullData = await fetchDeveloperData(user.id)
         setDeveloperData(developerFullData)
@@ -131,7 +142,7 @@ const DashboardLayout = () => {
         setLoadingProgress(100)
         setTimeout(() => {
           setIsLoading(false)
-        }, 500) // تأخير بسيط لإظهار اكتمال التحميل
+        }, 500)
 
       } catch (error) {
         console.error('Error loading essential data:', error)
@@ -141,42 +152,31 @@ const DashboardLayout = () => {
     }
 
     loadAllEssentialData()
-  }, [user?.id])
+  }, [user?.id, authChecked])
 
-  // =========== دوال المساعدة ===========
-
-  const navigation = [
-    { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
-    { name: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
-    { name: 'Skills', href: '/dashboard/skills', icon: Code },
-    { name: 'Certificates', href: '/dashboard/certificates', icon: Award },
-    { name: 'Experience', href: '/dashboard/experience', icon: Briefcase },
-    { name: 'Education', href: '/dashboard/education', icon: GraduationCap },
-    { name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
-    { name: 'AI Builder', href: '/app/builder', icon: Sparkles },
-    { name: 'Plan Status', href: '/dashboard/plan-status', icon: Crown },
-    { name: 'Settings', href: '/dashboard/settings', icon: Settings },
-  ]
-
-  const handleLogout = () => {
-    logout()
-    navigate('/')
+  // =========== إذا كانت المصادقة لا تزال تحمل ===========
+  
+  if (authLoading || !authChecked) {
+    return (
+      <div className="min-h-screen bg-[#030014] flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative mb-8 mx-auto w-24 h-24">
+            <div className="absolute inset-0 rounded-full border-4 border-t-transparent border-[#6366f1] animate-spin"></div>
+            <div className="absolute inset-2 rounded-full border-4 border-t-transparent border-[#a855f7] animate-spin-slow"></div>
+            <div className="absolute inset-4 rounded-full border-4 border-t-transparent border-[#ec4899] animate-spin-slower"></div>
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">جاري التحقق من الجلسة</h2>
+          <p className="text-gray-400">الرجاء الانتظار...</p>
+        </div>
+      </div>
+    )
   }
 
-  const handleNotificationClick = () => {
-    navigate('/dashboard/notifications')
+  // =========== إذا لا يوجد مستخدم ===========
+  
+  if (!user) {
+    return null
   }
-
-  const copyPortfolioLink = () => {
-    if (!developerData?.username && !user?.username) return
-    const username = developerData?.username || user?.username
-    const portfolioUrl = `${window.location.origin}/u/${username}`
-    navigator.clipboard.writeText(portfolioUrl)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  const isActive = (path) => location.pathname === path
 
   // =========== شاشة التحميل (Splash Screen) ===========
   
@@ -186,12 +186,10 @@ const DashboardLayout = () => {
         <div className="text-center max-w-md px-4">
           {/* شعار متحرك */}
           <div className="relative mb-8 mx-auto w-32 h-32">
-            {/* حلقات دائرية متحركة */}
             <div className="absolute inset-0 rounded-full border-4 border-t-transparent border-[#6366f1] animate-spin"></div>
             <div className="absolute inset-2 rounded-full border-4 border-t-transparent border-[#a855f7] animate-spin-slow"></div>
             <div className="absolute inset-4 rounded-full border-4 border-t-transparent border-[#ec4899] animate-spin-slower"></div>
             
-            {/* الشعار في المنتصف */}
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-16 h-16 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-2xl flex items-center justify-center shadow-2xl">
                 <span className="text-3xl font-bold text-white">P</span>
@@ -199,13 +197,12 @@ const DashboardLayout = () => {
             </div>
           </div>
 
-          {/* عنوان التحميل */}
           <h1 className="text-3xl font-bold text-white mb-3">
             Portfolio<span className="text-[#a855f7]">AI</span>
           </h1>
           
           <p className="text-gray-400 mb-6">
-            جاري تجهيز لوحة التحكم الخاصة بك...
+            مرحباً بعودتك! جاري تجهيز لوحة التحكم...
           </p>
 
           {/* شريط التقدم */}
@@ -285,7 +282,32 @@ const DashboardLayout = () => {
     )
   }
 
-  // =========== لوحة التحكم الرئيسية بعد اكتمال التحميل ===========
+  // =========== إعدادات التنقل ===========
+  
+  const navigation = [
+    { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
+    { name: 'Skills', href: '/dashboard/skills', icon: Code },
+    { name: 'Certificates', href: '/dashboard/certificates', icon: Award },
+    { name: 'Experience', href: '/dashboard/experience', icon: Briefcase },
+    { name: 'Education', href: '/dashboard/education', icon: GraduationCap },
+    { name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
+    { name: 'AI Builder', href: '/app/builder', icon: Sparkles },
+    { name: 'Plan Status', href: '/dashboard/plan-status', icon: Crown },
+    { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+  ]
+
+  const isActive = (path) => location.pathname === path
+
+  const copyPortfolioLink = () => {
+    if (!developerData?.username) return
+    const portfolioUrl = `${window.location.origin}/u/${developerData.username}`
+    navigator.clipboard.writeText(portfolioUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  // =========== لوحة التحكم الرئيسية ===========
   
   return (
     <div className="min-h-screen bg-[#030014]">
@@ -344,12 +366,12 @@ const DashboardLayout = () => {
           })}
         </nav>
 
-        {/* معلومات المستخدم */}
+        {/* معلومات المستخدم - الآن مع البيانات الكاملة */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
           <div className="flex items-center gap-3">
             <img
-              src={developerData?.profile_image || user?.avatar || '/default-avatar.png'}
-              alt={developerData?.full_name || user?.full_name}
+              src={developerData?.profile_image || '/default-avatar.png'}
+              alt={developerData?.full_name}
               className="w-10 h-10 rounded-full object-cover border-2 border-[#a855f7]/30"
               onError={(e) => {
                 e.target.src = '/default-avatar.png'
@@ -358,10 +380,10 @@ const DashboardLayout = () => {
             
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">
-                {developerData?.full_name || user?.full_name || 'مستخدم'}
+                {developerData?.full_name || 'مستخدم'}
               </p>
               <p className="text-xs text-gray-400 truncate">
-                {developerData?.email || user?.email || 'user@example.com'}
+                {developerData?.email || ''}
               </p>
               {developerData?.plan && (
                 <p className="text-xs text-[#a855f7] truncate">
@@ -396,7 +418,7 @@ const DashboardLayout = () => {
                   onMouseEnter={() => setShowShareTooltip(true)}
                   onMouseLeave={() => setShowShareTooltip(false)}
                   className="relative p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all"
-                  disabled={!developerData?.username && !user?.username}
+                  disabled={!developerData?.username}
                 >
                   {copied ? (
                     <Check className="w-5 h-5 text-green-400" />
@@ -420,7 +442,7 @@ const DashboardLayout = () => {
 
               {/* زر الإشعارات */}
               <button 
-                onClick={handleNotificationClick}
+                onClick={() => navigate('/dashboard/notifications')}
                 className="relative p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg"
               >
                 <Bell className="w-5 h-5" />
@@ -438,15 +460,15 @@ const DashboardLayout = () => {
                   className="flex items-center gap-2 p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg"
                 >
                   <img
-                    src={developerData?.profile_image || user?.avatar || '/default-avatar.png'}
-                    alt={developerData?.full_name || user?.full_name}
+                    src={developerData?.profile_image || '/default-avatar.png'}
+                    alt={developerData?.full_name}
                     className="w-8 h-8 rounded-full object-cover"
                     onError={(e) => {
                       e.target.src = '/default-avatar.png'
                     }}
                   />
                   <span className="hidden sm:block text-sm">
-                    {(developerData?.full_name || user?.full_name || 'User').split(' ')[0]}
+                    {developerData?.full_name?.split(' ')[0] || 'User'}
                   </span>
                   <ChevronDown className="w-4 h-4" />
                 </button>
@@ -454,7 +476,7 @@ const DashboardLayout = () => {
                 {profileMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-gray-900 border border-white/10 rounded-xl shadow-xl z-50">
                     <Link
-                      to={`/u/${developerData?.username || user?.username || ''}`}
+                      to={`/u/${developerData?.username || ''}`}
                       className="flex items-center gap-2 px-4 py-3 text-sm text-gray-300 hover:bg-white/5 hover:text-white"
                       onClick={() => setProfileMenuOpen(false)}
                     >
@@ -471,7 +493,10 @@ const DashboardLayout = () => {
                     </Link>
                     <hr className="border-white/10" />
                     <button
-                      onClick={handleLogout}
+                      onClick={() => {
+                        supabase.auth.signOut()
+                        navigate('/')
+                      }}
                       className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10"
                     >
                       <LogOut className="w-4 h-4" />
@@ -489,19 +514,6 @@ const DashboardLayout = () => {
           <Outlet context={{ developerData, unreadMessagesCount, unreadNotificationsCount }} />
         </main>
       </div>
-
-      {/* إضافة animations مخصصة */}
-      <style jsx>{`
-        @keyframes spin-slow {
-          to { transform: rotate(360deg); }
-        }
-        .animate-spin-slow {
-          animation: spin-slow 3s linear infinite;
-        }
-        .animate-spin-slower {
-          animation: spin-slow 4s linear infinite;
-        }
-      `}</style>
     </div>
   )
 }
