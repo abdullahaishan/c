@@ -1,8 +1,7 @@
-// PlanStatus.jsx
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { usePlan } from '../../hooks/usePlan'
+import { supabase, statsService } from '../../lib/supabase' // ✅ إضافة statsService
 import PaymentModal from '../plans/PaymentModel'
 import {
   Check,
@@ -27,18 +26,18 @@ import {
 } from 'lucide-react'
 
 // ============================================
-// بيانات العملات
+// بيانات العملات المحدثة حسب البحث
 // ============================================
 const CURRENCIES = {
-  USD: { symbol: '$', name: 'دولار أمريكي', code: 'USD' },
-  YER: { symbol: 'ر.ي', name: 'ريال يمني', code: 'YER' },
-  SAR: { symbol: 'ر.س', name: 'ريال سعودي', code: 'SAR' },
-  AED: { symbol: 'د.إ', name: 'درهم إماراتي', code: 'AED' },
-  EGP: { symbol: 'ج.م', name: 'جنيه مصري', code: 'EGP' }
+  USD: { symbol: '$', name: 'دولار أمريكي', code: 'USD', rate: 1 },
+  YER: { symbol: 'ر.ي', name: 'ريال يمني', code: 'YER', rate: 535 }, // تحديث: 535 (صنعاء)
+  SAR: { symbol: 'ر.س', name: 'ريال سعودي', code: 'SAR', rate: 3.75 },
+  AED: { symbol: 'د.إ', name: 'درهم إماراتي', code: 'AED', rate: 3.673 }, // تحديث
+  EGP: { symbol: 'ج.م', name: 'جنيه مصري', code: 'EGP', rate: 50.19 } // تحديث
 }
 
 // ============================================
-// دالة جلب أسعار الصرف الحقيقية
+// دالة جلب أسعار الصرف الحقيقية من API
 // ============================================
 const fetchExchangeRates = async () => {
   try {
@@ -46,25 +45,35 @@ const fetchExchangeRates = async () => {
     const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD')
     const data = await response.json()
     
+    // تحديث الأسعار حسب البحث مع الحفاظ على القيم الخاصة
     return {
       USD: 1,
-      YER: data.rates?.YER || 250, // fallback إذا لم يكن موجوداً
+      YER: 535, // سعر ثابت لصنعاء (يمكن تحديثه لاحقاً)
       SAR: data.rates?.SAR || 3.75,
-      AED: data.rates?.AED || 3.67,
-      EGP: data.rates?.EGP || 30.9,
-      lastUpdated: new Date().toISOString()
+      AED: data.rates?.AED || 3.673,
+      EGP: data.rates?.EGP || 50.19,
+      lastUpdated: new Date().toISOString(),
+      // إضافة أسعار اليمن حسب المنطقة
+      yemen: {
+        sanaa: { usd: 535, sar: 140 },
+        aden: { usd: 1548, sar: 406 }
+      }
     }
   } catch (error) {
     console.error('Error fetching exchange rates:', error)
     
-    // أسعار افتراضية إذا فشل الاتصال
+    // أسعار افتراضية حسب البحث
     return {
       USD: 1,
-      YER: 250,
+      YER: 535, // صنعاء
       SAR: 3.75,
-      AED: 3.67,
-      EGP: 30.9,
-      lastUpdated: new Date().toISOString()
+      AED: 3.673,
+      EGP: 50.19,
+      lastUpdated: new Date().toISOString(),
+      yemen: {
+        sanaa: { usd: 535, sar: 140 },
+        aden: { usd: 1548, sar: 406 }
+      }
     }
   }
 }
@@ -74,23 +83,35 @@ const fetchExchangeRates = async () => {
 // ============================================
 const detectCountryFromIP = async () => {
   try {
-    // محاولة جلب موقع المستخدم
     const response = await fetch('https://ipapi.co/json/')
     const data = await response.json()
     
-    // تحديد العملة المناسبة للدولة
     let currency = 'USD'
-    if (data.country_code === 'YE') currency = 'YER'
-    else if (data.country_code === 'SA') currency = 'SAR'
-    else if (data.country_code === 'AE') currency = 'AED'
-    else if (data.country_code === 'EG') currency = 'EGP'
-    else if (data.currency) currency = data.currency
+    let region = 'western'
+    
+    if (data.country_code === 'YE') {
+      currency = 'YER'
+      region = 'middle_east'
+    } else if (data.country_code === 'SA') {
+      currency = 'SAR'
+      region = 'middle_east'
+    } else if (data.country_code === 'AE') {
+      currency = 'AED'
+      region = 'middle_east'
+    } else if (data.country_code === 'EG') {
+      currency = 'EGP'
+      region = 'middle_east'
+    }
     
     return {
       country: data.country_code || 'US',
       country_name: data.country_name || 'United States',
-      region: data.continent_code === 'AS' ? 'middle_east' : 'western',
-      currency: currency
+      region: region,
+      currency: currency,
+      city: data.city || '',
+      // تحديد منطقة اليمن (افتراضي صنعاء)
+      yemen_region: data.country_code === 'YE' ? 
+        (data.city?.includes('عدن') ? 'aden' : 'sanaa') : 'sanaa'
     }
   } catch (error) {
     console.error('Error detecting country:', error)
@@ -98,7 +119,8 @@ const detectCountryFromIP = async () => {
       country: 'US',
       country_name: 'United States',
       region: 'western',
-      currency: 'USD'
+      currency: 'USD',
+      yemen_region: 'sanaa'
     }
   }
 }
@@ -303,15 +325,64 @@ const PlanStatus = () => {
   const [userCountry, setUserCountry] = useState('US')
   const [userCountryName, setUserCountryName] = useState('United States')
   const [userRegion, setUserRegion] = useState('western')
+  const [yemenRegion, setYemenRegion] = useState('sanaa')
   const [selectedCurrency, setSelectedCurrency] = useState('USD')
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false)
   const [exchangeRates, setExchangeRates] = useState(null)
   const [loadingRates, setLoadingRates] = useState(true)
   const [detectingCountry, setDetectingCountry] = useState(true)
   
+  // ✅ استخدام statsService بدلاً من usePlan
   const { user, isAuthenticated, loading: authLoading } = useAuth() || { loading: true }
-  const { allPlans, currentPlan, usage, loading: plansLoading } = usePlan() || { allPlans: [], loading: true }
+  const [allPlans, setAllPlans] = useState([])
+  const [currentPlan, setCurrentPlan] = useState(null)
+  const [usage, setUsage] = useState(null)
+  const [loading, setLoading] = useState(true)
+  
   const navigate = useNavigate()
+
+  // ============================================
+  // جلب بيانات الباقات والمستخدم
+  // ============================================
+  useEffect(() => {
+    if (user) {
+      fetchAllData()
+    }
+  }, [user])
+
+  const fetchAllData = async () => {
+    setLoading(true)
+    try {
+      // 1️⃣ جلب جميع الباقات
+      const { data: plans, error: plansError } = await supabase
+        .from('plans')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+
+      if (plansError) throw plansError
+      setAllPlans(plans || [])
+
+      // 2️⃣ جلب باقة المستخدم الحالية
+      const { data: userPlan, error: userError } = await supabase
+        .from('developers')
+        .select('plan_id, plans(*)')
+        .eq('id', user.id)
+        .single()
+
+      if (userError) throw userError
+      setCurrentPlan(userPlan?.plans || null)
+
+      // 3️⃣ جلب الاستخدام الحالي
+      const content = await statsService.getContentStats(user.id)
+      setUsage(content?.counts || {})
+
+    } catch (error) {
+      console.error('Error fetching data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // ============================================
   // جلب أسعار الصرف
@@ -338,6 +409,7 @@ const PlanStatus = () => {
       setUserCountry(data.country)
       setUserCountryName(data.country_name)
       setUserRegion(data.region)
+      setYemenRegion(data.yemen_region)
       setSelectedCurrency(data.currency)
     } catch (error) {
       console.error('Error detecting country:', error)
@@ -346,43 +418,51 @@ const PlanStatus = () => {
     }
   }
 
-useEffect(() => {
-  detectCountry().catch(() => {})
-  loadExchangeRates().catch(() => {})
+  useEffect(() => {
+    detectCountry()
+    loadExchangeRates()
 
-  const interval = setInterval(() => {
-    loadExchangeRates().catch(() => {})
-  }, 5 * 60 * 1000)
+    const interval = setInterval(() => {
+      loadExchangeRates()
+    }, 5 * 60 * 1000) // تحديث كل 5 دقائق
 
-  return () => clearInterval(interval)
-}, [])
+    return () => clearInterval(interval)
+  }, [])
 
   // ============================================
   // دالة تحويل العملة (تستخدم الأسعار الحقيقية)
   // ============================================
   const convertPrice = (priceInUSD, targetCurrency) => {
-  if (!exchangeRates || !exchangeRates[targetCurrency]) {
+    if (!exchangeRates) {
+      return {
+        price: priceInUSD,
+        amount: priceInUSD,
+        currency: 'USD',
+        symbol: '$',
+        originalUSD: priceInUSD
+      }
+    }
+
+    let rate = exchangeRates[targetCurrency] || 1
+
+    // معالجة خاصة للريال اليمني حسب المنطقة
+    if (targetCurrency === 'YER' && exchangeRates.yemen) {
+      rate = yemenRegion === 'aden' 
+        ? exchangeRates.yemen.aden.usd 
+        : exchangeRates.yemen.sanaa.usd
+    }
+
+    const convertedPrice = priceInUSD * rate
+
     return {
-      price: priceInUSD,
-      amount: priceInUSD,
-      currency: 'USD',
-      symbol: '$',
-      originalUSD: priceInUSD
+      price: Number(convertedPrice.toFixed(2)),
+      amount: Number(convertedPrice.toFixed(2)),
+      currency: targetCurrency,
+      symbol: CURRENCIES[targetCurrency]?.symbol || '$',
+      originalUSD: priceInUSD,
+      rate
     }
   }
-
-  const rate = exchangeRates[targetCurrency]
-  const convertedPrice = priceInUSD * rate
-
-  return {
-    price: Number(convertedPrice.toFixed(2)),
-    amount: Number(convertedPrice.toFixed(2)),
-    currency: targetCurrency,
-    symbol: CURRENCIES[targetCurrency]?.symbol || '$',
-    originalUSD: priceInUSD,
-    rate
-  }
-}
 
   // تحويل جميع الأسعار عند تغيير العملة أو تحديث الأسعار
   useEffect(() => {
@@ -398,7 +478,7 @@ useEffect(() => {
       })
       setConvertedPrices(newPrices)
     }
-  }, [selectedCurrency, exchangeRates, allPlans])
+  }, [selectedCurrency, exchangeRates, allPlans, yemenRegion])
 
   const [convertedPrices, setConvertedPrices] = useState({})
 
@@ -458,7 +538,7 @@ useEffect(() => {
     return flags[countryCode] || '🌍'
   }
 
-  const isLoading = authLoading || plansLoading
+  const isLoading = authLoading || loading || loadingRates || detectingCountry
   if (isLoading) {
     return (
       <div className="space-y-6 p-6">
@@ -511,6 +591,11 @@ useEffect(() => {
             <span className="text-gray-400">موقعك:</span>
             <span className="text-white font-medium flex items-center gap-1">
               {getCountryFlag(userCountry)} {userCountryName}
+              {userCountry === 'YE' && (
+                <span className="text-xs text-gray-500 mr-2">
+                  ({yemenRegion === 'aden' ? 'عدن' : 'صنعاء'})
+                </span>
+              )}
             </span>
           </div>
           
@@ -551,7 +636,9 @@ useEffect(() => {
                       <span className="flex-1 text-gray-300 text-right">{currency.name}</span>
                       {exchangeRates && (
                         <span className="text-xs text-gray-500">
-                          1 USD = {exchangeRates[code]?.toFixed(2) || '?'}
+                          1 USD = {code === 'YER' && yemenRegion === 'aden' 
+                            ? exchangeRates.yemen?.aden?.usd?.toFixed(0) 
+                            : exchangeRates[code]?.toFixed(2) || '?'}
                         </span>
                       )}
                     </button>
@@ -561,6 +648,33 @@ useEffect(() => {
             )}
           </div>
         </div>
+        
+        {/* Yemen Region Toggle */}
+        {userCountry === 'YE' && (
+          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-white/10">
+            <span className="text-sm text-gray-400">منطقتك:</span>
+            <button
+              onClick={() => setYemenRegion('sanaa')}
+              className={`px-3 py-1 text-sm rounded-lg transition-all ${
+                yemenRegion === 'sanaa' 
+                  ? 'bg-[#6366f1] text-white' 
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10'
+              }`}
+            >
+              صنعاء
+            </button>
+            <button
+              onClick={() => setYemenRegion('aden')}
+              className={`px-3 py-1 text-sm rounded-lg transition-all ${
+                yemenRegion === 'aden' 
+                  ? 'bg-[#6366f1] text-white' 
+                  : 'bg-white/5 text-gray-400 hover:bg-white/10'
+              }`}
+            >
+              عدن
+            </button>
+          </div>
+        )}
         
         {/* مؤشر آخر تحديث للأسعار */}
         {exchangeRates?.lastUpdated && (
