@@ -319,7 +319,8 @@ const Overview = () => {
               أنت مشترك في باقة <span className="text-[#a855f7] font-semibold">
                 {planId === 1 ? 'مجانية' : 
                  planId === 2 ? 'أساسية' : 
-                 planId === 3 ? 'محترف' : 'مؤسسات'}
+                 planId === 3 ? 'محترف':
+                planId === 4 ? 'مؤسسات':''}
               </span>
             </p>
             
