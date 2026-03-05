@@ -1,4 +1,3 @@
-// Overview.jsx
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePlan } from '../../hooks/usePlan'
@@ -183,8 +182,6 @@ const VisitorStatsSkeleton = () => (
 
 // Skeleton لصفحة Overview كاملة
 const OverviewSkeleton = () => {
-  const [selectedPeriod, setSelectedPeriod] = useState('week')
-  
   return (
     <div className="space-y-6" dir="rtl">
       <GreetingCardSkeleton />
@@ -288,7 +285,6 @@ const Overview = () => {
         setAiStats(ai)
       }
 
-      // تأخير بسيط لإظهار الـ Skeleton
       setTimeout(() => {
         setDataLoaded(true)
         setLoading(false)
@@ -323,7 +319,6 @@ const Overview = () => {
     return 'مساء الخير'
   }
 
-  // عرض Skeleton أثناء التحميل
   if (loading || !dataLoaded || planLoading) {
     return <OverviewSkeleton />
   }
@@ -343,7 +338,6 @@ const Overview = () => {
               </span>
             </p>
             
-            {/* شريط التقدم الكلي */}
             <div className="max-w-md">
               <div className="flex items-center justify-between text-sm mb-1">
                 <span className="text-gray-400">اكتمال الملف الشخصي</span>
@@ -358,7 +352,6 @@ const Overview = () => {
             </div>
           </div>
           
-          {/* زر عرض الباقات للمجانيين */}
           {isFree && (
             <Link
               to="/plans"
@@ -513,208 +506,154 @@ const Overview = () => {
           )}
         </div>
 
-        {/* إحصائيات الزوار */}
+        {/* إحصائيات الزوار - الكود الصحيح بدون تكرار */}
         <div className="lg:col-span-2 space-y-6">
-          {canUseFeature('analytics') && visitorStats ? (
+          {canUseFeature('analytics') ? (
             <>
-              <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-semibold text-white">تحليلات الزوار</h3>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setSelectedPeriod('week')}
-                      className={`px-3 py-1 text-sm rounded-lg transition-all ${
-                        selectedPeriod === 'week' 
-                          ? 'bg-[#6366f1] text-white' 
-                          : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                      }`}
-                    >
-                      أسبوع
-                    </button>
-                    <button
-                      onClick={() => setSelectedPeriod('month')}
-                      className={`px-3 py-1 text-sm rounded-lg transition-all ${
-                        selectedPeriod === 'month' 
-                          ? 'bg-[#6366f1] text-white' 
-                          : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                      }`}
-                    >
-                      شهر
-                    </button>
+              {visitorStats ? (
+                <>
+                  {/* البطاقة الأولى - تحليلات الزوار */}
+                  <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-lg font-semibold text-white">تحليلات الزوار</h3>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setSelectedPeriod('week')}
+                          className={`px-3 py-1 text-sm rounded-lg transition-all ${
+                            selectedPeriod === 'week' 
+                              ? 'bg-[#6366f1] text-white' 
+                              : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                          }`}
+                        >
+                          أسبوع
+                        </button>
+                        <button
+                          onClick={() => setSelectedPeriod('month')}
+                          className={`px-3 py-1 text-sm rounded-lg transition-all ${
+                            selectedPeriod === 'month' 
+                              ? 'bg-[#6366f1] text-white' 
+                              : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                          }`}
+                        >
+                          شهر
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* إحصائيات سريعة */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                      <div className="text-center">
+                        <Globe className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
+                        <p className="text-xl text-white">{visitorStats.countries?.length || 0}</p>
+                        <p className="text-xs text-gray-400">دولة</p>
+                      </div>
+                      <div className="text-center">
+                        <Smartphone className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
+                        <p className="text-xl text-white">{visitorStats.devices?.mobile || 0}</p>
+                        <p className="text-xs text-gray-400">جوال</p>
+                      </div>
+                      <div className="text-center">
+                        <Monitor className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
+                        <p className="text-xl text-white">{visitorStats.devices?.desktop || 0}</p>
+                        <p className="text-xs text-gray-400">كمبيوتر</p>
+                      </div>
+                      <div className="text-center">
+                        <Target className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
+                        <p className="text-xl text-white">{visitorStats.total || 0}</p>
+                        <p className="text-xs text-gray-400">إجمالي الزوار</p>
+                      </div>
+                    </div>
+
+                    {/* أفضل الدول */}
+                    {visitorStats.countries && visitorStats.countries.length > 0 && (
+                      <div className="mb-6">
+                        <h4 className="text-sm font-medium text-gray-400 mb-3">أفضل الدول</h4>
+                        <div className="space-y-2">
+                          {visitorStats.countries.slice(0, 5).map(([country, count], i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <span className="text-sm text-white w-24 truncate">{country}</span>
+                              <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
+                                  style={{ width: `${(count / visitorStats.total) * 100}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-gray-400">{count}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* الأجهزة */}
+                    <div className="mb-6">
+                      <h4 className="text-sm font-medium text-gray-400 mb-3">الأجهزة</h4>
+                      <div className="space-y-2">
+                        {Object.entries(visitorStats.devices || {}).map(([device, count]) => (
+                          count > 0 && (
+                            <div key={device} className="flex items-center gap-2">
+                              <span className="text-sm text-white w-24">
+                                {device === 'mobile' ? 'جوال' : device === 'desktop' ? 'كمبيوتر' : 'تابلت'}
+                              </span>
+                              <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
+                                  style={{ width: `${(count / visitorStats.total) * 100}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-gray-400">{count}</span>
+                            </div>
+                          )
+                        ))}
+                      </div>
+                    </div>
                   </div>
+
+                  {/* مصادر الزيارات */}
+                  {visitorStats.referrers && visitorStats.referrers.length > 0 && (
+                    <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
+                      <h3 className="text-lg font-semibold text-white mb-4">مصادر الزيارات</h3>
+                      <div className="space-y-3">
+                        {visitorStats.referrers.map(([source, count], i) => (
+                          <div key={i} className="flex items-center justify-between">
+                            <span className="text-sm text-gray-300">{source}</span>
+                            <div className="flex items-center gap-3">
+                              <div className="w-32 h-2 bg-white/10 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
+                                  style={{ width: `${(count / visitorStats.total) * 100}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-gray-400">{count}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10 text-center">
+                  <Loader className="w-12 h-12 text-[#6366f1] animate-spin mx-auto mb-4" />
+                  <p className="text-gray-400">جاري تحميل الإحصائيات...</p>
                 </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div className="text-center">
-                    <Globe className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                    <p className="text-xl text-white">{visitorStats.countries?.length || 0}</p>
-                    <p className="text-xs text-gray-400">دولة</p>
-                  </div>
-                  <div className="text-center">
-                    <Smartphone className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                    <p className="text-xl text-white">{visitorStats.devices?.mobile || 0}</p>
-                    <p className="text-xs text-gray-400">جوال</p>
-                  </div>
-                  <div className="text-center">
-                    <Monitor className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                    <p className="text-xl text-white">{visitorStats.devices?.desktop || 0}</p>
-                    <p className="text-xs text-gray-400">كمبيوتر</p>
-                  </div>
-                  <div className="text-center">
-                    <Target className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                    <p className="text-xl text-white">{visitorStats.referrers?.length || 0}</p>
-                    <p className="text-xs text-gray-400">مصدر</p>
-                  </div>
-                </div>
-
-                {visitorStats.countries?.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-400 mb-3">أفضل الدول</h4>
-                    <div className="space-y-2">
-                      {visitorStats.countries.slice(0, 5).map(([country, count], i) => (
-                        <div key={i} className="flex items-center gap-2">
-                          <span className="text-sm text-white w-24 truncate">{country}</span>
-                          <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-                            <div 
-// في Overview.jsx - أضف هذه التعديلات
-
-// في قسم إحصائيات الزوار (حوالي السطر 350)
-{canUseFeature('analytics') && visitorStats ? (
-  <>
-    <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-white">تحليلات الزوار</h3>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setSelectedPeriod('week')}
-            className={`px-3 py-1 text-sm rounded-lg transition-all ${
-              selectedPeriod === 'week' 
-                ? 'bg-[#6366f1] text-white' 
-                : 'bg-white/5 text-gray-400 hover:bg-white/10'
-            }`}
-          >
-            أسبوع
-          </button>
-          <button
-            onClick={() => setSelectedPeriod('month')}
-            className={`px-3 py-1 text-sm rounded-lg transition-all ${
-              selectedPeriod === 'month' 
-                ? 'bg-[#6366f1] text-white' 
-                : 'bg-white/5 text-gray-400 hover:bg-white/10'
-            }`}
-          >
-            شهر
-          </button>
-        </div>
-      </div>
-
-      {/* إحصائيات سريعة */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="text-center">
-          <Globe className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-          <p className="text-xl text-white">{visitorStats.countries?.length || 0}</p>
-          <p className="text-xs text-gray-400">دولة</p>
-        </div>
-        <div className="text-center">
-          <Smartphone className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-          <p className="text-xl text-white">{visitorStats.devices?.mobile || 0}</p>
-          <p className="text-xs text-gray-400">جوال</p>
-        </div>
-        <div className="text-center">
-          <Monitor className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-          <p className="text-xl text-white">{visitorStats.devices?.desktop || 0}</p>
-          <p className="text-xs text-gray-400">كمبيوتر</p>
-        </div>
-        <div className="text-center">
-          <Target className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-          <p className="text-xl text-white">{visitorStats.total || 0}</p>
-          <p className="text-xs text-gray-400">إجمالي</p>
-        </div>
-      </div>
-
-      {/* أفضل الدول - تظهر فقط إذا كانت موجودة */}
-      {visitorStats.countries && visitorStats.countries.length > 0 && (
-        <div className="mb-6">
-          <h4 className="text-sm font-medium text-gray-400 mb-3">أفضل الدول</h4>
-          <div className="space-y-2">
-            {visitorStats.countries.slice(0, 5).map(([country, count], i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span className="text-sm text-white w-24 truncate">{country}</span>
-                <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
-                    style={{ width: `${(count / visitorStats.total) * 100}%` }}
-                  />
-                </div>
-                <span className="text-xs text-gray-400">{count}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* الأجهزة - تظهر دائماً */}
-      <div className="mb-6">
-        <h4 className="text-sm font-medium text-gray-400 mb-3">الأجهزة</h4>
-        <div className="space-y-2">
-          {Object.entries(visitorStats.devices || {}).map(([device, count]) => (
-            count > 0 && (
-              <div key={device} className="flex items-center gap-2">
-                <span className="text-sm text-white w-24">
-                  {device === 'mobile' ? 'جوال' : device === 'desktop' ? 'كمبيوتر' : 'تابلت'}
-                </span>
-                <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
-                    style={{ width: `${(count / visitorStats.total) * 100}%` }}
-                  />
-                </div>
-                <span className="text-xs text-gray-400">{count}</span>
-              </div>
-            )
-          ))}
-        </div>
-      </div>
-    </div>
-
-    {/* مصادر الزيارات */}
-    {visitorStats.referrers && visitorStats.referrers.length > 0 && (
-      <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-        <h3 className="text-lg font-semibold text-white mb-4">مصادر الزيارات</h3>
-        <div className="space-y-3">
-          {visitorStats.referrers.map(([source, count], i) => (
-            <div key={i} className="flex items-center justify-between">
-              <span className="text-sm text-gray-300">{source}</span>
-              <div className="flex items-center gap-3">
-                <div className="w-32 h-2 bg-white/10 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
-                    style={{ width: `${(count / visitorStats.total) * 100}%` }}
-                  />
-                </div>
-                <span className="text-xs text-gray-400">{count}</span>
-              </div>
+              )}
+            </>
+          ) : (
+            <div className="bg-gradient-to-r from-[#6366f1]/10 to-[#a855f7]/10 rounded-2xl p-8 border border-[#6366f1]/20 text-center">
+              <TrendingUp className="w-12 h-12 text-[#6366f1] mx-auto mb-4" />
+              <h3 className="text-xl text-white mb-2">إحصائيات متقدمة</h3>
+              <p className="text-gray-400 mb-4">
+                قم بترقية باقتك للوصول إلى تحليلات مفصلة للزوار ومعرفة من أين يأتون
+              </p>
+              <Link
+                to="/plan-status"
+                className="inline-block px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg hover:scale-105 transition-all"
+              >
+                عرض الباقات
+              </Link>
             </div>
-          ))}
-        </div>
-      </div>
-    )}
-  </>
-) : (
-  <div className="bg-gradient-to-r from-[#6366f1]/10 to-[#a855f7]/10 rounded-2xl p-8 border border-[#6366f1]/20 text-center">
-    <TrendingUp className="w-12 h-12 text-[#6366f1] mx-auto mb-4" />
-    <h3 className="text-xl text-white mb-2">إحصائيات متقدمة</h3>
-    <p className="text-gray-400 mb-4">
-      قم بترقية باقتك للوصول إلى تحليلات مفصلة للزوار ومعرفة من أين يأتون
-    </p>
-    <Link
-      to="/plans"
-      className="inline-block px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg hover:scale-105 transition-all"
-    >
-      عرض الباقات
-    </Link>
-  </div>
-)}
+          )}
         </div>
       </div>
 
@@ -725,157 +664,19 @@ const Overview = () => {
             <div className="flex items-center gap-3">
               <Sparkles className="w-6 h-6 text-[#a855f7]" />
               <p className="text-white">
-// ✅ الكود الصحيح لقسم إحصائيات الزوار - استبدل من السطر 550 إلى 650
-
-{/* قسم إحصائيات الزوار */}
-<div className="lg:col-span-2 space-y-6">
-  {canUseFeature('analytics') ? (
-    <>
-      {visitorStats ? (
-        <>
-          {/* البطاقة الأولى - تحليلات الزوار */}
-          <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-white">تحليلات الزوار</h3>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setSelectedPeriod('week')}
-                  className={`px-3 py-1 text-sm rounded-lg transition-all ${
-                    selectedPeriod === 'week' 
-                      ? 'bg-[#6366f1] text-white' 
-                      : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                  }`}
-                >
-                  أسبوع
-                </button>
-                <button
-                  onClick={() => setSelectedPeriod('month')}
-                  className={`px-3 py-1 text-sm rounded-lg transition-all ${
-                    selectedPeriod === 'month' 
-                      ? 'bg-[#6366f1] text-white' 
-                      : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                  }`}
-                >
-                  شهر
-                </button>
-              </div>
+          🚀 طور Portfolio مع الباقات المدفوعة - احصل على تحليلات متقدمة 
+              </p>
             </div>
-
-            {/* إحصائيات سريعة */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="text-center">
-                <Globe className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                <p className="text-xl text-white">{visitorStats.countries?.length || 0}</p>
-                <p className="text-xs text-gray-400">دولة</p>
-              </div>
-              <div className="text-center">
-                <Smartphone className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                <p className="text-xl text-white">{visitorStats.devices?.mobile || 0}</p>
-                <p className="text-xs text-gray-400">جوال</p>
-              </div>
-              <div className="text-center">
-                <Monitor className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                <p className="text-xl text-white">{visitorStats.devices?.desktop || 0}</p>
-                <p className="text-xs text-gray-400">كمبيوتر</p>
-              </div>
-              <div className="text-center">
-                <Target className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                <p className="text-xl text-white">{visitorStats.total || 0}</p>
-                <p className="text-xs text-gray-400">إجمالي</p>
-              </div>
-            </div>
-
-            {/* أفضل الدول */}
-            {visitorStats.countries && visitorStats.countries.length > 0 && (
-              <div className="mb-6">
-                <h4 className="text-sm font-medium text-gray-400 mb-3">أفضل الدول</h4>
-                <div className="space-y-2">
-                  {visitorStats.countries.slice(0, 5).map(([country, count], i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="text-sm text-white w-24 truncate">{country}</span>
-                      <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
-                          style={{ width: `${(count / visitorStats.total) * 100}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-gray-400">{count}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* الأجهزة */}
-            <div>
-              <h4 className="text-sm font-medium text-gray-400 mb-3">الأجهزة</h4>
-              <div className="space-y-2">
-                {Object.entries(visitorStats.devices || {}).map(([device, count]) => (
-                  count > 0 && (
-                    <div key={device} className="flex items-center gap-2">
-                      <span className="text-sm text-white w-24">
-                        {device === 'mobile' ? 'جوال' : device === 'desktop' ? 'كمبيوتر' : 'تابلت'}
-                      </span>
-                      <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
-                          style={{ width: `${(count / visitorStats.total) * 100}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-gray-400">{count}</span>
-                    </div>
-                  )
-                ))}
-              </div>
-            </div>
+            <Link
+              to="/plans"
+              className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all text-sm whitespace-nowrap"
+            >
+              عرض الباقات
+            </Link>
           </div>
-
-          {/* مصادر الزيارات */}
-          {visitorStats.referrers && visitorStats.referrers.length > 0 && (
-            <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-              <h3 className="text-lg font-semibold text-white mb-4">مصادر الزيارات</h3>
-              <div className="space-y-3">
-                {visitorStats.referrers.map(([source, count], i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-300">{source}</span>
-                    <div className="flex items-center gap-3">
-                      <div className="w-32 h-2 bg-white/10 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
-                          style={{ width: `${(count / visitorStats.total) * 100}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-gray-400">{count}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10 text-center">
-          <Loader className="w-12 h-12 text-[#6366f1] animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">جاري تحميل الإحصائيات...</p>
         </div>
       )}
-    </>
-  ) : (
-    <div className="bg-gradient-to-r from-[#6366f1]/10 to-[#a855f7]/10 rounded-2xl p-8 border border-[#6366f1]/20 text-center">
-      <TrendingUp className="w-12 h-12 text-[#6366f1] mx-auto mb-4" />
-      <h3 className="text-xl text-white mb-2">إحصائيات متقدمة</h3>
-      <p className="text-gray-400 mb-4">
-        قم بترقية باقتك للوصول إلى تحليلات مفصلة للزوار ومعرفة من أين يأتون
-      </p>
-      <Link
-        to="/plans"
-        className="inline-block px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg hover:scale-105 transition-all"
-      >
-        عرض الباقات
-      </Link>
     </div>
-  )}
-</div>
   )
 }
 
@@ -883,7 +684,6 @@ const Overview = () => {
 // المكونات المساعدة (في نهاية الملف)
 // ===========================================
 
-// مكون بطاقة الاستخدام
 const UsageCard = ({ label, current, max, color }) => {
   const percentage = max === -1 ? 0 : Math.min(100, (current / max) * 100)
   
@@ -905,7 +705,6 @@ const UsageCard = ({ label, current, max, color }) => {
   )
 }
 
-// مكون بطاقة الإحصائيات الرئيسية
 const StatCard = ({ icon: Icon, label, value, trend, badge, subValue, color }) => (
   <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all group">
     <div className="flex items-start justify-between mb-4">
@@ -929,7 +728,6 @@ const StatCard = ({ icon: Icon, label, value, trend, badge, subValue, color }) =
   </div>
 )
 
-// مكون البطاقات المصغرة للمحتوى
 const ContentMiniCard = ({ icon: Icon, label, count, max, color, link }) => {
   const percentage = max === -1 ? 0 : Math.min(100, Math.round((count / max) * 100))
   
