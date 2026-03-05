@@ -10,27 +10,27 @@ import EducationPage from './EducationPage';
 import AnimatedBackground from '../components/AnimatedBackground';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { Loader, AlertCircle, Crown } from 'lucide-react';
+import { Loader, AlertCircle, Crown, Eye, Heart } from 'lucide-react';  // ✅ تم التعديل هنا
 
 const PublicPortfolio = () => {
   const {
-  developer,
- publicLoading,
-  publicError,
-  isPaidPlan,
-    handleLike,        // ✅ دالة اللايك
+    developer,
+    publicLoading,
+    publicError,
+    isPaidPlan,
+    handleLike,
     visitStats    
-} = useDeveloper();
+  } = useDeveloper();
 
- if (publicLoading) {
+  if (publicLoading) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center">
         <div className="text-center">
           <Loader className="w-12 h-12 text-[#6366f1] animate-spin mx-auto mb-4" />
-         <p className="text-gray-400">Loading portfolio...</p>
+          <p className="text-gray-400">Loading portfolio...</p>
         </div>
       </div>
-   );
+    );
   }
 
   if (publicError || !developer) {
@@ -57,10 +57,9 @@ const PublicPortfolio = () => {
     );
   }
 
-  
- return (
+  return (
     <>
-      {/* ✅ أضف هذا الشريط الصغير في الأعلى */}
+      {/* شريط الإحصائيات */}
       <div className="fixed top-16 left-4 z-50 bg-black/50 backdrop-blur-xl rounded-lg px-3 py-2 text-white text-sm flex items-center gap-3">
         <span className="flex items-center gap-1">
           <Eye className="w-4 h-4" />
@@ -80,7 +79,7 @@ const PublicPortfolio = () => {
         </button>
       </div>
 
-      {/* ✅ إذا كانت باقة مدفوعة، أضف شعار */}
+      {/* شعار الباقة المدفوعة */}
       {isPaidPlan() && (
         <div className="fixed top-16 right-4 z-50 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2">
           <Crown className="w-4 h-4" />
@@ -93,29 +92,24 @@ const PublicPortfolio = () => {
 
       <main className="relative z-10">
         <Home developer={developer} />
-       <About developer={developer}/>
+        <About developer={developer}/>
         <Skills developer={developer} />
         <Portfolio developer={developer} />
-         <ExperiencePage developer={developer} />
+        <ExperiencePage developer={developer} />
         <EducationPage developer={developer} />
-      
-        {/* قسم الخبرات الجديد */}
-        {/*  <ExperienceSection />*/}
-
-        {/* WhyMe يظهر فقط للباقة المجانية */}
-        {/*  {!isPaidPlan() && <WhyMe developer={developer} />*/}
-
       </main>
 
       <Footer />
-      {isPaidPlan() && (
+      
+      {/* هذا الشعار مكرر - يمكنك إزالته */}
+      {/* {isPaidPlan() && (
         <div className="fixed top-16 right-4 z-50">
           <div className="bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 shadow-lg">
             <Crown className="w-4 h-4" />
             Premium Plan
           </div>
         </div>
-      )}
+      )} */}
     </>
   );
 };
