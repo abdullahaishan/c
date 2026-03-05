@@ -736,42 +736,53 @@ async getDeveloperContent(developerId) {
   }
 },
   // ✅ إنشاء مشروع جديد
-  async create(developerId, projectData) {
-    // التحقق من وجود المشاريع الحالية
-    const { data: existingProjects } = await supabase
-      .from('projects')
-      .select('id')
-      .eq('developer_id', developerId)
+  // في supabase.js - تحديث projectService.create
+async create(developerId, projectData) {
+  // التحقق من حد الباقة
+  const { count, error: countError } = await supabase
+    .from('projects')
+    .select('*', { count: 'exact', head: true })
+    .eq('developer_id', developerId)
 
-    // التحقق من حد الباقة (اختياري)
-    const { data: developer } = await supabase
-      .from('developers')
-      .select('plan_id')
-      .eq('id', developerId)
-      .single()
+  if (countError) throw countError
 
-    // إذا كان مستخدم عادي (plan_id = 1) والحد 3 مشاريع
-    if (developer?.plan_id === 1 && existingProjects?.length >= 3) {
-      throw new Error('لقد تجاوزت الحد المسموح به من المشاريع للباقة المجانية')
+  const { data: developer, error: devError } = await supabase
+    .from('developers')
+    .select('plan_id, plans(max_projects)')
+    .eq('id', developerId)
+    .single()
+
+  if (devError) throw devError
+
+  const currentCount = count || 0
+  const maxProjects = developer?.plans?.max_projects || 3
+
+  // إذا كان الحد غير محدود (maxProjects = -1) نتخطى التحقق
+  if (maxProjects !== -1 && currentCount >= maxProjects) {
+    const planNames = {
+      1: 'المجانية',
+      2: 'الأساسية',
+      3: 'المحترف',
+      4: 'المؤسسات'
     }
+    throw new Error(`لقد تجاوزت الحد المسموح به من المشاريع للباقة ${planNames[developer?.plan_id] || ''}. الحد الأقصى هو ${maxProjects} مشاريع.`)
+  }
 
-    const { data, error } = await supabase
-      .from('projects')
-      .insert([{
-        developer_id: developerId,
-        ...projectData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }])
-      .select()
-      .single()
-    
-    if (error) {
-      console.error('Error creating project:', error)
-      throw error
-    }
-    return data
-  },
+  // إنشاء المشروع
+  const { data, error } = await supabase
+    .from('projects')
+    .insert([{
+      developer_id: developerId,
+      ...projectData,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }])
+    .select()
+    .single()
+  
+  if (error) throw error
+  return data
+},
 
   // ✅ تحديث مشروع
   async update(id, updates) {
