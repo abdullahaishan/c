@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { projectService, storageService } from '../../lib/supabase'
+import { projectService, storageService , supabsae} from '../../lib/supabase'
 import Swal from 'sweetalert2'
 import {
   Plus,
@@ -77,9 +77,10 @@ const Projects = () => {
 // =============================================
 // التحقق من حد المشاريع المسموح به (نفس طريقة المهارات)
 // =============================================
+// دالة التحقق بعد إضافة الاستيراد
 const checkProjectLimit = async () => {
   try {
-    // 1️⃣ جلب عدد المشاريع الحالية
+    // ✅ الآن supabase معرف
     const { count, error: countError } = await supabase
       .from('projects')
       .select('*', { count: 'exact', head: true })
@@ -87,7 +88,6 @@ const checkProjectLimit = async () => {
 
     if (countError) throw countError
 
-    // 2️⃣ جلب بيانات المطور لمعرفة الباقة والحدود
     const { data: developer, error: devError } = await supabase
       .from('developers')
       .select('plan_id, plans(max_projects)')
@@ -99,10 +99,8 @@ const checkProjectLimit = async () => {
     const currentCount = count || 0
     const maxProjects = developer?.plans?.max_projects || 3
 
-    // ✅ إذا كان الحد -1 يعني غير محدود
     if (maxProjects === -1) return true
 
-    // ✅ التحقق من العدد
     if (currentCount >= maxProjects) {
       const planNames = {
         1: 'المجانية',
