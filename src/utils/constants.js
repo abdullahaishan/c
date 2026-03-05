@@ -160,13 +160,21 @@ export const PLAN_LIMITS = {
 // ===========================================
 // منصات التواصل الاجتماعي
 // ===========================================
+// src/utils/constants.js
+
 export const SOCIAL_PLATFORMS = [
-  { id: 'github', name: 'GitHub', placeholder: 'https://github.com/username', icon: 'Github' },
-  { id: 'linkedin', name: 'LinkedIn', placeholder: 'https://linkedin.com/in/username', icon: 'Linkedin' },
-  { id: 'twitter', name: 'Twitter', placeholder: 'https://twitter.com/username', icon: 'Twitter' },
-  { id: 'instagram', name: 'Instagram', placeholder: 'https://instagram.com/username', icon: 'Instagram' },
-  { id: 'facebook', name: 'Facebook', placeholder: 'https://facebook.com/username', icon: 'Facebook' },
-  { id: 'youtube', name: 'YouTube', placeholder: 'https://youtube.com/@username', icon: 'Youtube' }
+  { id: 'github', name: 'GitHub', icon: 'Github', placeholder: 'https://github.com/username' },
+  { id: 'linkedin', name: 'LinkedIn', icon: 'Linkedin', placeholder: 'https://linkedin.com/in/username' },
+  { id: 'twitter', name: 'X (Twitter)', icon: 'Twitter', placeholder: 'https://twitter.com/username' },
+  { id: 'instagram', name: 'Instagram', icon: 'Instagram', placeholder: 'https://instagram.com/username' },
+  { id: 'facebook', name: 'Facebook', icon: 'Facebook', placeholder: 'https://facebook.com/username' },
+  { id: 'youtube', name: 'YouTube', icon: 'Youtube', placeholder: 'https://youtube.com/@username' },
+  { id: 'tiktok', name: 'TikTok', icon: 'TikTok', placeholder: 'https://tiktok.com/@username' },
+  { id: 'discord', name: 'Discord', icon: 'Discord', placeholder: 'https://discord.gg/invite' },
+  { id: 'telegram', name: 'Telegram', icon: 'Telegram', placeholder: 'https://t.me/username' },
+  { id: 'whatsapp', name: 'WhatsApp', icon: 'WhatsApp', placeholder: 'https://wa.me/967700000000' },
+  { id: 'website', name: 'الموقع الشخصي', icon: 'Globe', placeholder: 'https://example.com' },
+  { id: 'email', name: 'البريد الإلكتروني', icon: 'Mail', placeholder: 'email@example.com' },
 ];
 
 // ===========================================
