@@ -113,8 +113,8 @@ const About = () => {
 
   const contactInfo = {
     email: developer.email || socialLinks.email || "eng.abdullah.z.aishan@gmail.com",
-    phone: developer.phone || "+967-771-315-459",
-    location: developer.location || "Sana'a, Yemen"
+    phone: developer.phone || "+900-000-000-000",
+    location: developer.location || "City, State"
   };
 
   // تنسيق تاريخ الانضمام
