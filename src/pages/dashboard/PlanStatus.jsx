@@ -351,37 +351,50 @@ const PlanStatus = () => {
   }, [user])
 
   const fetchAllData = async () => {
-    setLoading(true)
-    try {
-      // 1️⃣ جلب جميع الباقات
-      const { data: plans, error: plansError } = await supabase
+  const fetchAllData = async () => {
+  setLoading(true)
+  try {
+    // 1️⃣ جلب جميع الباقات
+    const { data: plans, error: plansError } = await supabase
+      .from('plans')
+      .select('*')
+      .eq('is_active', true)
+
+    if (plansError) throw plansError
+    setAllPlans(plans || [])
+
+    // 2️⃣ جلب باقة المستخدم الحالية - ✅ تأكد من جلب plan_id
+    const { data: userData, error: userError } = await supabase
+      .from('developers')
+      .select('id, plan_id') // ✅ فقط plan_id
+      .eq('id', user.id)
+      .single()
+
+    if (userError) throw userError
+    
+    console.log('✅ User plan_id from DB:', userData?.plan_id) // ✅ تشخيص
+    
+    // 3️⃣ جلب تفاصيل الباقة الحالية
+    if (userData?.plan_id) {
+      const { data: planDetails } = await supabase
         .from('plans')
         .select('*')
-        .eq('is_active', true)
-
-      if (plansError) throw plansError
-      setAllPlans(plans || [])
-
-      // 2️⃣ جلب باقة المستخدم الحالية
-      const { data: userPlan, error: userError } = await supabase
-        .from('developers')
-        .select('plan_id, plans(*)')
-        .eq('id', user.id)
+        .eq('id', userData.plan_id)
         .single()
-
-      if (userError) throw userError
-      setCurrentPlan(userPlan?.plans || null)
-
-      // 3️⃣ جلب الاستخدام الحالي
-      const content = await statsService.getContentStats(user.id)
-      setUsage(content?.counts || {})
-
-    } catch (error) {
-      console.error('Error fetching data:', error)
-    } finally {
-      setLoading(false)
+      
+      setCurrentPlan(planDetails || null)
     }
+
+    // 4️⃣ جلب الاستخدام الحالي
+    const content = await statsService.getContentStats(user.id)
+    setUsage(content?.counts || {})
+
+  } catch (error) {
+    console.error('Error fetching data:', error)
+  } finally {
+    setLoading(false)
   }
+}
 
   // ============================================
   // جلب أسعار الصرف
