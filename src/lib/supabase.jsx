@@ -86,8 +86,146 @@ export const likeService = {
 // ===========================================
 
 export const developerService = {
-  
+
+  // ===========================================
+  // ✅ دالة جديدة 1: getDashboardData - تجلب فقط ما يحتاجه DashboardLayout
+  // ===========================================
+  async getDashboardData(userId) {
+    try {
+      // فقط الحقول الأساسية التي يحتاجها DashboardLayout
+      const { data, error } = await supabase
+        .from('developers')
+        .select(`
+          id,
+          full_name,
+          email,
+          username,
+          profile_image,
+          plan_id
+        `)
+        .eq('id', userId)
+        .single()
+
+      if (error) throw error
+      return data
+    } catch (error) {
+      console.error('Error in getDashboardData:', error)
+      return null
+    }
+  },
+
+  // ===========================================
+  // ✅ دالة جديدة 2: getOverviewData - تجلب بيانات Overview بالتدريج
+  // ===========================================
+  async getOverviewData(userId, callbacks = {}) {
+    let result = {
+      developer: null,
+      stats: null,
+      projects: null,
+      skills: null,
+      certificates: null,
+      experience: null,
+      education: null
+    }
+
+    try {
+      // ========== المستوى 1: بيانات المطور الأساسية (فوراً) ==========
+      const { data: developer, error: devError } = await supabase
+        .from('developers')
+        .select(`
+          id,
+          full_name,
+          views_count,
+          likes_count
+        `)
+        .eq('id', userId)
+        .single()
+
+      if (devError) throw devError
       
+      result.developer = developer
+      callbacks.onDeveloper?.(developer) // ✅ استدعاء callback إذا وجد
+
+      // ========== المستوى 2: المشاريع (بعد 300ms) ==========
+      setTimeout(async () => {
+        try {
+          const { data: projects, error: projError } = await supabase
+            .from('projects')
+            .select('id, title, image, created_at')
+            .eq('developer_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(3)
+
+          if (!projError) {
+            result.projects = projects || []
+            callbacks.onProjects?.(projects || [])
+          }
+        } catch (e) {
+          console.error('Error fetching projects:', e)
+        }
+      }, 300)
+
+      // ========== المستوى 3: المهارات (بعد 600ms) ==========
+      setTimeout(async () => {
+        try {
+          const { data: skills, error: skillError } = await supabase
+            .from('skills')
+            .select('id, name, proficiency, category')
+            .eq('developer_id', userId)
+            .order('proficiency', { ascending: false })
+            .limit(5)
+
+          if (!skillError) {
+            result.skills = skills || []
+            callbacks.onSkills?.(skills || [])
+          }
+        } catch (e) {
+          console.error('Error fetching skills:', e)
+        }
+      }, 600)
+
+      // ========== المستوى 4: باقي الجداول (بعد 900ms) ==========
+      setTimeout(async () => {
+        try {
+          // Certificates
+          const { count: certCount } = await supabase
+            .from('certificates')
+            .select('*', { count: 'exact', head: true })
+            .eq('developer_id', userId)
+
+          // Experience
+          const { count: expCount } = await supabase
+            .from('experience')
+            .select('*', { count: 'exact', head: true })
+            .eq('developer_id', userId)
+
+          // Education
+          const { count: eduCount } = await supabase
+            .from('education')
+            .select('*', { count: 'exact', head: true })
+            .eq('developer_id', userId)
+
+          result.certificates = { count: certCount || 0 }
+          result.experience = { count: expCount || 0 }
+          result.education = { count: eduCount || 0 }
+
+          callbacks.onOtherTables?.({
+            certificates: certCount || 0,
+            experience: expCount || 0,
+            education: eduCount || 0
+          })
+        } catch (e) {
+          console.error('Error fetching other tables:', e)
+        }
+      }, 900)
+
+      return result
+    } catch (error) {
+      console.error('Error in getOverviewData:', error)
+      return null
+    }
+  },
+
 async getByUsername(username) {
   try {
     // استعلام يجلب المطور + فقط id و developer_id من كل جدول
