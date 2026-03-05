@@ -111,6 +111,21 @@ const detectCountryFromIP = async () => {
 }
 
 // ============================================
+// مكون عرض سعر الصرف
+// ============================================
+const ExchangeRateIndicator = ({ rates, lastUpdated, onRefresh }) => (
+  <div className="text-xs text-gray-500 flex items-center gap-2">
+    <span>آخر تحديث: {new Date(lastUpdated).toLocaleTimeString('ar')}</span>
+    <button 
+      onClick={onRefresh}
+      className="p-1 hover:bg-white/10 rounded-full transition-all"
+    >
+      <RefreshCw className="w-3 h-3" />
+    </button>
+  </div>
+)
+
+// ============================================
 // مكونات Skeleton Loading
 // ============================================
 const PlanCardSkeleton = () => (
@@ -145,6 +160,13 @@ const PlanCardSkeleton = () => (
   </div>
 )
 
+const HeaderSkeleton = () => (
+  <div className="flex items-center justify-between animate-pulse">
+    <div className="h-8 w-48 bg-white/10 rounded-lg"></div>
+    <div className="h-5 w-32 bg-white/10 rounded-lg"></div>
+  </div>
+)
+
 // ============================================
 // الدوال المساعدة
 // ============================================
@@ -173,34 +195,29 @@ const generateFeaturesFromPlan = (plan) => {
   
   return [
     {
-      text: 'عدد المشاريع',
+      text: 'المشاريع',
       limit: plan.max_projects === -1 ? 'غير محدود' : plan.max_projects,
-      value: plan.max_projects,
-      included: true
+      value: plan.max_projects
     },
     {
-      text: 'عدد المهارات',
+      text: 'المهارات',
       limit: plan.max_skills === -1 ? 'غير محدود' : plan.max_skills,
-      value: plan.max_skills,
-      included: true
+      value: plan.max_skills
     },
     {
       text: 'الشهادات',
       limit: plan.max_certificates === -1 ? 'غير محدود' : plan.max_certificates,
-      value: plan.max_certificates,
-      included: true
+      value: plan.max_certificates
     },
     {
       text: 'الخبرات',
       limit: plan.max_experience === -1 ? 'غير محدود' : plan.max_experience,
-      value: plan.max_experience,
-      included: true
+      value: plan.max_experience
     },
     {
       text: 'التعليم',
       limit: plan.max_education === -1 ? 'غير محدود' : plan.max_education,
-      value: plan.max_education,
-      included: true
+      value: plan.max_education
     },
     {
       text: 'تحليلات ذكاء اصطناعي',
@@ -222,7 +239,7 @@ const generateFeaturesFromPlan = (plan) => {
 }
 
 // ============================================
-// المكون الرئيسي (مبسط ومستقر)
+// المكون الرئيسي
 // ============================================
 const PlanStatus = () => {
   const [selectedPlan, setSelectedPlan] = useState(null)
@@ -243,6 +260,7 @@ const PlanStatus = () => {
   const [currentPlan, setCurrentPlan] = useState(null)
   const [usage, setUsage] = useState(null)
   const [loading, setLoading] = useState(true)
+  // ✅ متغير لتخزين plan_id الحقيقي من قاعدة البيانات
   const [userPlanId, setUserPlanId] = useState(null)
   const [convertedPrices, setConvertedPrices] = useState({})
   
@@ -259,7 +277,6 @@ const PlanStatus = () => {
 
   const fetchAllData = async () => {
     setLoading(true)
-    
     try {
       // 1️⃣ جلب جميع الباقات
       const { data: plans, error: plansError } = await supabase
@@ -270,30 +287,23 @@ const PlanStatus = () => {
       if (plansError) throw plansError
       setAllPlans(plans || [])
 
-      // 2️⃣ جلب plan_id من قاعدة البيانات
+      // 2️⃣ جلب باقة المستخدم الحالية من قاعدة البيانات
       if (user?.id) {
         const { data: userData, error: userError } = await supabase
           .from('developers')
-          .select('id, plan_id')
+          .select('plan_id, plans(*)')
           .eq('id', user.id)
           .single()
 
         if (!userError && userData) {
+          // ✅ تخزين plan_id الحقيقي
           setUserPlanId(userData.plan_id)
-          
-          // 3️⃣ جلب تفاصيل الباقة الحالية
-          if (userData.plan_id) {
-            const { data: planDetails } = await supabase
-              .from('plans')
-              .select('*')
-              .eq('id', userData.plan_id)
-              .single()
-            
-            setCurrentPlan(planDetails || null)
-          }
+          setCurrentPlan(userData.plans || null)
         }
+      }
 
-        // 4️⃣ جلب الاستخدام الحالي
+      // 3️⃣ جلب الاستخدام الحالي
+      if (user?.id) {
         const content = await statsService.getContentStats(user.id)
         setUsage(content?.counts || {})
       }
@@ -439,16 +449,27 @@ const PlanStatus = () => {
     return 0
   }
 
-  // ✅ دالة isCurrentPlan المبسطة والصحيحة
+  // ✅ دالة isCurrentPlan الصحيحة (تستخدم userPlanId من قاعدة البيانات)
   const isCurrentPlan = (planId) => {
-    // استخدام userPlanId من قاعدة البيانات
+    // تحويل القيم إلى أرقام للمقارنة الآمنة
+    const targetId = Number(planId)
+    
+    // ✅ استخدام userPlanId من قاعدة البيانات (الأدق)
     if (userPlanId) {
-      return Number(userPlanId) === Number(planId)
+      const currentId = Number(userPlanId)
+      return currentId === targetId
     }
-    // fallback إلى user?.plan_id
+    
+    // ✅ احتياطي: استخدام currentPlan
+    if (currentPlan?.id) {
+      return Number(currentPlan.id) === targetId
+    }
+    
+    // ✅ احتياطي أخير: استخدام user?.plan_id
     if (user?.plan_id) {
-      return Number(user.plan_id) === Number(planId)
+      return Number(user.plan_id) === targetId
     }
+    
     return false
   }
 
@@ -468,10 +489,7 @@ const PlanStatus = () => {
   if (isLoading) {
     return (
       <div className="space-y-6 p-6">
-        <div className="flex items-center justify-between animate-pulse">
-          <div className="h-8 w-48 bg-white/10 rounded-lg"></div>
-          <div className="h-5 w-32 bg-white/10 rounded-lg"></div>
-        </div>
+        <HeaderSkeleton />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
           <PlanCardSkeleton />
           <PlanCardSkeleton />
@@ -512,7 +530,7 @@ const PlanStatus = () => {
         </p>
       </div>
 
-      {/* Country and Currency Bar (مبسط) */}
+      {/* Country and Currency Bar */}
       <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-4 border border-white/10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -570,6 +588,7 @@ const PlanStatus = () => {
           const planColor = getPlanColor(plan.id)
           const price = getPrice(plan)
           const savings = getSavings(plan)
+          // ✅ استخدام الدالة الصحيحة للمقارنة
           const current = isCurrentPlan(plan.id)
           const features = generateFeaturesFromPlan(plan)
           
@@ -584,45 +603,84 @@ const PlanStatus = () => {
                   : 'border-white/10'
               } p-8 hover:scale-105 transition-all duration-300 group`}
             >
+              {/* Current Plan Badge - ✅ سيظهر فقط للباقة الصحيحة */}
               {current && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-1 rounded-full text-sm font-bold">
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-4 py-1 rounded-full text-sm font-bold whitespace-nowrap">
                   باقتك الحالية
                 </div>
               )}
 
+              {/* Popular Badge */}
               {plan.is_popular && !current && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white px-4 py-1 rounded-full text-sm font-bold">
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white px-4 py-1 rounded-full text-sm font-bold whitespace-nowrap">
                   الأكثر طلباً
                 </div>
               )}
 
-              <PlanIcon className={`w-12 h-12 mb-6 bg-gradient-to-r ${planColor} bg-clip-text text-transparent`} />
+              {/* Plan Icon */}
+              <div className="mb-6">
+                <PlanIcon className={`w-12 h-12 bg-gradient-to-r ${planColor} bg-clip-text text-transparent`} />
+              </div>
 
+              {/* Plan Name */}
               <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
               <p className="text-gray-400 text-sm mb-4">{plan.name_ar}</p>
 
+              {/* Price */}
               <div className="mb-6">
                 <span className="text-4xl font-bold text-white">
                   {price.symbol}{price.amount}
                 </span>
                 <span className="text-gray-400 text-sm mr-2">لمدى الحياة</span>
+                {savings > 0 && (
+                  <p className="text-xs text-green-400 mt-1">وفر {savings}%</p>
+                )}
               </div>
 
+              {/* Features */}
               <div className="space-y-4 mb-8">
-                {features.map((feature, index) => (
-                  <div key={index} className="flex items-center gap-2 text-gray-300">
-                    <Check className="w-4 h-4 text-green-400" />
-                    <span className="text-sm">{feature.text}: {feature.limit}</span>
-                  </div>
-                ))}
+                {features.map((feature, index) => {
+                  const isCurrentUserPlan = userPlanId === plan.id
+                  const currentUsage = usage?.[
+                    feature.text === 'المشاريع' ? 'projects' :
+                    feature.text === 'المهارات' ? 'skills' :
+                    feature.text === 'الشهادات' ? 'certificates' :
+                    feature.text === 'الخبرات' ? 'experience' :
+                    feature.text === 'التعليم' ? 'education' : ''
+                  ] || 0
+                  
+                  return (
+                    <div key={index}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2 text-gray-300">
+                          <Check className="w-4 h-4 text-green-400" />
+                          <span className="text-sm">{feature.text}</span>
+                        </div>
+                        <span className="text-sm text-white font-medium">
+                          {feature.limit}
+                        </span>
+                      </div>
+                      
+                      {isCurrentUserPlan && feature.value > 0 && feature.value !== -1 && (
+                        <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7] transition-all duration-300"
+                            style={{ width: `${Math.min(100, (currentUsage / feature.value) * 100)}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
 
+              {/* Action Button */}
               {current ? (
                 <button
                   disabled
                   className="w-full py-3 bg-white/10 text-gray-400 rounded-xl cursor-not-allowed"
                 >
-                  الباقة الحالية
+                  باقتك الحالية
                 </button>
               ) : (
                 <button
