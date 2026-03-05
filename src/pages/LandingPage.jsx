@@ -51,8 +51,7 @@ import Swal from 'sweetalert2'
 import Komentar from '../components/Commentar'
 import { useAuth } from '../hooks/useAuth' // ✅ استيراد useAuth
 
-// مكون الرقم المتحرك
-// مكون الرقم المتحرك المعدل
+// مكون الرقم المتحرك المعدل - حجم متناسق
 const AnimatedNumber = ({ value }) => {
   const [count, setCount] = useState(0)
   const { ref, inView } = useInView({ triggerOnce: true })
@@ -78,11 +77,11 @@ const AnimatedNumber = ({ value }) => {
     }
   }, [inView, value])
 
-  // ✅ إذا كانت القيمة 0 أو أقل، اعرض "جاري التحميل"
+  // ✅ نص التحميل بنفس حجم الأرقام تماماً
   if (!value || value === 0) {
     return (
       <span ref={ref} className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-400">
-        جاري التحميل...
+        --
       </span>
     )
   }
