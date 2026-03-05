@@ -214,56 +214,168 @@ const About = () => {
             </div>
 
             {/* أزرار التواصل الاجتماعي */}
-            {Object.keys(socialLinks).length > 0 && (
-              <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10" data-aos="fade-up" data-aos-delay="400">
-                <h4 className="text-white font-semibold mb-4 flex items-center gap-2">
-                  <span className="w-1 h-4 bg-purple-500 rounded-full" />
-                  Connect With Me
-                </h4>
-                <div className="flex flex-wrap gap-3">
-                  {socialLinks.github && (
-                    <a href={socialLinks.github} target="_blank" rel="noopener noreferrer"
-                       className="group relative p-3 bg-white/5 rounded-xl hover:bg-[#333] transition-all duration-300"
-                       title="GitHub">
-                      <Github className="w-5 h-5 text-gray-400 group-hover:text-white" />
-                      <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/90 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
-                        GitHub
-                      </span>
-                    </a>
-                  )}
-                  {socialLinks.linkedin && (
-                    <a href={socialLinks.linkedin} target="_blank" rel="noopener noreferrer"
-                       className="group relative p-3 bg-white/5 rounded-xl hover:bg-[#0077b5] transition-all duration-300"
-                       title="LinkedIn">
-                      <Linkedin className="w-5 h-5 text-gray-400 group-hover:text-white" />
-                      <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/90 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
-                        LinkedIn
-                      </span>
-                    </a>
-                  )}
-                  {socialLinks.instagram && (
-                    <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer"
-                       className="group relative p-3 bg-white/5 rounded-xl hover:bg-[#e4405f] transition-all duration-300"
-                       title="Instagram">
-                      <Instagram className="w-5 h-5 text-gray-400 group-hover:text-white" />
-                      <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/90 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
-                        Instagram
-                      </span>
-                    </a>
-                  )}
-                  {socialLinks.facebook && (
-                    <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer"
-                       className="group relative p-3 bg-white/5 rounded-xl hover:bg-[#1877f2] transition-all duration-300"
-                       title="Facebook">
-                      <Facebook className="w-5 h-5 text-gray-400 group-hover:text-white" />
-                      <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/90 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
-                        Facebook
-                      </span>
-                    </a>
-                  )}
-                </div>
-              </div>
-            )}
+            {/* أزرار التواصل الاجتماعي - نسخة كاملة مع جميع المنصات */}
+{Object.keys(socialLinks).length > 0 && (
+  <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10" data-aos="fade-up" data-aos-delay="400">
+    <h4 className="text-white font-semibold mb-4 flex items-center gap-2">
+      <span className="w-1 h-4 bg-purple-500 rounded-full" />
+      Connect With Me
+    </h4>
+    <div className="flex flex-wrap gap-3">
+      {/* ✅ GitHub */}
+      {socialLinks.github && (
+        <a href={socialLinks.github} target="_blank" rel="noopener noreferrer"
+           className="group relative p-3 bg-white/5 rounded-xl hover:bg-[#333] transition-all duration-300"
+           title="GitHub">
+          <Github className="w-5 h-5 text-gray-400 group-hover:text-white" />
+          <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/90 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
+            GitHub
+          </span>
+        </a>
+      )}
+      
+      {/* ✅ LinkedIn */}
+      {socialLinks.linkedin && (
+        <a href={socialLinks.linkedin} target="_blank" rel="noopener noreferrer"
+           className="group relative p-3 bg-white/5 rounded-xl hover:bg-[#0077b5] transition-all duration-300"
+           title="LinkedIn">
+          <Linkedin className="w-5 h-5 text-gray-400 group-hover:text-white" />
+          <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/90 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
+            LinkedIn
+          </span>
+        </a>
+      )}
+      
+      {/* ✅ X (Twitter) */}
+      {socialLinks.twitter && (
+        <a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer"
+           className="group relative p-3 bg-white/5 rounded-xl hover:bg-[#000000] transition-all duration-300"
+           title="X (Twitter)">
+          <Twitter className="w-5 h-5 text-gray-400 group-hover:text-white" />
+          <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/90 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
+            X
+          </span>
+        </a>
+      )}
+      
+      {/* ✅ Instagram */}
+      {socialLinks.instagram && (
+        <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer"
+           className="group relative p-3 bg-white/5 rounded-xl hover:bg-gradient-to-r hover:from-[#833ab4] hover:via-[#fd1d1d] hover:to-[#f77737] transition-all duration-300"
+           title="Instagram">
+          <Instagram className="w-5 h-5 text-gray-400 group-hover:text-white" />
+          <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/90 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
+            Instagram
+          </span>
+        </a>
+      )}
+      
+      {/* ✅ Facebook */}
+      {socialLinks.facebook && (
+        <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer"
+           className="group relative p-3 bg-white/5 rounded-xl hover:bg-[#1877f2] transition-all duration-300"
+           title="Facebook">
+          <Facebook className="w-5 h-5 text-gray-400 group-hover:text-white" />
+          <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/90 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
+            Facebook
+          </span>
+        </a>
+      )}
+      
+      {/* ✅ YouTube */}
+      {socialLinks.youtube && (
+        <a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer"
+           className="group relative p-3 bg-white/5 rounded-xl hover:bg-[#FF0000] transition-all duration-300"
+           title="YouTube">
+          <Youtube className="w-5 h-5 text-gray-400 group-hover:text-white" />
+          <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/90 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
+            YouTube
+          </span>
+        </a>
+      )}
+      
+      {/* ✅ TikTok */}
+      {socialLinks.tiktok && (
+        <a href={socialLinks.tiktok} target="_blank" rel="noopener noreferrer"
+           className="group relative p-3 bg-white/5 rounded-xl hover:bg-[#000000] transition-all duration-300"
+           title="TikTok">
+          <svg className="w-5 h-5 text-gray-400 group-hover:text-white" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
+          </svg>
+          <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/90 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
+            TikTok
+          </span>
+        </a>
+      )}
+      
+      {/* ✅ Discord */}
+      {socialLinks.discord && (
+        <a href={socialLinks.discord} target="_blank" rel="noopener noreferrer"
+           className="group relative p-3 bg-white/5 rounded-xl hover:bg-[#5865F2] transition-all duration-300"
+           title="Discord">
+          <svg className="w-5 h-5 text-gray-400 group-hover:text-white" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515c-.074.134-.16.314-.212.471a18.344 18.344 0 0 0-5.506 0 3.474 3.474 0 0 0-.212-.471 19.733 19.733 0 0 0-4.885 1.515c-2.66 3.942-3.438 7.744-3.07 11.484 2.176 1.614 4.258 2.554 6.301 3.166.54-.74 1.018-1.53 1.424-2.374a12.284 12.284 0 0 1-2.233-1.075 9.528 9.528 0 0 0 .553-.431 14.638 14.638 0 0 0 12.12 0c.178.147.36.293.553.431-.7.432-1.448.814-2.233 1.075.406.844.884 1.634 1.424 2.374 2.043-.612 4.125-1.552 6.301-3.166.426-4.287-.636-8.079-3.07-11.484zM8.988 14.236c-1.182 0-2.158-1.091-2.158-2.432 0-1.34.946-2.432 2.158-2.432 1.211 0 2.157 1.092 2.158 2.432 0 1.341-.946 2.432-2.158 2.432zm6.024 0c-1.182 0-2.158-1.091-2.158-2.432 0-1.34.946-2.432 2.158-2.432s2.158 1.092 2.158 2.432c0 1.341-.946 2.432-2.158 2.432z"/>
+          </svg>
+          <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/90 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
+            Discord
+          </span>
+        </a>
+      )}
+      
+      {/* ✅ Telegram */}
+      {socialLinks.telegram && (
+        <a href={socialLinks.telegram} target="_blank" rel="noopener noreferrer"
+           className="group relative p-3 bg-white/5 rounded-xl hover:bg-[#0088cc] transition-all duration-300"
+           title="Telegram">
+          <svg className="w-5 h-5 text-gray-400 group-hover:text-white" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.914.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.244-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+          </svg>
+          <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/90 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
+            Telegram
+          </span>
+        </a>
+      )}
+      
+      {/* ✅ WhatsApp */}
+      {socialLinks.whatsapp && (
+        <a href={socialLinks.whatsapp} target="_blank" rel="noopener noreferrer"
+           className="group relative p-3 bg-white/5 rounded-xl hover:bg-[#25D366] transition-all duration-300"
+           title="WhatsApp">
+          <svg className="w-5 h-5 text-gray-400 group-hover:text-white" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.064 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+          </svg>
+          <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/90 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
+            WhatsApp
+          </span>
+        </a>
+      )}
+      
+      {/* ✅ الموقع الشخصي */}
+      {socialLinks.website && (
+        <a href={socialLinks.website} target="_blank" rel="noopener noreferrer"
+           className="group relative p-3 bg-white/5 rounded-xl hover:bg-purple-600 transition-all duration-300"
+           title="Website">
+          <Globe className="w-5 h-5 text-gray-400 group-hover:text-white" />
+          <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/90 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
+            Website
+          </span>
+        </a>
+      )}
+      
+      {/* ✅ البريد الإلكتروني */}
+      {socialLinks.email && (
+        <a href={`mailto:${socialLinks.email}`} target="_blank" rel="noopener noreferrer"
+           className="group relative p-3 bg-white/5 rounded-xl hover:bg-purple-600 transition-all duration-300"
+           title="Email">
+          <Mail className="w-5 h-5 text-gray-400 group-hover:text-white" />
+          <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/90 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
+            Email
+          </span>
+        </a>
+      )}
+    </div>
+  </div>
+)}
           </div>
 
           {/* العمود الأيسر - الإحصائيات والصورة */}
