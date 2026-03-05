@@ -38,21 +38,17 @@ const DashboardLayout = () => {
   
   // البيانات الكاملة
   const [developerData, setDeveloperData] = useState(null)
-  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
-  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0)
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0) // ✅ فقط الإشعارات
   
-  const { user, loading: authLoading } = useAuth() // user فقط { id }
+  const { user, loading: authLoading } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
 
   // =========== التحقق من المصادقة أولاً ===========
   
   useEffect(() => {
-    // ننتظر حتى ينتهي تحميل المصادقة
     if (!authLoading) {
       setAuthChecked(true)
-      
-      // إذا لا يوجد مستخدم بعد التأكد، نوجه لتسجيل الدخول
       if (!user) {
         navigate('/login', { state: { from: location.pathname } })
       }
@@ -80,22 +76,7 @@ const DashboardLayout = () => {
     }
   }
 
-  const fetchUnreadMessagesCount = async (userId) => {
-    try {
-      const { count, error } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('developer_id', userId)
-        .eq('is_read', false)
-
-      if (error) throw error
-      return count || 0
-    } catch (error) {
-      console.error('Error fetching unread messages:', error)
-      throw error
-    }
-  }
-
+  // ✅ دالة جلب عدد الإشعارات غير المقروءة فقط
   const fetchUnreadNotificationsCount = async (userId) => {
     try {
       const { count, error } = await supabase
@@ -108,7 +89,7 @@ const DashboardLayout = () => {
       return count || 0
     } catch (error) {
       console.error('Error fetching unread notifications:', error)
-      throw error
+      return 0
     }
   }
 
@@ -128,13 +109,8 @@ const DashboardLayout = () => {
         const developerFullData = await fetchDeveloperData(user.id)
         setDeveloperData(developerFullData)
         
-        // 2. جلب عدد الرسائل
+        // 2. جلب عدد الإشعارات فقط (بدون رسائل)
         setLoadingProgress(60)
-        const messagesCount = await fetchUnreadMessagesCount(user.id)
-        setUnreadMessagesCount(messagesCount)
-
-        // 3. جلب عدد الإشعارات
-        setLoadingProgress(90)
         const notificationsCount = await fetchUnreadNotificationsCount(user.id)
         setUnreadNotificationsCount(notificationsCount)
 
@@ -154,6 +130,18 @@ const DashboardLayout = () => {
     loadAllEssentialData()
   }, [user?.id, authChecked])
 
+  // =========== تحديث دوري للإشعارات ===========
+  useEffect(() => {
+    if (user?.id && !isLoading) {
+      const interval = setInterval(async () => {
+        const count = await fetchUnreadNotificationsCount(user.id)
+        setUnreadNotificationsCount(count)
+      }, 30000) // كل 30 ثانية
+      
+      return () => clearInterval(interval)
+    }
+  }, [user?.id, isLoading])
+
   // =========== إذا كانت المصادقة لا تزال تحمل ===========
   
   if (authLoading || !authChecked) {
@@ -172,24 +160,16 @@ const DashboardLayout = () => {
     )
   }
 
-  // =========== إذا لا يوجد مستخدم ===========
-  
-  if (!user) {
-    return null
-  }
+  if (!user) return null
 
-  // =========== شاشة التحميل (Splash Screen) ===========
-  
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center">
         <div className="text-center max-w-md px-4">
-          {/* شعار متحرك */}
           <div className="relative mb-8 mx-auto w-32 h-32">
             <div className="absolute inset-0 rounded-full border-4 border-t-transparent border-[#6366f1] animate-spin"></div>
             <div className="absolute inset-2 rounded-full border-4 border-t-transparent border-[#a855f7] animate-spin-slow"></div>
             <div className="absolute inset-4 rounded-full border-4 border-t-transparent border-[#ec4899] animate-spin-slower"></div>
-            
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-16 h-16 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-2xl flex items-center justify-center shadow-2xl">
                 <span className="text-3xl font-bold text-white">P</span>
@@ -205,7 +185,6 @@ const DashboardLayout = () => {
             مرحباً بعودتك! جاري تجهيز لوحة التحكم...
           </p>
 
-          {/* شريط التقدم */}
           <div className="w-full max-w-sm mx-auto mb-4">
             <div className="flex justify-between text-sm text-gray-400 mb-2">
               <span>جاري التحميل</span>
@@ -219,7 +198,6 @@ const DashboardLayout = () => {
             </div>
           </div>
 
-          {/* مراحل التحميل */}
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2 text-gray-400">
               <div className={`w-4 h-4 rounded-full flex items-center justify-center ${loadingProgress >= 30 ? 'bg-green-500' : 'bg-white/20'}`}>
@@ -231,17 +209,10 @@ const DashboardLayout = () => {
               <div className={`w-4 h-4 rounded-full flex items-center justify-center ${loadingProgress >= 60 ? 'bg-green-500' : 'bg-white/20'}`}>
                 {loadingProgress >= 60 && <span className="text-white text-xs">✓</span>}
               </div>
-              <span>تأكد من الخصوصيه</span>
-            </div>
-            <div className="flex items-center gap-2 text-gray-400">
-              <div className={`w-4 h-4 rounded-full flex items-center justify-center ${loadingProgress >= 90 ? 'bg-green-500' : 'bg-white/20'}`}>
-                {loadingProgress >= 90 && <span className="text-white text-xs">✓</span>}
-              </div>
               <span>الإشعارات</span>
             </div>
           </div>
 
-          {/* رسالة الخطأ إن وجدت */}
           {loadingError && (
             <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
               <p className="text-red-400 text-sm mb-2">{loadingError}</p>
@@ -258,8 +229,6 @@ const DashboardLayout = () => {
     )
   }
 
-  // =========== عرض الخطأ إذا فشل التحميل ===========
-  
   if (loadingError) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center">
@@ -268,9 +237,7 @@ const DashboardLayout = () => {
             <span className="text-4xl">⚠️</span>
           </div>
           <h2 className="text-2xl font-bold text-white mb-4">فشل تحميل البيانات</h2>
-          <p className="text-gray-400 mb-6">
-            {loadingError}
-          </p>
+          <p className="text-gray-400 mb-6">{loadingError}</p>
           <button
             onClick={() => window.location.reload()}
             className="px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl hover:opacity-90 transition-opacity"
@@ -282,8 +249,6 @@ const DashboardLayout = () => {
     )
   }
 
-  // =========== إعدادات التنقل ===========
-  
   const navigation = [
     { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
@@ -307,11 +272,8 @@ const DashboardLayout = () => {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  // =========== لوحة التحكم الرئيسية ===========
-  
   return (
     <div className="min-h-screen bg-[#030014]">
-      {/* خلفية القائمة الجانبية للجوال */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
@@ -319,13 +281,11 @@ const DashboardLayout = () => {
         />
       )}
 
-      {/* القائمة الجانبية */}
       <div
         className={`fixed inset-y-0 left-0 w-64 bg-white/5 backdrop-blur-xl border-r border-white/10 transform transition-transform duration-300 ease-in-out z-50 lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        {/* الشعار */}
         <div className="h-16 flex items-center justify-center border-b border-white/10">
           <Link to="/" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-lg flex items-center justify-center">
@@ -335,12 +295,9 @@ const DashboardLayout = () => {
           </Link>
         </div>
 
-        {/* روابط التنقل */}
         <nav className="p-4 space-y-1">
           {navigation.map((item) => {
             const Icon = item.icon
-            const isMessagesPage = item.href === '/dashboard/messages'
-            
             return (
               <Link
                 key={item.name}
@@ -354,30 +311,19 @@ const DashboardLayout = () => {
               >
                 <Icon className="w-5 h-5" />
                 <span>{item.name}</span>
-                
-                {/* عداد الرسائل غير المقروءة */}
-                {isMessagesPage && unreadMessagesCount > 0 && (
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 min-w-[20px] h-[20px] flex items-center justify-center bg-red-500 text-white text-xs rounded-full px-1">
-                    {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
-                  </span>
-                )}
               </Link>
             )
           })}
         </nav>
 
-        {/* معلومات المستخدم - الآن مع البيانات الكاملة */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
           <div className="flex items-center gap-3">
             <img
               src={developerData?.profile_image || '/default-avatar.png'}
               alt={developerData?.full_name}
               className="w-10 h-10 rounded-full object-cover border-2 border-[#a855f7]/30"
-              onError={(e) => {
-                e.target.src = '/default-avatar.png'
-              }}
+              onError={(e) => { e.target.src = '/default-avatar.png' }}
             />
-            
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">
                 {developerData?.full_name || 'مستخدم'}
@@ -395,12 +341,9 @@ const DashboardLayout = () => {
         </div>
       </div>
 
-      {/* المحتوى الرئيسي */}
       <div className="lg:pl-64">
-        {/* الشريط العلوي */}
         <header className="sticky top-0 z-30 bg-white/5 backdrop-blur-xl border-b border-white/10">
           <div className="flex items-center justify-between h-16 px-4">
-            {/* زر القائمة للجوال */}
             <button
               onClick={() => setSidebarOpen(true)}
               className="lg:hidden p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg"
@@ -408,10 +351,7 @@ const DashboardLayout = () => {
               <Menu className="w-6 h-6" />
             </button>
 
-            {/* الجانب الأيمن */}
             <div className="flex items-center gap-4 ml-auto">
-              
-              {/* زر مشاركة الموقع */}
               <div className="relative">
                 <button
                   onClick={copyPortfolioLink}
@@ -440,7 +380,7 @@ const DashboardLayout = () => {
                 )}
               </div>
 
-              {/* زر الإشعارات */}
+              {/* ✅ زر الإشعارات مع العداد */}
               <button 
                 onClick={() => navigate('/dashboard/notifications')}
                 className="relative p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg"
@@ -453,7 +393,6 @@ const DashboardLayout = () => {
                 )}
               </button>
 
-              {/* القائمة المنسدلة للملف الشخصي */}
               <div className="relative">
                 <button
                   onClick={() => setProfileMenuOpen(!profileMenuOpen)}
@@ -463,9 +402,7 @@ const DashboardLayout = () => {
                     src={developerData?.profile_image || '/default-avatar.png'}
                     alt={developerData?.full_name}
                     className="w-8 h-8 rounded-full object-cover"
-                    onError={(e) => {
-                      e.target.src = '/default-avatar.png'
-                    }}
+                    onError={(e) => { e.target.src = '/default-avatar.png' }}
                   />
                   <span className="hidden sm:block text-sm">
                     {developerData?.full_name?.split(' ')[0] || 'User'}
@@ -509,9 +446,8 @@ const DashboardLayout = () => {
           </div>
         </header>
 
-        {/* محتوى الصفحة */}
         <main className="p-6">
-          <Outlet context={{ developerData, unreadMessagesCount, unreadNotificationsCount }} />
+          <Outlet context={{ developerData, unreadNotificationsCount }} />
         </main>
       </div>
     </div>
