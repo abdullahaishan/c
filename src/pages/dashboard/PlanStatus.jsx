@@ -358,7 +358,6 @@ const PlanStatus = () => {
         .from('plans')
         .select('*')
         .eq('is_active', true)
-        .order('sort_order', { ascending: true })
 
       if (plansError) throw plansError
       setAllPlans(plans || [])
