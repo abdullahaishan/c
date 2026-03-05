@@ -51,13 +51,15 @@ import Swal from 'sweetalert2'
 import Komentar from '../components/Commentar'
 import { useAuth } from '../hooks/useAuth' // ✅ استيراد useAuth
 
-// مكون الرقم المتحرك المعدل - حجم متناسق
+// مكون الرقم المتحرك مع تحميل احترافي
 const AnimatedNumber = ({ value }) => {
   const [count, setCount] = useState(0)
+  const [loading, setLoading] = useState(true)
   const { ref, inView } = useInView({ triggerOnce: true })
 
   useEffect(() => {
     if (inView && value > 0) {
+      setLoading(false)
       let start = 0
       const end = parseInt(value.toString().replace(/[^0-9]/g, ''))
       const duration = 2000
@@ -77,12 +79,19 @@ const AnimatedNumber = ({ value }) => {
     }
   }, [inView, value])
 
-  // ✅ نص التحميل بنفس حجم الأرقام تماماً
-  if (!value || value === 0) {
+  // ✅ برجراس تحميل صغير واحترافي
+  if (loading || !value || value === 0) {
     return (
-      <span ref={ref} className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-400">
-        --
-      </span>
+      <div ref={ref} className="flex items-center justify-center">
+        <div className="relative">
+          {/* الدائرة الخارجية */}
+          <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full border-2 border-indigo-500/20 border-t-indigo-500 animate-spin"></div>
+          {/* النقطة المتحركة في المنتصف */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-indigo-500 rounded-full animate-pulse"></div>
+          </div>
+        </div>
+      </div>
     )
   }
 
