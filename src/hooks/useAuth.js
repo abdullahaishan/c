@@ -31,73 +31,65 @@ export const useAuth = () => {
   }
 
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        // ✅ 1. جرب UUID من localStorage أولاً
-        const storedUserId = localStorage.getItem('user_id')
-        if (storedUserId) {
-          setUser({ id: storedUserId }) // ✅ UUID فقط فوراً
-          
-          // ✅ جرب البيانات الكاملة من localStorage
-          const storedFullData = localStorage.getItem('developer_full')
-          if (storedFullData) {
-            setFullData(JSON.parse(storedFullData))
-          }
-        }
+  let isMounted = true  // ← أضف هذا
+  let dataFetched = false  // ← أضف هذا
 
-        // ✅ 2. تحقق من الجلسة الحقيقية (في الخلفية)
-        const { data: { session } } = await supabase.auth.getSession()
-        
-        if (session?.user) {
-          const uuid = session.user.id
-          
-          // ✅ حدث UUID إذا اختلف
-          if (storedUserId !== uuid) {
-            setUser({ id: uuid })
-            localStorage.setItem('user_id', uuid)
-          }
-          
-          // ✅ جلب البيانات الكاملة في الخلفية (دائماً)
-          fetchDeveloperData(uuid)
-        } else if (storedUserId) {
-          // إذا كان UUID موجود بس مافي جلسة → امسح كل شيء
-          setUser(null)
-          setFullData(null)
-          localStorage.removeItem('user_id')
-          localStorage.removeItem('developer_full')
-        }
-      } catch (err) {
-        console.error('Init auth error:', err)
-        setError(err.message)
-      } finally {
-        setLoading(false)
+  const initAuth = async () => {
+    try {
+      const storedUserId = localStorage.getItem('user_id')
+      if (storedUserId && isMounted) {
+        setUser({ id: storedUserId })
       }
-    }
 
-    initAuth()
-
-    // ✅ استماع لتغييرات المصادقة
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (session?.user && isMounted) {
         const uuid = session.user.id
         
-        // ✅ حدث UUID فوراً
-        setUser({ id: uuid })
-        localStorage.setItem('user_id', uuid)
+        if (storedUserId !== uuid) {
+          setUser({ id: uuid })
+          localStorage.setItem('user_id', uuid)
+        }
         
-        // ✅ جلب البيانات الكاملة في الخلفية
-        fetchDeveloperData(uuid)
-      } else {
-        setUser(null)
-        setFullData(null)
-        localStorage.removeItem('user_id')
-        localStorage.removeItem('developer_full')
+        // ✅ اشتغل مرة واحدة فقط
+        if (!dataFetched) {
+          dataFetched = true
+          fetchDeveloperData(uuid)
+        }
       }
-    })
+    } catch (err) {
+      console.error(err)
+    } finally {
+      if (isMounted) setLoading(false)
+    }
+  }
 
-    return () => subscription?.unsubscribe()
-  }, [])
+  initAuth()
 
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (session?.user && isMounted) {
+      const uuid = session.user.id
+      setUser({ id: uuid })
+      localStorage.setItem('user_id', uuid)
+      
+      // ✅ اشتغل مرة واحدة فقط
+      if (!dataFetched) {
+        dataFetched = true
+        fetchDeveloperData(uuid)
+      }
+    } else if (isMounted) {
+      setUser(null)
+      setFullData(null)
+      localStorage.removeItem('user_id')
+      localStorage.removeItem('developer_full')
+    }
+  })
+
+  return () => {
+    isMounted = false
+    subscription?.unsubscribe()
+  }
+}, [])
   // ✅ دالة تسجيل الدخول
   const login = async (email, password) => {
     try {
