@@ -16,7 +16,7 @@ const CONTACT_METHODS = {
     hoverColor: 'hover:bg-green-500',
     username: '+967771315459',
     link: 'https://wa.me/967771315459',
-    qrCode: null // يمكن إضافة رابط QR code لاحقاً
+    qrCode: null
   },
   instagram: {
     id: 'instagram',
@@ -175,11 +175,15 @@ const ContactSupport = () => {
             onClick={() => setIsOpen(false)}
           />
           
-          {/* نافذة الاختيار */}
+          {/* نافذة الاختيار - ✅ SVG مُصلح هنا */}
           <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-gradient-to-b from-[#1a1a2e] to-[#16213e] border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
             {/* الهيدر */}
             <div className="relative p-6 border-b border-white/10">
-              <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.05"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")] opacity-20'></div>
+              {/* ✅ SVG مُصلح - استخدام style بدلاً من bg-[] */}
+              <div className="absolute inset-0 opacity-20" style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                backgroundRepeat: 'repeat'
+              }}></div>
               
               <div className="relative flex items-center justify-between">
                 <h2 className="text-2xl font-bold bg-gradient-to-l from-[#6366f1] to-[#a855f7] bg-clip-text text-transparent">
