@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { authService } from '../lib/supabase'
 import { supabase } from '../lib/supabase'
 
@@ -6,124 +6,103 @@ export const useAuth = () => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [hasPortfolio, setHasPortfolio] = useState(false)
-  const initialLoadRef = useRef(true) // لمنع التحميل المزدوج
-// ✅ دالة جلب بيانات المطور (قبل useEffect)
-const fetchDeveloperData = async (userId) => {
-  try {
-    const { data: developer, error } = await supabase
-      .from('developers')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle()
-    
-    if (error) throw error
-    
-    if (developer) {
-      setUser(developer)
-      localStorage.setItem('developer', JSON.stringify(developer))
-    }
-    return developer
-  } catch (err) {
-    console.error('Error fetching developer:', err)
-    return null
-  }
-}
-  useEffect(() => {
-  const initAuth = async () => {
+
+  // ✅ دالة جلب بيانات المطور
+  const fetchDeveloperData = async (userId) => {
     try {
-      // ✅ 1. تحقق من localStorage أولاً
-      const cachedUser = localStorage.getItem('developer')
-      if (cachedUser) {
-        setUser(JSON.parse(cachedUser))
-        setLoading(false)
-        
-        // ✅ 2. تحديث في الخلفية
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session?.user) {
-          fetchDeveloperData(session.user.id) // بدون await
-        }
-        return
-      }
-
-      // ✅ 3. إذا مافي كاش، جلب من الجلسة
-      const { data: { session } } = await supabase.auth.getSession()
+      const { data: developer, error } = await supabase
+        .from('developers')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle()
       
-      if (session?.user) {
-        // جلب من developers فقط (لا pending)
-        const { data: developer } = await supabase
-          .from('developers')
-          .select('*')
-          .eq('id', session.user.id)
-          .maybeSingle()
-
-        if (developer) {
-          setUser(developer)
-          localStorage.setItem('developer', JSON.stringify(developer))
-        }
-        // ❌ لا تتحقق من pending
+      if (error) throw error
+      
+      if (developer) {
+        setUser(developer)
+        localStorage.setItem('developer', JSON.stringify(developer))
       }
+      return developer
     } catch (err) {
-      console.error('Init auth error:', err)
+      console.error('Error fetching developer:', err)
+      return null
+    }
+  }
+
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        // ✅ 1. تحقق من localStorage أولاً
+        const cachedUser = localStorage.getItem('developer')
+        if (cachedUser) {
+          setUser(JSON.parse(cachedUser))
+          setLoading(false)
+          
+          // ✅ 2. تحديث في الخلفية
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session?.user) {
+            fetchDeveloperData(session.user.id)
+          }
+          return
+        }
+
+        // ✅ 3. إذا مافي كاش، جلب من الجلسة
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (session?.user) {
+          const { data: developer } = await supabase
+            .from('developers')
+            .select('*')
+            .eq('id', session.user.id)
+            .maybeSingle()
+
+          if (developer) {
+            setUser(developer)
+            localStorage.setItem('developer', JSON.stringify(developer))
+          }
+        }
+      } catch (err) {
+        console.error('Init auth error:', err)
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    initAuth()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        fetchDeveloperData(session.user.id)
+      } else {
+        setUser(null)
+        localStorage.removeItem('developer')
+      }
+    })
+
+    return () => subscription?.unsubscribe()
+  }, [])
+
+  const login = async (email, password) => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const result = await authService.login(email, password)
+      if (!result.success) throw new Error('Login failed')
+
+      // ✅ جلب البيانات في الخلفية
+      fetchDeveloperData(result.user.id)
+
+      return { success: true, user: result.user }
+
+    } catch (err) {
       setError(err.message)
+      return { success: false, error: err.message }
     } finally {
       setLoading(false)
     }
   }
-
-  initAuth()
-
-  // ✅ onAuthStateChange مبسط
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-    if (session?.user) {
-      // جلب البيانات في الخلفية
-      supabase
-        .from('developers')
-        .select('*')
-        .eq('id', session.user.id)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (data) {
-            setUser(data)
-            localStorage.setItem('developer', JSON.stringify(data))
-          }
-        })
-    } else {
-      setUser(null)
-      localStorage.removeItem('developer')
-    }
-  })
-
-  return () => subscription?.unsubscribe()
-}, [])
-
-
-  // useAuth.js - عدل دالة login فقط
-const login = async (email, password) => {
-  try {
-    setLoading(true)
-    setError(null)
-
-    // ✅ 1. سجل الدخول أولاً (سريع)
-    const result = await authService.login(email, password)
-    if (!result.success) throw new Error('Login failed')
-
-    // ✅ 2. جلب البيانات في الخلفية (بدون await)
-    setTimeout(() => {
-      fetchDeveloperData(result.user.id)  // تشتغل في الخلفية
-    }, 0)
-
-    // ✅ 3. أرجع نجاح فوراً (بدون انتظار البيانات)
-    return { success: true, user: result.user }
-
-  } catch (err) {
-    setError(err.message)
-    return { success: false, error: err.message }
-  } finally {
-    setLoading(false)  // ← التحميل يخلص بسرعة
-  }
-}
-  
 
   const register = async (formData) => {
     try {
@@ -136,33 +115,26 @@ const login = async (email, password) => {
         throw new Error(result.message || 'Registration failed')
       }
 
-      setLoading(false) // إيقاف التحميل فوراً للتسجيل
       return { 
         success: true, 
-        user: result.user,
         message: 'Verification link sent to your email'
       }
 
     } catch (err) {
       setError(err.message)
-      setLoading(false)
       return { success: false, error: err.message }
+    } finally {
+      setLoading(false)
     }
   }
 
   const logout = async () => {
-  try {
-    await supabase.auth.signOut()
-    setUser(null)
-    localStorage.removeItem('developer')
-  } catch (err) {
-    console.error('Logout error:', err)
-  }
-  }
-
-  const refreshPortfolioStatus = async () => {
-    if (user && user.id) {
-      await checkPortfolio(user.id)
+    try {
+      await supabase.auth.signOut()
+      setUser(null)
+      localStorage.removeItem('developer')
+    } catch (err) {
+      console.error('Logout error:', err)
     }
   }
 
@@ -170,11 +142,9 @@ const login = async (email, password) => {
     user,
     loading,
     error,
-    hasPortfolio,
     login,
     register,
     logout,
-    refreshPortfolioStatus,
     isAuthenticated: !!user, 
   }
 }
