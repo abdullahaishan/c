@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { statsService } from '../../lib/supabase'
+import { supabase, statsService } from '../../lib/supabase'  // ✅ استيراد supabase
 import { Link } from 'react-router-dom'
 import {
   Eye,
@@ -29,7 +29,6 @@ import {
 // مكونات Skeleton Loading
 // ============================================
 
-// Skeleton للبطاقة الرئيسية (التحية)
 const GreetingCardSkeleton = () => (
   <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
     <div className="flex items-start justify-between">
@@ -51,7 +50,6 @@ const GreetingCardSkeleton = () => (
   </div>
 )
 
-// Skeleton لبطاقة الإحصائيات الرئيسية
 const StatCardSkeleton = () => (
   <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
     <div className="flex items-start justify-between mb-4">
@@ -64,7 +62,6 @@ const StatCardSkeleton = () => (
   </div>
 )
 
-// Skeleton لبطاقة المحتوى المصغرة
 const ContentMiniCardSkeleton = () => (
   <div className="bg-white/5 rounded-xl p-4 border border-white/10 animate-pulse">
     <div className="w-10 h-10 bg-white/10 rounded-lg mb-3"></div>
@@ -76,7 +73,6 @@ const ContentMiniCardSkeleton = () => (
   </div>
 )
 
-// Skeleton لقسم تحليلات الذكاء الاصطناعي
 const AISectionSkeleton = () => (
   <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
     <div className="flex items-center gap-2 mb-4">
@@ -104,7 +100,6 @@ const AISectionSkeleton = () => (
   </div>
 )
 
-// Skeleton لأحدث المشاريع
 const LatestProjectsSkeleton = () => (
   <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
     <div className="h-6 w-32 bg-white/10 rounded-lg mb-4"></div>
@@ -122,7 +117,6 @@ const LatestProjectsSkeleton = () => (
   </div>
 )
 
-// Skeleton لتحليلات الزوار
 const VisitorStatsSkeleton = () => (
   <>
     <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
@@ -133,7 +127,6 @@ const VisitorStatsSkeleton = () => (
           <div className="w-16 h-8 bg-white/10 rounded-lg"></div>
         </div>
       </div>
-
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[1,2,3,4].map((i) => (
           <div key={i} className="text-center">
@@ -143,7 +136,6 @@ const VisitorStatsSkeleton = () => (
           </div>
         ))}
       </div>
-
       <div>
         <div className="h-4 w-24 bg-white/10 rounded-lg mb-3"></div>
         <div className="space-y-2">
@@ -159,7 +151,6 @@ const VisitorStatsSkeleton = () => (
         </div>
       </div>
     </div>
-
     <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
       <div className="h-6 w-32 bg-white/10 rounded-lg mb-4"></div>
       <div className="space-y-3">
@@ -179,21 +170,16 @@ const VisitorStatsSkeleton = () => (
   </>
 )
 
-// Skeleton لصفحة Overview كاملة
 const OverviewSkeleton = () => {
   return (
     <div className="space-y-6" dir="rtl">
       <GreetingCardSkeleton />
-      
-      {/* بطاقات الإحصائيات الرئيسية */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCardSkeleton />
         <StatCardSkeleton />
         <StatCardSkeleton />
         <StatCardSkeleton />
       </div>
-
-      {/* بطاقات المحتوى المصغرة */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <ContentMiniCardSkeleton />
         <ContentMiniCardSkeleton />
@@ -201,22 +187,15 @@ const OverviewSkeleton = () => {
         <ContentMiniCardSkeleton />
         <ContentMiniCardSkeleton />
       </div>
-
-      {/* قسمين رئيسيين */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* القسم الأيسر */}
         <div className="lg:col-span-1 space-y-6">
           <AISectionSkeleton />
           <LatestProjectsSkeleton />
         </div>
-
-        {/* القسم الأيمن */}
         <div className="lg:col-span-2 space-y-6">
           <VisitorStatsSkeleton />
         </div>
       </div>
-
-      {/* Banner للمجانيين */}
       <div className="bg-white/5 rounded-2xl p-4 border border-white/10 animate-pulse">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
@@ -241,63 +220,57 @@ const Overview = () => {
   const [contentStats, setContentStats] = useState(null)
   const [visitorStats, setVisitorStats] = useState(null)
   const [aiStats, setAiStats] = useState(null)
-  const [planData, setPlanData] = useState(null) // ✅ بيانات الباقة الحقيقية
+  const [planData, setPlanData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [selectedPeriod, setSelectedPeriod] = useState('week')
-  const [dataLoaded, setDataLoaded] = useState(false)
 
   useEffect(() => {
     if (user) {
-      fetchAllStats()
-      fetchUserPlan() // ✅ جلب الباقة الحقيقية
+      fetchAllData() // ✅ دالة واحدة تجلب كل البيانات
     }
   }, [user])
 
-  // ✅ جلب الباقة الحقيقية من developers
-  const fetchUserPlan = async () => {
+  // ✅ دالة واحدة تجلب كل البيانات بشكل إجباري
+  const fetchAllData = async () => {
+    setLoading(true)
+    
     try {
-      const { data, error } = await supabase
+      // 1️⃣ جلب بيانات الباقة أولاً (مهمة)
+      const { data: plan, error: planError } = await supabase
         .from('developers')
         .select('plan_id, plans(*)')
         .eq('id', user.id)
         .single()
 
-      if (error) throw error
-      setPlanData(data)
-    } catch (error) {
-      console.error('Error fetching user plan:', error)
-    }
-  }
+      if (planError) throw planError
+      setPlanData(plan)
+      console.log('✅ Plan data loaded:', plan)
 
-  const fetchAllStats = async () => {
-    setLoading(true)
-    try {
-      const basicStats = await statsService.getDeveloperStats(user.id)
+      // 2️⃣ جلب باقي الإحصائيات
+      const [basicStats, content] = await Promise.all([
+        statsService.getDeveloperStats(user.id),
+        statsService.getContentStats(user.id)
+      ])
+
       setStats(basicStats)
-
-      const content = await statsService.getContentStats(user.id)
       setContentStats(content)
 
-      // ✅ التحقق من الباقة الحقيقية
-      if (planData?.plans?.analytics) {
+      // 3️⃣ جلب الإحصائيات المتقدمة إذا كانت الباقة تدعمها
+      if (plan?.plans?.analytics) {
         const advanced = await statsService.getAdvancedVisitorStats(user.id)
         setVisitorStats(advanced)
       }
 
-      if (planData?.plan_id >= 3) {
+      // 4️⃣ جلب تحليلات الذكاء الاصطناعي إذا كانت الباقة تدعمها
+      if (plan?.plan_id >= 3) {
         const ai = await statsService.getAIAnalysisStats(user.id)
         setAiStats(ai)
       }
 
-      setTimeout(() => {
-        setDataLoaded(true)
-        setLoading(false)
-      }, 500)
-
     } catch (error) {
-      console.error('Error fetching stats:', error)
-      setLoading(false)
-      setDataLoaded(true)
+      console.error('Error fetching data:', error)
+    } finally {
+      setLoading(false) // ✅ إنهاء التحميل فوراً بعد جلب البيانات
     }
   }
 
@@ -323,7 +296,8 @@ const Overview = () => {
     return 'مساء الخير'
   }
 
-  if (loading || !dataLoaded) {
+  // ✅ عرض Skeleton أثناء التحميل فقط
+  if (loading) {
     return <OverviewSkeleton />
   }
 
@@ -334,7 +308,7 @@ const Overview = () => {
 
   return (
     <div className="space-y-6" dir="rtl">
-      {/* التحية ومعلومات المستخدم */}
+      {/* التحية ومعلومات المستخدم - ✅ تظهر فوراً بعد جلب البيانات */}
       <div className="bg-gradient-to-r from-[#6366f1]/20 to-[#a855f7]/20 rounded-2xl p-6 border border-white/10">
         <div className="flex items-start justify-between">
           <div>
@@ -692,7 +666,7 @@ const Overview = () => {
 }
 
 // ===========================================
-// المكونات المساعدة (في نهاية الملف)
+// المكونات المساعدة
 // ===========================================
 
 const UsageCard = ({ label, current, max, color }) => {
