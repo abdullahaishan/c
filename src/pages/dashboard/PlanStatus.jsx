@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase, statsService } from '../../lib/supabase'
 import PaymentModal from '../plans/PaymentModel'
+import ContactSupport from '../../components/ContactSupport'  
 import {
   Check,
   Sparkles,
@@ -786,15 +787,9 @@ const PlanStatus = () => {
                 <p className="text-gray-400">تواصل معنا مباشرة عبر واتساب للاستفسار عن الباقات</p>
               </div>
             </div>
-            <a
-              href="https://wa.me/967771315459"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group px-8 py-4 bg-green-600 text-white rounded-2xl hover:bg-green-700 transition-all flex items-center gap-2 font-semibold shadow-lg shadow-green-600/25"
-            >
-              <MessageCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
-              تواصل مع الدعم
-            </a>
+            <div className="mt-8">
+  <ContactSupport />  // ✅ استخدم المكون هنا
+</div>
           </div>
         </div>
       </div>
