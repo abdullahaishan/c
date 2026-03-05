@@ -198,7 +198,7 @@ const DashboardLayout = () => {
           </div>
 
           <h1 className="text-3xl font-bold text-white mb-3">
-            Portfolio<span className="text-[#a855f7]">AI</span>
+            Portfolio<span className="text-[#a855f7]">V5</span>
           </h1>
           
           <p className="text-gray-400 mb-6">
@@ -231,7 +231,7 @@ const DashboardLayout = () => {
               <div className={`w-4 h-4 rounded-full flex items-center justify-center ${loadingProgress >= 60 ? 'bg-green-500' : 'bg-white/20'}`}>
                 {loadingProgress >= 60 && <span className="text-white text-xs">✓</span>}
               </div>
-              <span>الرسائل غير المقروءة</span>
+              <span>تأكد من الخصوصيه</span>
             </div>
             <div className="flex items-center gap-2 text-gray-400">
               <div className={`w-4 h-4 rounded-full flex items-center justify-center ${loadingProgress >= 90 ? 'bg-green-500' : 'bg-white/20'}`}>
@@ -331,7 +331,7 @@ const DashboardLayout = () => {
             <div className="w-8 h-8 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-lg flex items-center justify-center">
               <span className="text-white font-bold">P</span>
             </div>
-            <span className="text-xl font-bold text-white">Portfolio<span className="text-[#a855f7]">AI</span></span>
+            <span className="text-xl font-bold text-white">Portfolio<span className="text-[#a855f7]">V5</span></span>
           </Link>
         </div>
 
