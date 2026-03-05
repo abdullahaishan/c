@@ -6,6 +6,8 @@ import {
   Linkedin,
   Instagram,
   Facebook,
+  Youtube,
+  Twitter,
   Mail,
   Phone,
   MapPin,
@@ -16,7 +18,8 @@ import {
   Eye,
   Heart,
   Calendar,
-  ChevronRight
+  ChevronRight,
+  Globe
 } from "lucide-react";
 import AOS from "aos";
 import "aos/dist/aos.css";
