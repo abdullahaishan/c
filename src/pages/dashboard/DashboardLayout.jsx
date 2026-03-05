@@ -382,7 +382,7 @@ const DashboardLayout = () => {
 
               {/* ✅ زر الإشعارات مع العداد */}
               <button 
-                onClick={() => navigate('./Notifications')}
+                onClick={() => navigate('/dashboard/Notifications')}
                 className="relative p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg"
               >
                 <Bell className="w-5 h-5" />
