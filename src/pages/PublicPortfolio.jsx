@@ -15,21 +15,21 @@ import { Loader, AlertCircle, Crown } from 'lucide-react';
 const PublicPortfolio = () => {
   const {
   developer,
-//  publicLoading,
+ publicLoading,
   publicError,
   isPaidPlan
 } = useDeveloper();
 
- // if (publicLoading) {
-  //  return (
-   //   <div className="min-h-screen bg-[#030014] flex items-center justify-center">
-   //     <div className="text-center">
-      //    <Loader className="w-12 h-12 text-[#6366f1] animate-spin mx-auto mb-4" />
-     //     <p className="text-gray-400">Loading portfolio...</p>
-      //  </div>
-     // </div>
-   // );
-//  }
+ if (publicLoading) {
+    return (
+      <div className="min-h-screen bg-[#030014] flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="w-12 h-12 text-[#6366f1] animate-spin mx-auto mb-4" />
+         <p className="text-gray-400">Loading portfolio...</p>
+        </div>
+      </div>
+   );
+  }
 
   if (publicError || !developer) {
     return (
