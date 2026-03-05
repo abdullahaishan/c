@@ -49,7 +49,7 @@ import 'aos/dist/aos.css'
 import { developerService, likeService } from '../lib/supabase'
 import Swal from 'sweetalert2'
 import Komentar from '../components/Commentar'
-import { useAuth } from '../hooks/useAuth' // ✅ استيراد useAuth
+import { useAuth } from '../hooks/useAuth' 
 
 // مكون الرقم المتحرك مع تحميل احترافي
 const AnimatedNumber = ({ value }) => {
@@ -275,7 +275,7 @@ const ProfileCard = ({ profile, index, onLike }) => {
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const { user, logout } = useAuth() // ✅ استخدام useAuth
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -308,7 +308,7 @@ const Navbar = () => {
             <div className="w-8 h-8 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">P</span>
             </div>
-            <span className="text-white font-semibold hidden sm:block">Portfolio-v5</span>
+            <span className="text-white font-semibold hidden sm:block">Portfolio V5</span>
           </Link>
 
           {/* Desktop Menu */}
@@ -555,7 +555,7 @@ const Footer = () => {
               </li>
               <li className="flex items-center gap-2 text-gray-400 text-sm">
                 <Mail className="w-4 h-4 text-indigo-400" />
-                <span>eng.abdullah.z.aishan@gmail.com</span>
+                <span>portfolio.professional.v5@gmail.com</span>
               </li>
             </ul>
           </div>
