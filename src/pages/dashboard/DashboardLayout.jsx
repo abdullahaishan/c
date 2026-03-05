@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { messagesService, developerService } from '../../lib/supabase'
+import { developerService, messagesService } from '../../lib/supabase'
 import {
   LayoutDashboard,
   FolderKanban,
@@ -29,40 +29,38 @@ const DashboardLayout = () => {
   const [unreadCount, setUnreadCount] = useState(0)
   const [showShareTooltip, setShowShareTooltip] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [developerData, setDeveloperData] = useState(null)
+  const [dashboardData, setDashboardData] = useState(null)
   const [loading, setLoading] = useState(true)
 
   const { user, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
 
-  // جلب بيانات المطور الأساسية
+  // ✅ استخدام getDashboardData - سريع جداً
   useEffect(() => {
     if (!user?.id) return
 
     let isMounted = true
 
-    const fetchBasicData = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const data = await developerService.getById(user.id)
+        const data = await developerService.getDashboardData(user.id)
         if (isMounted) {
-          setDeveloperData(data)
+          setDashboardData(data)
           setLoading(false)
         }
       } catch (error) {
-        console.error('Error fetching developer data:', error)
+        console.error('Error fetching dashboard data:', error)
         if (isMounted) setLoading(false)
       }
     }
 
-    fetchBasicData()
-
-    return () => { isMounted = false }
+    fetchDashboardData()
   }, [user?.id])
 
-  // جلب عدد الرسائل
+  // جلب عدد الرسائل غير المقروءة
   useEffect(() => {
-    if (!user?.id || !developerData) return
+    if (!user?.id || !dashboardData) return
 
     let isMounted = true
 
@@ -82,11 +80,11 @@ const DashboardLayout = () => {
       isMounted = false
       clearInterval(interval)
     }
-  }, [user?.id, developerData])
+  }, [user?.id, dashboardData])
 
   const copyPortfolioLink = () => {
-    if (!developerData?.username) return
-    const portfolioUrl = `${window.location.origin}/u/${developerData.username}`
+    if (!dashboardData?.username) return
+    const portfolioUrl = `${window.location.origin}/u/${dashboardData.username}`
     navigator.clipboard.writeText(portfolioUrl)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
@@ -103,7 +101,6 @@ const DashboardLayout = () => {
 
   const isActive = (path) => location.pathname === path
 
-  // روابط القائمة - معطلة إذا البيانات لسة تحمل
   const navigation = [
     { name: 'Overview', href: '/dashboard', icon: LayoutDashboard, requiresData: true },
     { name: 'Projects', href: '/dashboard/projects', icon: FolderKanban, requiresData: true },
@@ -143,7 +140,7 @@ const DashboardLayout = () => {
           </Link>
         </div>
 
-        {/* Navigation - معطل إذا لسة تحمل */}
+        {/* Navigation */}
         <nav className="p-4 space-y-1">
           {navigation.map((item) => {
             const Icon = item.icon
@@ -187,10 +184,10 @@ const DashboardLayout = () => {
           })}
         </nav>
 
-        {/* User info */}
+        {/* User info - من getDashboardData */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
           <div className="flex items-center gap-3">
-            {!developerData ? (
+            {loading ? (
               <>
                 <div className="w-10 h-10 bg-white/10 rounded-full animate-pulse"></div>
                 <div className="flex-1">
@@ -201,17 +198,17 @@ const DashboardLayout = () => {
             ) : (
               <>
                 <img
-                  src={developerData.profile_image || '/default-avatar.png'}
-                  alt={developerData.full_name}
+                  src={dashboardData?.profile_image || '/default-avatar.png'}
+                  alt={dashboardData?.full_name}
                   className="w-10 h-10 rounded-full object-cover border-2 border-[#a855f7]/30"
                   onError={(e) => { e.target.src = '/default-avatar.png' }}
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-white truncate">
-                    {developerData.full_name}
+                    {dashboardData?.full_name}
                   </p>
                   <p className="text-xs text-gray-400 truncate">
-                    {developerData.email}
+                    {dashboardData?.email}
                   </p>
                 </div>
               </>
@@ -241,7 +238,7 @@ const DashboardLayout = () => {
                   onMouseEnter={() => setShowShareTooltip(true)}
                   onMouseLeave={() => setShowShareTooltip(false)}
                   className="relative p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all"
-                  disabled={!developerData?.username}
+                  disabled={!dashboardData?.username}
                 >
                   {copied ? (
                     <Check className="w-5 h-5 text-green-400" />
@@ -281,9 +278,9 @@ const DashboardLayout = () => {
                 <button
                   onClick={() => setProfileMenuOpen(!profileMenuOpen)}
                   className="flex items-center gap-2 p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg"
-                  disabled={!developerData}
+                  disabled={loading}
                 >
-                  {!developerData ? (
+                  {loading ? (
                     <>
                       <div className="w-8 h-8 bg-white/10 rounded-full animate-pulse"></div>
                       <div className="w-16 h-4 bg-white/10 rounded-lg animate-pulse hidden sm:block"></div>
@@ -291,23 +288,23 @@ const DashboardLayout = () => {
                   ) : (
                     <>
                       <img
-                        src={developerData.profile_image || '/default-avatar.png'}
-                        alt={developerData.full_name}
+                        src={dashboardData?.profile_image || '/default-avatar.png'}
+                        alt={dashboardData?.full_name}
                         className="w-8 h-8 rounded-full object-cover"
                         onError={(e) => { e.target.src = '/default-avatar.png' }}
                       />
                       <span className="hidden sm:block text-sm">
-                        {developerData.full_name?.split(' ')[0] || 'User'}
+                        {dashboardData?.full_name?.split(' ')[0] || 'User'}
                       </span>
                     </>
                   )}
                   <ChevronDown className="w-4 h-4" />
                 </button>
 
-                {profileMenuOpen && developerData && (
+                {profileMenuOpen && dashboardData && (
                   <div className="absolute right-0 mt-2 w-48 bg-gray-900 border border-white/10 rounded-xl shadow-xl z-50">
                     <Link
-                      to={`/u/${developerData.username || ''}`}
+                      to={`/u/${dashboardData?.username || ''}`}
                       className="flex items-center gap-2 px-4 py-3 text-sm text-gray-300 hover:bg-white/5 hover:text-white"
                       onClick={() => setProfileMenuOpen(false)}
                     >
