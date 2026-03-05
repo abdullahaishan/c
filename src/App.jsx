@@ -5,8 +5,6 @@ import { AnimatePresence } from 'framer-motion'
 import "./index.css"
 import VerifyOtp from './pages/auth/VerifyOtp'
 import AdminProtectedRoute from './components/AdminProtectedRoute'
-//import AdminRoute from './components/AdminRoute'
-
 // الصفحات العامة
 import WelcomeScreen from './pages/WelcomeScreen'
 import LandingPage from './pages/LandingPage'
@@ -31,6 +29,8 @@ import Education from './pages/dashboard/Education'
 import Settings from './pages/dashboard/Settings'
 import PlanStatus from './pages/dashboard/PlanStatus'
 import Messages from './pages/dashboard/Messages'
+import Notifications from './pages/dashboard/Notifications'
+
 import NotFound from './pages/NotFound'
 
 // صفحات المشروع
@@ -155,6 +155,8 @@ const AppRoutes = () => {
             <Route path="settings" element={<Settings />} />
             <Route path="plan-status" element={<PlanStatus />} />
             <Route path="messages" element={<Messages />} />
+            <Route path="dashboard/notifications" element={<Notifications />} />
+            
           </Route>
           
           {/* ========== صفحات الأدمن ========== */}
