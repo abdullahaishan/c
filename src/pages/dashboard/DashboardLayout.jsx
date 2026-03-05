@@ -1,5 +1,5 @@
 // DashboardLayout.jsx
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
@@ -27,23 +27,25 @@ import {
 const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profileMenuOpen, setProfileMenuOpen] = useState(false)
-  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
-  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0)
   const [showShareTooltip, setShowShareTooltip] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [essentialDataLoaded, setEssentialDataLoaded] = useState(false)
+  
+  // حالات التحميل
+  const [isLoading, setIsLoading] = useState(true)
   const [loadingError, setLoadingError] = useState(null)
-  const [retryCount, setRetryCount] = useState(0)
+  const [loadingProgress, setLoadingProgress] = useState(0)
+  
+  // البيانات الأساسية
   const [developerData, setDeveloperData] = useState(null)
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0)
   
   const { user, logout } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-  const loadingRef = useRef(false)
 
-  // =========== الدوال المحلية للجلب من Supabase ===========
+  // =========== دوال جلب البيانات من Supabase ===========
   
-  // جلب بيانات المطور كاملة
   const fetchDeveloperData = async (userId) => {
     try {
       const { data, error } = await supabase
@@ -63,7 +65,6 @@ const DashboardLayout = () => {
     }
   }
 
-  // جلب عدد الرسائل غير المقروءة
   const fetchUnreadMessagesCount = async (userId) => {
     try {
       const { count, error } = await supabase
@@ -80,7 +81,6 @@ const DashboardLayout = () => {
     }
   }
 
-  // جلب عدد الإشعارات غير المقروءة
   const fetchUnreadNotificationsCount = async (userId) => {
     try {
       const { count, error } = await supabase
@@ -97,101 +97,53 @@ const DashboardLayout = () => {
     }
   }
 
-  // جلب إحصائيات المطور
-  const fetchDeveloperStats = async (userId) => {
-    try {
-      const [projects, skills, certificates, experience, education] = await Promise.all([
-        supabase.from('projects').select('*', { count: 'exact', head: true }).eq('developer_id', userId),
-        supabase.from('skills').select('*', { count: 'exact', head: true }).eq('developer_id', userId),
-        supabase.from('certificates').select('*', { count: 'exact', head: true }).eq('developer_id', userId),
-        supabase.from('experience').select('*', { count: 'exact', head: true }).eq('developer_id', userId),
-        supabase.from('education').select('*', { count: 'exact', head: true }).eq('developer_id', userId)
-      ])
-
-      return {
-        projects: projects.count || 0,
-        skills: skills.count || 0,
-        certificates: certificates.count || 0,
-        experience: experience.count || 0,
-        education: education.count || 0
-      }
-    } catch (error) {
-      console.error('Error fetching developer stats:', error)
-      throw error
-    }
-  }
-
-  // =========== دالة تحميل البيانات الأساسية ===========
+  // =========== تحميل جميع البيانات الأساسية ===========
   
-  const loadEssentialData = async () => {
-    if (loadingRef.current || !user?.id) return
-    
-    loadingRef.current = true
-    
-    try {
-      setLoadingError(null)
-      
-      // 1. جلب بيانات المطور كاملة
-      const developerFullData = await fetchDeveloperData(user.id)
-      setDeveloperData(developerFullData)
-
-      // 2. جلب عدد الرسائل غير المقروءة
-      const messagesCount = await fetchUnreadMessagesCount(user.id)
-      setUnreadMessagesCount(messagesCount)
-
-      // 3. جلب عدد الإشعارات غير المقروءة
-      const notificationsCount = await fetchUnreadNotificationsCount(user.id)
-      setUnreadNotificationsCount(notificationsCount)
-
-      // 4. جلب الإحصائيات (اختياري)
-      const stats = await fetchDeveloperStats(user.id)
-      
-      // يمكن تخزين الإحصائيات في حالة إذا أردت استخدامها
-      // setDeveloperStats(stats)
-      
-      setEssentialDataLoaded(true)
-      
-    } catch (error) {
-      console.error('Error loading essential data:', error)
-      setLoadingError(error.message)
-      
-      // محاولة إعادة التحميل إذا فشلت (حتى 3 مرات)
-      if (retryCount < 3) {
-        setTimeout(() => {
-          setRetryCount(prev => prev + 1)
-          loadingRef.current = false
-        }, 2000 * (retryCount + 1)) // 2s, 4s, 6s
+  useEffect(() => {
+    const loadAllEssentialData = async () => {
+      if (!user?.id) {
+        // إذا لا يوجد مستخدم، نوجه لتسجيل الدخول
+        navigate('/login')
+        return
       }
-    } finally {
-      loadingRef.current = false
-    }
-  }
 
-  // تحميل البيانات الأساسية فوراً عند توفر المستخدم
-  useEffect(() => {
-    if (user?.id && !essentialDataLoaded && !loadingRef.current) {
-      loadEssentialData()
-    }
-  }, [user?.id, essentialDataLoaded, retryCount])
+      try {
+        setIsLoading(true)
+        setLoadingError(null)
+        setLoadingProgress(10)
 
-  // تحديث دوري للرسائل والإشعارات بعد التحميل
-  useEffect(() => {
-    if (user?.id && essentialDataLoaded) {
-      const interval = setInterval(async () => {
-        try {
-          const messagesCount = await fetchUnreadMessagesCount(user.id)
-          setUnreadMessagesCount(messagesCount)
-          
-          const notificationsCount = await fetchUnreadNotificationsCount(user.id)
-          setUnreadNotificationsCount(notificationsCount)
-        } catch (error) {
-          console.error('Error fetching counts:', error)
-        }
-      }, 30000) // كل 30 ثانية
-      
-      return () => clearInterval(interval)
+        // 1. جلب بيانات المطور
+        setLoadingProgress(30)
+        const developerFullData = await fetchDeveloperData(user.id)
+        setDeveloperData(developerFullData)
+        
+        // 2. جلب عدد الرسائل
+        setLoadingProgress(60)
+        const messagesCount = await fetchUnreadMessagesCount(user.id)
+        setUnreadMessagesCount(messagesCount)
+
+        // 3. جلب عدد الإشعارات
+        setLoadingProgress(90)
+        const notificationsCount = await fetchUnreadNotificationsCount(user.id)
+        setUnreadNotificationsCount(notificationsCount)
+
+        // اكتمل التحميل
+        setLoadingProgress(100)
+        setTimeout(() => {
+          setIsLoading(false)
+        }, 500) // تأخير بسيط لإظهار اكتمال التحميل
+
+      } catch (error) {
+        console.error('Error loading essential data:', error)
+        setLoadingError(error.message)
+        setIsLoading(false)
+      }
     }
-  }, [user?.id, essentialDataLoaded])
+
+    loadAllEssentialData()
+  }, [user?.id])
+
+  // =========== دوال المساعدة ===========
 
   const navigation = [
     { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
@@ -226,8 +178,92 @@ const DashboardLayout = () => {
 
   const isActive = (path) => location.pathname === path
 
-  // عرض شاشة الخطأ بعد 3 محاولات فاشلة
-  if (retryCount >= 3 && !essentialDataLoaded) {
+  // =========== شاشة التحميل (Splash Screen) ===========
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#030014] flex items-center justify-center">
+        <div className="text-center max-w-md px-4">
+          {/* شعار متحرك */}
+          <div className="relative mb-8 mx-auto w-32 h-32">
+            {/* حلقات دائرية متحركة */}
+            <div className="absolute inset-0 rounded-full border-4 border-t-transparent border-[#6366f1] animate-spin"></div>
+            <div className="absolute inset-2 rounded-full border-4 border-t-transparent border-[#a855f7] animate-spin-slow"></div>
+            <div className="absolute inset-4 rounded-full border-4 border-t-transparent border-[#ec4899] animate-spin-slower"></div>
+            
+            {/* الشعار في المنتصف */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-2xl flex items-center justify-center shadow-2xl">
+                <span className="text-3xl font-bold text-white">P</span>
+              </div>
+            </div>
+          </div>
+
+          {/* عنوان التحميل */}
+          <h1 className="text-3xl font-bold text-white mb-3">
+            Portfolio<span className="text-[#a855f7]">AI</span>
+          </h1>
+          
+          <p className="text-gray-400 mb-6">
+            جاري تجهيز لوحة التحكم الخاصة بك...
+          </p>
+
+          {/* شريط التقدم */}
+          <div className="w-full max-w-sm mx-auto mb-4">
+            <div className="flex justify-between text-sm text-gray-400 mb-2">
+              <span>جاري التحميل</span>
+              <span>{loadingProgress}%</span>
+            </div>
+            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${loadingProgress}%` }}
+              />
+            </div>
+          </div>
+
+          {/* مراحل التحميل */}
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center gap-2 text-gray-400">
+              <div className={`w-4 h-4 rounded-full flex items-center justify-center ${loadingProgress >= 30 ? 'bg-green-500' : 'bg-white/20'}`}>
+                {loadingProgress >= 30 && <span className="text-white text-xs">✓</span>}
+              </div>
+              <span>بيانات المطور الشخصية</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-400">
+              <div className={`w-4 h-4 rounded-full flex items-center justify-center ${loadingProgress >= 60 ? 'bg-green-500' : 'bg-white/20'}`}>
+                {loadingProgress >= 60 && <span className="text-white text-xs">✓</span>}
+              </div>
+              <span>الرسائل غير المقروءة</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-400">
+              <div className={`w-4 h-4 rounded-full flex items-center justify-center ${loadingProgress >= 90 ? 'bg-green-500' : 'bg-white/20'}`}>
+                {loadingProgress >= 90 && <span className="text-white text-xs">✓</span>}
+              </div>
+              <span>الإشعارات</span>
+            </div>
+          </div>
+
+          {/* رسالة الخطأ إن وجدت */}
+          {loadingError && (
+            <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+              <p className="text-red-400 text-sm mb-2">{loadingError}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+              >
+                إعادة المحاولة
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // =========== عرض الخطأ إذا فشل التحميل ===========
+  
+  if (loadingError) {
     return (
       <div className="min-h-screen bg-[#030014] flex items-center justify-center">
         <div className="text-center max-w-md p-8">
@@ -236,14 +272,10 @@ const DashboardLayout = () => {
           </div>
           <h2 className="text-2xl font-bold text-white mb-4">فشل تحميل البيانات</h2>
           <p className="text-gray-400 mb-6">
-            حدث خطأ في تحميل البيانات الأساسية. يرجى تحديث الصفحة أو المحاولة لاحقاً.
+            {loadingError}
           </p>
           <button
-            onClick={() => {
-              setRetryCount(0)
-              setEssentialDataLoaded(false)
-              setLoadingError(null)
-            }}
+            onClick={() => window.location.reload()}
             className="px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl hover:opacity-90 transition-opacity"
           >
             إعادة المحاولة
@@ -253,45 +285,8 @@ const DashboardLayout = () => {
     )
   }
 
-  // عرض شاشة التحميل حتى تكتمل البيانات الأساسية
-  if (!essentialDataLoaded && user?.id) {
-    return (
-      <div className="min-h-screen bg-[#030014] flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative mb-8">
-            {/* حلقات متحركة */}
-            <div className="absolute inset-0 rounded-full animate-ping opacity-20 bg-gradient-to-r from-[#6366f1] to-[#a855f7]"></div>
-            <div className="absolute inset-0 rounded-full animate-pulse opacity-40 bg-gradient-to-r from-[#6366f1] to-[#a855f7]"></div>
-            
-            {/* شعار متحرك */}
-            <div className="relative w-24 h-24 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-2xl flex items-center justify-center">
-              <Loader2 className="w-12 h-12 text-white animate-spin" />
-            </div>
-          </div>
-          
-          <h2 className="text-2xl font-bold text-white mb-2">جاري تحميل لوحة التحكم</h2>
-          <p className="text-gray-400 mb-4">
-            يتم تحميل بياناتك الأساسية...
-            {loadingError && (
-              <span className="block text-red-400 mt-2 text-sm">
-                خطأ: {loadingError} - جاري إعادة المحاولة ({retryCount + 1}/3)
-              </span>
-            )}
-          </p>
-          
-          {/* شريط التقدم */}
-          <div className="w-64 h-2 bg-white/10 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-full transition-all duration-500"
-              style={{ width: `${(retryCount + 1) * 33.33}%` }}
-            ></div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // بعد اكتمال التحميل، نعرض لوحة التحكم مع البيانات الكاملة
+  // =========== لوحة التحكم الرئيسية بعد اكتمال التحميل ===========
+  
   return (
     <div className="min-h-screen bg-[#030014]">
       {/* خلفية القائمة الجانبية للجوال */}
@@ -349,7 +344,7 @@ const DashboardLayout = () => {
           })}
         </nav>
 
-        {/* معلومات المستخدم - الآن مع البيانات الكاملة */}
+        {/* معلومات المستخدم */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
           <div className="flex items-center gap-3">
             <img
@@ -391,7 +386,7 @@ const DashboardLayout = () => {
               <Menu className="w-6 h-6" />
             </button>
 
-            {/* الجانب الأيمن - الأزرار */}
+            {/* الجانب الأيمن */}
             <div className="flex items-center gap-4 ml-auto">
               
               {/* زر مشاركة الموقع */}
@@ -410,14 +405,12 @@ const DashboardLayout = () => {
                   )}
                 </button>
                 
-                {/* تلميح المشاركة */}
                 {showShareTooltip && !copied && (
                   <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 px-3 py-1 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap border border-white/10">
                     مشاركة الموقع
                   </div>
                 )}
                 
-                {/* رسالة تم النسخ */}
                 {copied && (
                   <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 px-3 py-1 bg-green-600 text-white text-xs rounded-lg whitespace-nowrap">
                     تم نسخ الرابط!
@@ -425,7 +418,7 @@ const DashboardLayout = () => {
                 )}
               </div>
 
-              {/* زر الإشعارات مع العداد */}
+              {/* زر الإشعارات */}
               <button 
                 onClick={handleNotificationClick}
                 className="relative p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg"
@@ -458,7 +451,6 @@ const DashboardLayout = () => {
                   <ChevronDown className="w-4 h-4" />
                 </button>
 
-                {/* قائمة الملف الشخصي */}
                 {profileMenuOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-gray-900 border border-white/10 rounded-xl shadow-xl z-50">
                     <Link
@@ -497,6 +489,19 @@ const DashboardLayout = () => {
           <Outlet context={{ developerData, unreadMessagesCount, unreadNotificationsCount }} />
         </main>
       </div>
+
+      {/* إضافة animations مخصصة */}
+      <style jsx>{`
+        @keyframes spin-slow {
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+          animation: spin-slow 3s linear infinite;
+        }
+        .animate-spin-slower {
+          animation: spin-slow 4s linear infinite;
+        }
+      `}</style>
     </div>
   )
 }
