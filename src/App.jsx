@@ -98,16 +98,6 @@ const AppRoutes = () => {
     return <Navigate to={redirectTo} replace />
   }
 
-  // ✅ صفحات التأكيد تظهر دائماً حتى أثناء التحميل
-  if (location.pathname === '/confirm' || location.pathname === '/verify-email') {
-    return (
-      <Routes>
-        <Route path="/verify-email" element={<VerifyEmail />} />
-        <Route path="/confirm" element={<ConfirmEmail />} />
-      </Routes>
-    )
-  }
-
   if (loading && showWelcome) {
     return <WelcomeScreen onLoadingComplete={handleWelcomeComplete} />
   }
