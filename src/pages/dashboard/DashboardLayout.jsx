@@ -1,450 +1,367 @@
-// DashboardLayout.jsx
-import React, { useState, useEffect } from 'react'
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
-import { messagesService, supabase } from '../../lib/supabase'
+import React, { useState, useEffect } from "react"
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom"
+import { supabase } from "../../lib/supabase"
 
 import {
-  LayoutDashboard,
-  FolderKanban,
-  Award,
-  Briefcase,
-  GraduationCap,
-  Settings,
-  LogOut,
-  Menu,
-  User,
-  Code,
-  ChevronDown,
-  Bell,
-  Sparkles,
-  Crown,
-  MessageSquare,
-  Share2,
-  Check
-} from 'lucide-react'
+LayoutDashboard,
+FolderKanban,
+Award,
+Briefcase,
+GraduationCap,
+Settings,
+LogOut,
+Menu,
+User,
+Code,
+ChevronDown,
+Bell,
+Sparkles,
+Crown,
+MessageSquare,
+Share2,
+Check
+} from "lucide-react"
 
 const DashboardLayout = () => {
 
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+const location = useLocation()
+const navigate = useNavigate()
 
-  const [unreadCount, setUnreadCount] = useState(0)
+const [sidebarOpen,setSidebarOpen] = useState(false)
+const [profileMenuOpen,setProfileMenuOpen] = useState(false)
 
-  const [developer, setDeveloper] = useState(null)
-  const [loadingDeveloper, setLoadingDeveloper] = useState(true)
+const [developer,setDeveloper] = useState(null)
+const [loading,setLoading] = useState(true)
 
-  const [notificationsCount, setNotificationsCount] = useState(0)
-  const [loadingNotifications, setLoadingNotifications] = useState(true)
+const [notificationsCount,setNotificationsCount] = useState(0)
 
-  const [showShareTooltip, setShowShareTooltip] = useState(false)
-  const [copied, setCopied] = useState(false)
+const [copied,setCopied] = useState(false)
+const [showShareTooltip,setShowShareTooltip] = useState(false)
 
-  const { user, logout } = useAuth()
+const navigation = [
 
-  const location = useLocation()
-  const navigate = useNavigate()
+{ name:"Overview",href:"/dashboard",icon:LayoutDashboard },
 
-  // =========================
-  // جلب بيانات المطور
-  // =========================
-  const fetchDeveloperData = async () => {
+{ name:"Projects",href:"/dashboard/projects",icon:FolderKanban },
 
-    if (!user?.id) return
+{ name:"Skills",href:"/dashboard/skills",icon:Code },
 
-    try {
+{ name:"Certificates",href:"/dashboard/certificates",icon:Award },
 
-      setLoadingDeveloper(true)
+{ name:"Experience",href:"/dashboard/experience",icon:Briefcase },
 
-      const { data, error } = await supabase
-        .from('developers')
-        .select('username, avatar, email, full_name')
-        .eq('user_id', user.id)
-        .single()
+{ name:"Education",href:"/dashboard/education",icon:GraduationCap },
 
-      if (!error && data) {
+{ name:"Messages",href:"/dashboard/messages",icon:MessageSquare },
 
-        setDeveloper(data)
+{ name:"AI Builder",href:"/app/builder",icon:Sparkles },
 
-      }
+{ name:"Plan Status",href:"/dashboard/plan-status",icon:Crown },
 
-    } catch (err) {
+{ name:"Settings",href:"/dashboard/settings",icon:Settings }
 
-      console.error('Developer fetch error:', err)
+]
 
-    } finally {
+const isActive = (path)=> location.pathname === path
 
-      setLoadingDeveloper(false)
+const fetchDeveloperData = async ()=>{
 
-    }
-  }
+try{
 
-  // =========================
-  // جلب الإشعارات
-  // =========================
-  const fetchNotifications = async () => {
+const {data:{user}} = await supabase.auth.getUser()
 
-    if (!user?.id) return
+if(!user) return
 
-    try {
+const {data,error} = await supabase
 
-      setLoadingNotifications(true)
+.from("developers")
 
-      const { count, error } = await supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('is_read', false)
+.select("*")
 
-      if (!error) {
+.eq("id",user.id)
 
-        setNotificationsCount(count || 0)
+.single()
 
-      }
+if(error){
 
-    } catch (err) {
+console.error(error)
 
-      console.error('Notifications error:', err)
+return
 
-    } finally {
+}
 
-      setLoadingNotifications(false)
+setDeveloper(data)
 
-    }
-  }
+fetchNotifications(data.id)
 
-  // =========================
-  // جلب الرسائل
-  // =========================
-  const fetchUnreadCount = async () => {
+}catch(err){
 
-    if (!user) return
+console.error(err)
 
-    try {
+}
 
-      const count = await messagesService.getUnreadCount(user.id)
+}
 
-      setUnreadCount(count)
+const fetchNotifications = async (developerId)=>{
 
-    } catch (error) {
+try{
 
-      console.error('Error fetching unread count:', error)
+const {count,error} = await supabase
 
-    }
-  }
+.from("notifications")
 
-  // =========================
-  // تحميل البيانات عند تحديث الصفحة
-  // =========================
-  useEffect(() => {
+.select("*",{count:"exact",head:true})
 
-    if (user) {
+.eq("user_id",developerId)
 
-      fetchDeveloperData()
+.eq("is_read",false)
 
-      fetchNotifications()
+if(!error){
 
-      fetchUnreadCount()
+setNotificationsCount(count || 0)
 
-      const interval = setInterval(() => {
+}
 
-        fetchNotifications()
+}catch(err){
 
-        fetchUnreadCount()
+console.error(err)
 
-      }, 30000)
+}
 
-      return () => clearInterval(interval)
+}
 
-    }
+useEffect(()=>{
 
-  }, [user])
+const load = async ()=>{
 
-  // =========================
-  // نسخ رابط الموقع
-  // =========================
-  const copyPortfolioLink = () => {
+setLoading(true)
 
-    if (!developer?.username) return
+await fetchDeveloperData()
 
-    const portfolioUrl = `${window.location.origin}/u/${developer.username}`
+setLoading(false)
 
-    navigator.clipboard.writeText(portfolioUrl)
+}
 
-    setCopied(true)
+load()
 
-    setTimeout(() => setCopied(false), 2000)
-  }
+const interval = setInterval(()=>{
 
-  // =========================
-  // التنقل
-  // =========================
-  const navigation = [
+if(developer?.id){
 
-    { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+fetchNotifications(developer.id)
 
-    { name: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
+}
 
-    { name: 'Skills', href: '/dashboard/skills', icon: Code },
+},30000)
 
-    { name: 'Certificates', href: '/dashboard/certificates', icon: Award },
+return ()=> clearInterval(interval)
 
-    { name: 'Experience', href: '/dashboard/experience', icon: Briefcase },
+},[])
 
-    { name: 'Education', href: '/dashboard/education', icon: GraduationCap },
+const copyPortfolioLink = ()=>{
 
-    { name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
+if(!developer?.username) return
 
-    { name: 'AI Builder', href: '/app/builder', icon: Sparkles },
+const url = "${window.location.origin}/u/${developer.username}"
 
-    { name: 'Plan Status', href: '/dashboard/plan-status', icon: Crown },
+navigator.clipboard.writeText(url)
 
-    { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+setCopied(true)
 
-  ]
+setTimeout(()=> setCopied(false),2000)
 
-  const handleLogout = () => {
+}
 
-    logout()
+const logout = async ()=>{
 
-    navigate('/')
+await supabase.auth.signOut()
 
-  }
+navigate("/")
 
-  const handleNotificationClick = () => {
+}
 
-    navigate('/dashboard/messages')
+return (
 
-  }
+<div className="min-h-screen bg-[#030014]">{sidebarOpen && (
 
-  const isActive = (path) => location.pathname === path
+<divclassName="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
 
-  return (
+onClick={()=>setSidebarOpen(false)}
 
-    <div className="min-h-screen bg-[#030014]">
+/>
 
-      {/* Sidebar backdrop */}
-      {sidebarOpen && (
+)}
 
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
+<divclassName={"fixed inset-y-0 left-0 w-64 bg-white/5 backdrop-blur-xl border-r border-white/10 transform transition-transform duration-300 z-50 lg:translate-x-0 ${sidebarOpen ? "translate-x-0":"-translate-x-full"}"}
 
-      )}
+«»
 
-      {/* Sidebar */}
-      <div
-        className={`fixed inset-y-0 left-0 w-64 bg-white/5 backdrop-blur-xl border-r border-white/10 transform transition-transform duration-300 ease-in-out z-50 lg:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
+<div className="h-16 flex items-center justify-center border-b border-white/10"><Link to="/" className="flex items-center gap-2"><div className="w-8 h-8 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-lg flex items-center justify-center"><span className="text-white font-bold">P</span>
 
-        {/* Logo */}
-        <div className="h-16 flex items-center justify-center border-b border-white/10">
+</div><span className="text-xl font-bold text-white">Portfolio<span className="text-[#a855f7]">V5</span>
 
-          <Link to="/" className="flex items-center gap-2">
+</span></Link></div><nav className="p-4 space-y-1">{navigation.map((item)=>{
 
-            <div className="w-8 h-8 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-lg flex items-center justify-center">
+const Icon = item.icon
 
-              <span className="text-white font-bold">P</span>
+const isMessagesPage = item.href === "/dashboard/messages"
 
-            </div>
+return (
 
-            <span className="text-xl font-bold text-white">
+<Linkkey={item.name}
 
-              Portfolio<span className="text-[#a855f7]">V5</span>
+to={item.href}
 
-            </span>
+className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all relative ${isActive(item.href)
 
-          </Link>
+? "bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white"
 
-        </div>
+: "text-gray-400 hover:bg-white/5 hover:text-white"
 
-        {/* Navigation */}
+}`}
 
-        <nav className="p-4 space-y-1">
+onClick={()=>setSidebarOpen(false)}
 
-          {navigation.map((item) => {
+«»
 
-            const Icon = item.icon
+<Icon className="w-5 h-5"/><span>{item.name}</span>
 
-            const isMessagesPage = item.href === '/dashboard/messages'
+{isMessagesPage && notificationsCount>0 && (
 
-            return (
+<span className="absolute left-2 top-1/2 -translate-y-1/2 min-w-[20px] h-[20px] flex items-center justify-center bg-red-500 text-white text-xs rounded-full px-1">{notificationsCount>9?"9+":notificationsCount}
 
-              <Link
-                key={item.name}
-                to={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all relative ${
-                  isActive(item.href)
-                    ? 'bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white'
-                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                }`}
-                onClick={() => setSidebarOpen(false)}
-              >
+</span>)}
 
-                <Icon className="w-5 h-5" />
+</Link>)
 
-                <span>{item.name}</span>
+})}
 
-                {isMessagesPage && unreadCount > 0 && (
+</nav><div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10"><div className="flex items-center gap-3">{loading ? (
 
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 min-w-[20px] h-[20px] flex items-center justify-center bg-red-500 text-white text-xs rounded-full px-1">
+<div className="w-10 h-10 bg-white/10 rounded-full animate-pulse"/>):(
 
-                    {unreadCount > 9 ? '9+' : unreadCount}
+<img
 
-                  </span>
+src={developer?.profile_image || "/default-avatar.png"}
 
-                )}
+className="w-10 h-10 rounded-full object-cover border-2 border-[#a855f7]/30"
 
-              </Link>
+onError={(e)=>{e.target.src="/default-avatar.png"}}
 
-            )
+/>
 
-          })}
+)}
 
-        </nav>
+<div className="flex-1 min-w-0">{loading ? (
 
-        {/* User info */}
+<>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
+<div className="w-24 h-4 bg-white/10 rounded-lg animate-pulse mb-2"/><div className="w-32 h-3 bg-white/10 rounded-lg animate-pulse"/></>
 
-          <div className="flex items-center gap-3">
+):(
 
-            {loadingDeveloper ? (
+<>
 
-              <div className="w-10 h-10 bg-white/10 rounded-full animate-pulse"></div>
+<p className="text-sm font-medium text-white truncate">{developer?.full_name || "User"}
 
-            ) : (
+</p><p className="text-xs text-gray-400 truncate">{developer?.email}
 
-              <img
-                src={developer?.avatar || '/default-avatar.png'}
-                alt={developer?.full_name}
-                className="w-10 h-10 rounded-full object-cover border-2 border-[#a855f7]/30"
-                onError={(e) => (e.target.src = '/default-avatar.png')}
-              />
+</p></>
 
-            )}
+)}
 
-            <div className="flex-1 min-w-0">
+</div></div></div></div><div className="lg:pl-64"><header className="sticky top-0 z-30 bg-white/5 backdrop-blur-xl border-b border-white/10"><div className="flex items-center justify-between h-16 px-4"><button
 
-              {loadingDeveloper ? (
+onClick={()=>setSidebarOpen(true)}
 
-                <>
-                  <div className="w-24 h-4 bg-white/10 rounded-lg animate-pulse mb-2"></div>
-                  <div className="w-32 h-3 bg-white/10 rounded-lg animate-pulse"></div>
-                </>
+className="lg:hidden p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg"
 
-              ) : (
+«»
 
-                <>
-                  <p className="text-sm font-medium text-white truncate">
+<Menu className="w-6 h-6"/></button><div className="flex items-center gap-4 ml-auto"><div className="relative"><button
 
-                    {developer?.full_name || 'User'}
+onClick={copyPortfolioLink}
 
-                  </p>
+onMouseEnter={()=>setShowShareTooltip(true)}
 
-                  <p className="text-xs text-gray-400 truncate">
+onMouseLeave={()=>setShowShareTooltip(false)}
 
-                    {developer?.email}
+className="relative p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg"
 
-                  </p>
-                </>
+«»
 
-              )}
+{copied ? (
 
-            </div>
+<Check className="w-5 h-5 text-green-400"/>):(
 
-          </div>
+<Share2 className="w-5 h-5"/>)}
 
-        </div>
+</button>{showShareTooltip && !copied && (
 
-      </div>
+<div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 px-3 py-1 bg-gray-900 text-white text-xs rounded-lg">مشاركة الموقع
 
-      {/* Main */}
+</div>)}
 
-      <div className="lg:pl-64">
+{copied && (
 
-        {/* Navbar */}
+<div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 px-3 py-1 bg-green-600 text-white text-xs rounded-lg">تم نسخ الرابط
 
-        <header className="sticky top-0 z-30 bg-white/5 backdrop-blur-xl border-b border-white/10">
+</div>)}
 
-          <div className="flex items-center justify-between h-16 px-4">
+</div><button
 
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg"
-            >
+className="relative p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg"
 
-              <Menu className="w-6 h-6" />
+«»
 
-            </button>
+<Bell className="w-5 h-5"/>{notificationsCount>0 && (
 
-            <div className="flex items-center gap-4 ml-auto">
+<span className="absolute top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-xs rounded-full px-1">{notificationsCount>9?"9+":notificationsCount}
 
-              {/* Share */}
+</span>)}
 
-              <div className="relative">
+</button><div className="relative"><button
 
-                <button
-                  onClick={copyPortfolioLink}
-                  onMouseEnter={() => setShowShareTooltip(true)}
-                  onMouseLeave={() => setShowShareTooltip(false)}
-                  className="relative p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all"
-                >
+onClick={()=>setProfileMenuOpen(!profileMenuOpen)}
 
-                  {copied ? (
+className="flex items-center gap-2 p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg"
 
-                    <Check className="w-5 h-5 text-green-400" />
+«»
 
-                  ) : (
+<img
 
-                    <Share2 className="w-5 h-5" />
+src={developer?.profile_image || "/default-avatar.png"}
 
-                  )}
+className="w-8 h-8 rounded-full object-cover"
 
-                </button>
+/>
 
-              </div>
+<span className="hidden sm:block text-sm">{developer?.full_name?.split(" ")[0]}
 
-              {/* Notifications */}
+</span><ChevronDown className="w-4 h-4"/></button>{profileMenuOpen && (
 
-              <button
-                onClick={handleNotificationClick}
-                className="relative p-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg"
-              >
+<div className="absolute right-0 mt-2 w-48 bg-gray-900 border border-white/10 rounded-xl shadow-xl z-50"><Linkto={"/u/${developer?.username}"}
 
-                <Bell className="w-5 h-5" />
+className="flex items-center gap-2 px-4 py-3 text-sm text-gray-300 hover:bg-white/5"
 
-                {notificationsCount > 0 && (
+«»
 
-                  <span className="absolute top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-xs rounded-full px-1">
+<User className="w-4 h-4"/>عرض الملف الشخصي
 
-                    {notificationsCount > 9 ? '9+' : notificationsCount}
+</Link><button
 
-                  </span>
+onClick={logout}
 
-                )}
+className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-400 hover:bg-red-500/10"
 
-              </button>
+«»
 
-            </div>
+<LogOut className="w-4 h-4"/>تسجيل خروج
 
-          </div>
+</button></div>)}
 
-        </header>
+</div></div></div></header><main className="p-6"><Outlet/></main></div></div>)
 
-        <main className="p-6">
-
-          <Outlet />
-
-        </main>
-
-      </div>
-
-    </div>
-  )
 }
 
 export default DashboardLayout
