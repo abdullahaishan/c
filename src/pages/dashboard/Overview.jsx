@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
-import { usePlan } from '../../hooks/usePlan'
 import { statsService } from '../../lib/supabase'
 import { Link } from 'react-router-dom'
 import {
@@ -237,22 +236,12 @@ const OverviewSkeleton = () => {
 
 const Overview = () => {
   const { user } = useAuth()
-  const { 
-    planId, 
-    limits, 
-    usage,
-    getUsagePercentage,
-    canUseFeature, 
-    isFree,
-    getRemainingAnalyses,
-    loading: planLoading 
-  } = usePlan()
   
   const [stats, setStats] = useState(null)
   const [contentStats, setContentStats] = useState(null)
   const [visitorStats, setVisitorStats] = useState(null)
   const [aiStats, setAiStats] = useState(null)
-  const [remainingAnalyses, setRemainingAnalyses] = useState(0)
+  const [planData, setPlanData] = useState(null) // ✅ بيانات الباقة الحقيقية
   const [loading, setLoading] = useState(true)
   const [selectedPeriod, setSelectedPeriod] = useState('week')
   const [dataLoaded, setDataLoaded] = useState(false)
@@ -260,8 +249,25 @@ const Overview = () => {
   useEffect(() => {
     if (user) {
       fetchAllStats()
+      fetchUserPlan() // ✅ جلب الباقة الحقيقية
     }
   }, [user])
+
+  // ✅ جلب الباقة الحقيقية من developers
+  const fetchUserPlan = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('developers')
+        .select('plan_id, plans(*)')
+        .eq('id', user.id)
+        .single()
+
+      if (error) throw error
+      setPlanData(data)
+    } catch (error) {
+      console.error('Error fetching user plan:', error)
+    }
+  }
 
   const fetchAllStats = async () => {
     setLoading(true)
@@ -272,15 +278,13 @@ const Overview = () => {
       const content = await statsService.getContentStats(user.id)
       setContentStats(content)
 
-      const remaining = await getRemainingAnalyses()
-      setRemainingAnalyses(remaining)
-
-      if (canUseFeature('analytics')) {
+      // ✅ التحقق من الباقة الحقيقية
+      if (planData?.plans?.analytics) {
         const advanced = await statsService.getAdvancedVisitorStats(user.id)
         setVisitorStats(advanced)
       }
 
-      if (planId >= 3) {
+      if (planData?.plan_id >= 3) {
         const ai = await statsService.getAIAnalysisStats(user.id)
         setAiStats(ai)
       }
@@ -298,15 +302,15 @@ const Overview = () => {
   }
 
   const calculateOverallProgress = () => {
-    if (!contentStats || !limits) return 0
+    if (!contentStats || !planData?.plans) return 0
     
     const totalCurrent = Object.values(contentStats.counts).reduce((a, b) => a + b, 0)
     const totalMax = [
-      limits.maxProjects || 3,
-      limits.maxSkills || 10,
-      limits.maxCertificates || 3,
-      limits.maxExperience || 5,
-      limits.maxEducation || 5
+      planData.plans.max_projects || 3,
+      planData.plans.max_skills || 10,
+      planData.plans.max_certificates || 3,
+      planData.plans.max_experience || 5,
+      planData.plans.max_education || 5
     ].reduce((a, b) => a + b, 0)
     
     return Math.min(100, Math.round((totalCurrent / totalMax) * 100))
@@ -319,9 +323,14 @@ const Overview = () => {
     return 'مساء الخير'
   }
 
-  if (loading || !dataLoaded || planLoading) {
+  if (loading || !dataLoaded) {
     return <OverviewSkeleton />
   }
+
+  const plan = planData?.plans || {}
+  const planId = planData?.plan_id || 1
+  const isFree = planId === 1
+  const canUseAnalytics = plan?.analytics || false
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -334,7 +343,9 @@ const Overview = () => {
             </h1>
             <p className="text-gray-400 mb-4">
               أنت مشترك في باقة <span className="text-[#a855f7] font-semibold">
-                {planId === 1 ? 'مجانية' : planId === 2 ? 'أساسية' : planId === 3 ? 'محترف' : 'مؤسسات'}
+                {planId === 1 ? 'مجانية' : 
+                 planId === 2 ? 'أساسية' : 
+                 planId === 3 ? 'محترف' : 'مؤسسات'}
               </span>
             </p>
             
@@ -389,7 +400,7 @@ const Overview = () => {
           icon={Users}
           label="الزوار"
           value={stats?.visitors?.toLocaleString() || '0'}
-          subValue={!canUseFeature('analytics') ? '🔒 متاح في الباقات المدفوعة' : null}
+          subValue={!canUseAnalytics ? '🔒 متاح في الباقات المدفوعة' : null}
           color="from-green-500 to-emerald-500"
         />
       </div>
@@ -400,7 +411,7 @@ const Overview = () => {
           icon={FolderKanban}
           label="المشاريع"
           count={contentStats?.counts?.projects || 0}
-          max={limits?.maxProjects || 1}
+          max={plan.max_projects || 1}
           color="from-blue-500 to-cyan-500"
           link="/dashboard/projects"
         />
@@ -408,7 +419,7 @@ const Overview = () => {
           icon={Code}
           label="المهارات"
           count={contentStats?.counts?.skills || 0}
-          max={limits?.maxSkills || 2}
+          max={plan.max_skills || 2}
           color="from-purple-500 to-pink-500"
           link="/dashboard/skills"
         />
@@ -416,7 +427,7 @@ const Overview = () => {
           icon={Award}
           label="الشهادات"
           count={contentStats?.counts?.certificates || 0}
-          max={limits?.maxCertificates || 1}
+          max={plan.max_certificates || 1}
           color="from-yellow-500 to-orange-500"
           link="/dashboard/certificates"
         />
@@ -424,7 +435,7 @@ const Overview = () => {
           icon={Briefcase}
           label="الخبرات"
           count={contentStats?.counts?.experience || 0}
-          max={limits?.maxExperience || 1}
+          max={plan.max_experience || 1}
           color="from-green-500 to-emerald-500"
           link="/dashboard/experience"
         />
@@ -432,7 +443,7 @@ const Overview = () => {
           icon={GraduationCap}
           label="التعليم"
           count={contentStats?.counts?.education || 0}
-          max={limits?.maxEducation || 1}
+          max={plan.max_education || 1}
           color="from-red-500 to-rose-500"
           link="/dashboard/education"
         />
@@ -506,9 +517,9 @@ const Overview = () => {
           )}
         </div>
 
-        {/* إحصائيات الزوار - الكود الصحيح بدون تكرار */}
+        {/* إحصائيات الزوار */}
         <div className="lg:col-span-2 space-y-6">
-          {canUseFeature('analytics') ? (
+          {canUseAnalytics ? (
             <>
               {visitorStats ? (
                 <>
@@ -647,7 +658,7 @@ const Overview = () => {
                 قم بترقية باقتك للوصول إلى تحليلات مفصلة للزوار ومعرفة من أين يأتون
               </p>
               <Link
-                to="/plan-status"
+                to="/plans"
                 className="inline-block px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg hover:scale-105 transition-all"
               >
                 عرض الباقات
@@ -664,7 +675,7 @@ const Overview = () => {
             <div className="flex items-center gap-3">
               <Sparkles className="w-6 h-6 text-[#a855f7]" />
               <p className="text-white">
-          🚀 طور Portfolio مع الباقات المدفوعة - احصل على تحليلات متقدمة 
+                🚀 طور Portfolio مع الباقات المدفوعة - احصل على تحليلات متقدمة 
               </p>
             </div>
             <Link
