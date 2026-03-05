@@ -183,6 +183,28 @@ export const DeveloperProvider = ({ children, username }) => {
     return Math.round(totalYears * 10) / 10 || 0
   }
 
+  // ✅ دالة جديدة لجلب المهارات الرئيسية
+const getMainSkills = () => {
+  if (!developer?.skills || developer.skills.length === 0) return []
+  
+  // فلترة المهارات الرئيسية (is_main = true)
+  const mainSkillsList = developer.skills
+    .filter(skill => skill.is_main === true)
+    .map(skill => skill.name)
+  
+  // إذا لم توجد مهارات رئيسية، استخدم كل المهارات
+  if (mainSkillsList.length === 0) {
+    return developer.skills.map(skill => skill.name)
+  }
+  
+  return mainSkillsList
+}
+
+// ✅ دالة إضافية: جلب المهارات حسب التصنيف (اختياري)
+const getSkillsByCategory = (category) => {
+  if (!developer?.skills) return []
+  return developer.skills.filter(skill => skill.category === category)
+}
   const value = {
     developer,
     publicLoading: loading,
@@ -203,7 +225,9 @@ export const DeveloperProvider = ({ children, username }) => {
     getEducation,
     getSocialLinks,
     getProfileImage,
-    getTotalExperienceYears
+    getTotalExperienceYears,
+    getMainSkills,        // 👈 أضف هذا
+  getSkillsByCategory
   }
 
   return (
