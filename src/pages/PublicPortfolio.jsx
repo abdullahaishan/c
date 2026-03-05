@@ -17,7 +17,9 @@ const PublicPortfolio = () => {
   developer,
  publicLoading,
   publicError,
-  isPaidPlan
+  isPaidPlan,
+    handleLike,        // ✅ دالة اللايك
+    visitStats    
 } = useDeveloper();
 
  if (publicLoading) {
@@ -58,6 +60,34 @@ const PublicPortfolio = () => {
   
  return (
     <>
+      {/* ✅ أضف هذا الشريط الصغير في الأعلى */}
+      <div className="fixed top-16 left-4 z-50 bg-black/50 backdrop-blur-xl rounded-lg px-3 py-2 text-white text-sm flex items-center gap-3">
+        <span className="flex items-center gap-1">
+          <Eye className="w-4 h-4" />
+          {visitStats?.views || 0}
+        </span>
+        <button 
+          onClick={async () => {
+            const result = await handleLike()
+            if (!result.success) {
+              alert(result.error || 'حدث خطأ')
+            }
+          }}
+          className="flex items-center gap-1 hover:text-pink-400 transition-colors"
+        >
+          <Heart className="w-4 h-4" />
+          {visitStats?.likes || 0}
+        </button>
+      </div>
+
+      {/* ✅ إذا كانت باقة مدفوعة، أضف شعار */}
+      {isPaidPlan() && (
+        <div className="fixed top-16 right-4 z-50 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2">
+          <Crown className="w-4 h-4" />
+          Premium
+        </div>
+      )}
+      
       <AnimatedBackground />
       <Navbar />
 
