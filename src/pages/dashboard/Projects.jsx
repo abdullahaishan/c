@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
-import { projectService, storageService , supabsae} from '../../lib/supabase'
+import { projectService, storageService } from '../../lib/supabase'
 import Swal from 'sweetalert2'
 import {
   Plus,
@@ -74,49 +74,7 @@ const Projects = () => {
     }
     return true
   }
-// =============================================
-// التحقق من حد المشاريع المسموح به (نفس طريقة المهارات)
-// =============================================
-// دالة التحقق بعد إضافة الاستيراد
-const checkProjectLimit = async () => {
-  try {
-    // ✅ الآن supabase معرف
-    const { count, error: countError } = await supabase
-      .from('projects')
-      .select('*', { count: 'exact', head: true })
-      .eq('developer_id', user.id)
 
-    if (countError) throw countError
-
-    const { data: developer, error: devError } = await supabase
-      .from('developers')
-      .select('plan_id, plans(max_projects)')
-      .eq('id', user.id)
-      .single()
-
-    if (devError) throw devError
-
-    const currentCount = count || 0
-    const maxProjects = developer?.plans?.max_projects || 3
-
-    if (maxProjects === -1) return true
-
-    if (currentCount >= maxProjects) {
-      const planNames = {
-        1: 'المجانية',
-        2: 'الأساسية',
-        3: 'المحترف',
-        4: 'المؤسسات'
-      }
-      throw new Error(`لقد تجاوزت الحد المسموح به من المشاريع للباقة ${planNames[developer?.plan_id] || ''}. الحد الأقصى هو ${maxProjects} مشاريع.`)
-    }
-
-    return true
-  } catch (error) {
-    setError(error.message)
-    return false
-  }
-}
   // =============================================
   // جلب المشاريع
   // =============================================
@@ -259,9 +217,7 @@ const checkProjectLimit = async () => {
     return
   }
 
-  // ✅ التحقق من حد المشاريع (نفس طريقة المهارات)
-  const canAdd = await checkProjectLimit()
-  if (!canAdd) return
+
 
   setSaving(true)
   setError('')
