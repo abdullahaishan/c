@@ -74,7 +74,51 @@ const Projects = () => {
     }
     return true
   }
+// =============================================
+// التحقق من حد المشاريع المسموح به (نفس طريقة المهارات)
+// =============================================
+const checkProjectLimit = async () => {
+  try {
+    // 1️⃣ جلب عدد المشاريع الحالية
+    const { count, error: countError } = await supabase
+      .from('projects')
+      .select('*', { count: 'exact', head: true })
+      .eq('developer_id', user.id)
 
+    if (countError) throw countError
+
+    // 2️⃣ جلب بيانات المطور لمعرفة الباقة والحدود
+    const { data: developer, error: devError } = await supabase
+      .from('developers')
+      .select('plan_id, plans(max_projects)')
+      .eq('id', user.id)
+      .single()
+
+    if (devError) throw devError
+
+    const currentCount = count || 0
+    const maxProjects = developer?.plans?.max_projects || 3
+
+    // ✅ إذا كان الحد -1 يعني غير محدود
+    if (maxProjects === -1) return true
+
+    // ✅ التحقق من العدد
+    if (currentCount >= maxProjects) {
+      const planNames = {
+        1: 'المجانية',
+        2: 'الأساسية',
+        3: 'المحترف',
+        4: 'المؤسسات'
+      }
+      throw new Error(`لقد تجاوزت الحد المسموح به من المشاريع للباقة ${planNames[developer?.plan_id] || ''}. الحد الأقصى هو ${maxProjects} مشاريع.`)
+    }
+
+    return true
+  } catch (error) {
+    setError(error.message)
+    return false
+  }
+}
   // =============================================
   // جلب المشاريع
   // =============================================
@@ -217,6 +261,10 @@ const Projects = () => {
     return
   }
 
+  // ✅ التحقق من حد المشاريع (نفس طريقة المهارات)
+  const canAdd = await checkProjectLimit()
+  if (!canAdd) return
+
   setSaving(true)
   setError('')
   setSuccess('')
@@ -224,15 +272,13 @@ const Projects = () => {
   try {
     const slug = generateSlug(formData.title)
     
-    // رفع الصورة - بدون projectId (سيستخدم 'temp')
+    // رفع الصورة
     let imageResult = null
     if (formData.image) {
       try {
         imageResult = await storageService.uploadProjectImage(formData.image, user.id)
-        // imageResult يحتوي على: { url, path, isTemp }
       } catch (uploadErr) {
-    setError('❌ ' + (uploadErr.message || JSON.stringify(uploadErr)))
-        
+        setError('❌ ' + (uploadErr.message || JSON.stringify(uploadErr)))
         setSaving(false)
         return
       }
@@ -257,7 +303,7 @@ const Projects = () => {
 
     const created = await projectService.create(user.id, projectData)
     
-    // إذا كانت الصورة في مجلد مؤقت، انقلها إلى مجلد المشروع الجديد
+    // نقل الصورة إذا كانت في مجلد مؤقت
     if (created.id && imageResult?.isTemp && imageResult?.path) {
       const finalImageUrl = await storageService.moveProjectImage(
         imageResult.path, 
@@ -266,7 +312,6 @@ const Projects = () => {
       )
       
       if (finalImageUrl) {
-        // تحديث المشروع بالرابط الجديد
         await projectService.update(created.id, { image: finalImageUrl })
         created.image = finalImageUrl
       }
@@ -285,11 +330,7 @@ const Projects = () => {
     setTimeout(() => setError(''), 3000)
   }
 }
-
   // =============================================
-  // تحديث مشروع موجود
-  // =============================================
-// =============================================
 // تحديث مشروع موجود (مع حذف الصورة القديمة)
 // =============================================
 const handleUpdateProject = async () => {
