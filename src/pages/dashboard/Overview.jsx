@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react'
+
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePlan } from '../../hooks/usePlan'
-import { statsService, developerService, projectService } from '../../lib/supabase'
+import { developerService, messagesService, statsService } from '../../lib/supabase'
+import { supabase } from '../../lib/supabase'
 import { Link } from 'react-router-dom'
 import {
   Eye,
@@ -9,7 +11,6 @@ import {
   MessageSquare,
   ThumbsUp,
   Sparkles,
-  ArrowRight,
   FolderKanban,
   Code,
   Award,
@@ -21,90 +22,35 @@ import {
   Smartphone,
   Monitor,
   Target,
-  Zap
+  Zap,
+  ArrowRight
 } from 'lucide-react'
 
-// ============================================
-// مكونات Skeleton Loading
-// ============================================
-
-const GreetingCardSkeleton = () => (
-  <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
-    <div className="flex items-start justify-between">
-      <div className="space-y-3 flex-1">
-        <div className="h-8 w-64 bg-white/10 rounded-lg"></div>
-        <div className="h-4 w-48 bg-white/10 rounded-lg"></div>
-        <div className="max-w-md mt-4">
-          <div className="flex items-center justify-between mb-1">
-            <div className="h-4 w-24 bg-white/10 rounded-lg"></div>
-            <div className="h-4 w-8 bg-white/10 rounded-lg"></div>
-          </div>
-          <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-            <div className="h-full w-3/4 bg-white/10 rounded-full"></div>
-          </div>
-        </div>
-      </div>
-      <div className="w-10 h-10 bg-white/10 rounded-xl"></div>
-    </div>
-  </div>
-)
-
+// ===========================================
+// مكونات Skeleton
+// ===========================================
 const StatCardSkeleton = () => (
   <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
-    <div className="flex items-start justify-between mb-4">
-      <div className="w-12 h-12 bg-white/10 rounded-xl"></div>
-      <div className="w-16 h-5 bg-white/10 rounded-full"></div>
-    </div>
+    <div className="w-12 h-12 bg-white/10 rounded-xl mb-4"></div>
     <div className="h-8 w-20 bg-white/10 rounded-lg mb-2"></div>
     <div className="h-4 w-24 bg-white/10 rounded-lg"></div>
-    <div className="h-3 w-32 bg-white/10 rounded-lg mt-2"></div>
   </div>
 )
 
-const ContentMiniCardSkeleton = () => (
+const ContentCardSkeleton = () => (
   <div className="bg-white/5 rounded-xl p-4 border border-white/10 animate-pulse">
     <div className="w-10 h-10 bg-white/10 rounded-lg mb-3"></div>
     <div className="h-4 w-16 bg-white/10 rounded-lg mb-2"></div>
-    <div className="h-6 w-20 bg-white/10 rounded-lg mb-2"></div>
-    <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-      <div className="h-full w-3/4 bg-white/10 rounded-full"></div>
-    </div>
+    <div className="h-6 w-20 bg-white/10 rounded-lg"></div>
   </div>
 )
 
-const AISectionSkeleton = () => (
-  <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
-    <div className="flex items-center gap-2 mb-4">
-      <div className="w-5 h-5 bg-white/10 rounded-lg"></div>
-      <div className="h-6 w-40 bg-white/10 rounded-lg"></div>
-    </div>
-    <div className="space-y-4">
-      <div>
-        <div className="h-4 w-24 bg-white/10 rounded-lg mb-2"></div>
-        <div className="h-8 w-16 bg-white/10 rounded-lg"></div>
-      </div>
-      <div>
-        <div className="h-4 w-32 bg-white/10 rounded-lg mb-2"></div>
-        <div className="space-y-2">
-          {[1,2,3].map((i) => (
-            <div key={i} className="flex items-start gap-2">
-              <div className="w-4 h-4 bg-white/10 rounded-full"></div>
-              <div className="h-4 w-full bg-white/10 rounded-lg"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="h-10 w-full bg-white/10 rounded-lg"></div>
-    </div>
-  </div>
-)
-
-const LatestProjectsSkeleton = () => (
+const ProjectsSkeleton = () => (
   <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
     <div className="h-6 w-32 bg-white/10 rounded-lg mb-4"></div>
     <div className="space-y-3">
-      {[1,2,3].map((i) => (
-        <div key={i} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg">
+      {[1,2,3].map(i => (
+        <div key={i} className="flex items-center gap-3">
           <div className="w-10 h-10 bg-white/10 rounded-lg"></div>
           <div className="flex-1">
             <div className="h-4 w-32 bg-white/10 rounded-lg mb-2"></div>
@@ -116,109 +62,23 @@ const LatestProjectsSkeleton = () => (
   </div>
 )
 
-const VisitorStatsSkeleton = () => (
-  <>
-    <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
-      <div className="flex items-center justify-between mb-6">
-        <div className="h-6 w-32 bg-white/10 rounded-lg"></div>
-        <div className="flex gap-2">
-          <div className="w-16 h-8 bg-white/10 rounded-lg"></div>
-          <div className="w-16 h-8 bg-white/10 rounded-lg"></div>
+const SkillsSkeleton = () => (
+  <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
+    <div className="h-6 w-32 bg-white/10 rounded-lg mb-4"></div>
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      {[1,2,3,4,5,6].map(i => (
+        <div key={i} className="bg-white/5 p-3 rounded-lg">
+          <div className="h-4 w-20 bg-white/10 rounded-lg mb-2"></div>
+          <div className="h-1 bg-white/10 rounded-full"></div>
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {[1,2,3,4].map((i) => (
-          <div key={i} className="text-center">
-            <div className="w-5 h-5 bg-white/10 rounded-full mx-auto mb-2"></div>
-            <div className="h-6 w-8 bg-white/10 rounded-lg mx-auto mb-1"></div>
-            <div className="h-3 w-12 bg-white/10 rounded-lg mx-auto"></div>
-          </div>
-        ))}
-      </div>
-
-      <div>
-        <div className="h-4 w-24 bg-white/10 rounded-lg mb-3"></div>
-        <div className="space-y-2">
-          {[1,2,3,4,5].map((i) => (
-            <div key={i} className="flex items-center gap-2">
-              <div className="h-4 w-24 bg-white/10 rounded-lg"></div>
-              <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full w-3/4 bg-white/10 rounded-full"></div>
-              </div>
-              <div className="h-4 w-8 bg-white/10 rounded-lg"></div>
-            </div>
-          ))}
-        </div>
-      </div>
+      ))}
     </div>
-
-    <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
-      <div className="h-6 w-32 bg-white/10 rounded-lg mb-4"></div>
-      <div className="space-y-3">
-        {[1,2,3].map((i) => (
-          <div key={i} className="flex items-center justify-between">
-            <div className="h-4 w-24 bg-white/10 rounded-lg"></div>
-            <div className="flex items-center gap-3">
-              <div className="w-32 h-2 bg-white/10 rounded-full overflow-hidden">
-                <div className="h-full w-3/4 bg-white/10 rounded-full"></div>
-              </div>
-              <div className="h-4 w-6 bg-white/10 rounded-lg"></div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  </>
+  </div>
 )
 
-const OverviewSkeleton = () => {
-  return (
-    <div className="space-y-6" dir="rtl">
-      <GreetingCardSkeleton />
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCardSkeleton />
-        <StatCardSkeleton />
-        <StatCardSkeleton />
-        <StatCardSkeleton />
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <ContentMiniCardSkeleton />
-        <ContentMiniCardSkeleton />
-        <ContentMiniCardSkeleton />
-        <ContentMiniCardSkeleton />
-        <ContentMiniCardSkeleton />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1 space-y-6">
-          <AISectionSkeleton />
-          <LatestProjectsSkeleton />
-        </div>
-        <div className="lg:col-span-2 space-y-6">
-          <VisitorStatsSkeleton />
-        </div>
-      </div>
-
-      <div className="bg-white/5 rounded-2xl p-4 border border-white/10 animate-pulse">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-6 h-6 bg-white/10 rounded-lg"></div>
-            <div className="h-5 w-96 bg-white/10 rounded-lg"></div>
-          </div>
-          <div className="w-24 h-9 bg-white/10 rounded-lg"></div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ============================================
-// المكونات الأصلية
-// ============================================
-
+// ===========================================
+// المكون الرئيسي
+// ===========================================
 const Overview = () => {
   const { user } = useAuth()
   const { 
@@ -230,83 +90,98 @@ const Overview = () => {
     loading: planLoading 
   } = usePlan()
   
-  const [dashboardData, setDashboardData] = useState({
-    stats: null,
-    contentStats: null,
-    visitorStats: null,
-    aiStats: null,
-    remainingAnalyses: 0,
-    projects: null,
-    skills: null
-  })
-  const [loading, setLoading] = useState(true)
-  const [selectedPeriod, setSelectedPeriod] = useState('week')
+  // ===========================================
+  // State لكل جزء من البيانات
+  // ===========================================
+  const [developer, setDeveloper] = useState(null)        // المستوى 1: بيانات المطور
+  const [stats, setStats] = useState(null)                // المستوى 1: إحصائيات إضافية
+  const [projects, setProjects] = useState(null)          // المستوى 2: المشاريع
+  const [skills, setSkills] = useState(null)              // المستوى 3: المهارات
+  const [otherTables, setOtherTables] = useState(null)    // المستوى 4: باقي الجداول
+  const [visitorStats, setVisitorStats] = useState(null)  // المستوى 5: تحليلات الزوار (للمدفوع)
+  const [aiStats, setAiStats] = useState(null)            // المستوى 5: تحليلات الذكاء الاصطناعي (للمدفوع)
+  const [unreadCount, setUnreadCount] = useState(0)       // المستوى 5: عدد الرسائل
 
+  // حالة التحميل لكل جزء
+  const [loading, setLoading] = useState({
+    developer: true,
+    stats: true,
+    projects: true,
+    skills: true,
+    other: true,
+    advanced: true
+  })
+
+  // ===========================================
+  // جلب البيانات من getOverviewData
+  // ===========================================
   useEffect(() => {
     if (!user?.id) return
 
-    let isMounted = true
+    // ✅ استخدام getOverviewData مع callbacks
+    developerService.getOverviewData(user.id, {
+      // المستوى 1: developer (فوراً)
+      onDeveloper: (data) => {
+        setDeveloper(data)
+        setLoading(prev => ({ ...prev, developer: false }))
+      },
 
-    const fetchAllStats = async () => {
-      setLoading(true)
+      // المستوى 2: projects (بعد 300ms)
+      onProjects: (data) => {
+        setProjects(data)
+        setLoading(prev => ({ ...prev, projects: false }))
+      },
+
+      // المستوى 3: skills (بعد 600ms)
+      onSkills: (data) => {
+        setSkills(data)
+        setLoading(prev => ({ ...prev, skills: false }))
+      },
+
+      // المستوى 4: باقي الجداول (بعد 900ms)
+      onOtherTables: (data) => {
+        setOtherTables(data)
+        setLoading(prev => ({ ...prev, other: false }))
+      }
+    })
+
+    // ===========================================
+    // المستوى 5: بيانات إضافية (تبدأ بعد 1200ms)
+    // ===========================================
+    const timer = setTimeout(async () => {
       try {
-        // تنفيذ جميع الاستعلامات بالتوازي
-        const [basicStats, content, remaining, projects, skills] = await Promise.all([
-          statsService.getDeveloperStats(user.id),
-          statsService.getContentStats(user.id),
-          getRemainingAnalyses(),
-          statsService.getProjects ? statsService.getProjects(user.id) : Promise.resolve([]),
-          supabase.from('skills').select('*').eq('developer_id', user.id)
-        ])
+        // إحصائيات إضافية
+        const statsData = await statsService.getDeveloperStats(user.id)
+        setStats(statsData)
 
-        let advanced = null
+        // عدد الرسائل
+        const messagesCount = await messagesService.getUnreadCount(user.id)
+        setUnreadCount(messagesCount)
+
+        // تحليلات الزوار (للمدفوع)
         if (canUseFeature('analytics')) {
-          advanced = await statsService.getAdvancedVisitorStats(user.id)
+          const advanced = await statsService.getAdvancedVisitorStats(user.id)
+          setVisitorStats(advanced)
         }
 
-        let ai = null
+        // تحليلات الذكاء الاصطناعي (للمدفوع)
         if (planId >= 3) {
-          ai = await statsService.getAIAnalysisStats(user.id)
-        }
-
-        if (isMounted) {
-          setDashboardData({
-            stats: basicStats,
-            contentStats: content,
-            visitorStats: advanced,
-            aiStats: ai,
-            remainingAnalyses: remaining,
-            projects: projects || [],
-            skills: skills.data || []
-          })
+          const ai = await statsService.getAIAnalysisStats(user.id)
+          setAiStats(ai)
         }
       } catch (error) {
-        console.error('Error fetching stats:', error)
+        console.error('Error loading advanced stats:', error)
       } finally {
-        if (isMounted) setLoading(false)
+        setLoading(prev => ({ ...prev, stats: false, advanced: false }))
       }
-    }
+    }, 1200)
 
-    fetchAllStats()
+    return () => clearTimeout(timer)
+  }, [user?.id, canUseFeature, planId])
 
-    return () => { isMounted = false }
-  }, [user?.id, canUseFeature, getRemainingAnalyses, planId])
-
-  const calculateOverallProgress = useMemo(() => {
-    if (!dashboardData.contentStats || !limits) return 0
-    
-    const totalCurrent = Object.values(dashboardData.contentStats.counts).reduce((a, b) => a + b, 0)
-    const totalMax = [
-      limits.maxProjects || 3,
-      limits.maxSkills || 10,
-      limits.maxCertificates || 3,
-      limits.maxExperience || 5,
-      limits.maxEducation || 5
-    ].reduce((a, b) => a + b, 0)
-    
-    return Math.min(100, Math.round((totalCurrent / totalMax) * 100))
-  }, [dashboardData.contentStats, limits])
-
+  // ===========================================
+  // دوال مساعدة
+  // ===========================================
   const getGreeting = () => {
     const hour = new Date().getHours()
     if (hour < 12) return 'صباح الخير'
@@ -314,18 +189,39 @@ const Overview = () => {
     return 'مساء الخير'
   }
 
-  if (loading || planLoading) {
-    return <OverviewSkeleton />
+  const calculateOverallProgress = () => {
+    if (!otherTables || !limits) return 0
+    
+    const totalCurrent = (
+      (projects?.length || 0) +
+      (skills?.length || 0) +
+      (otherTables.certificates || 0) +
+      (otherTables.experience || 0) +
+      (otherTables.education || 0)
+    )
+    
+    const totalMax = (
+      (limits.maxProjects || 3) +
+      (limits.maxSkills || 10) +
+      (limits.maxCertificates || 3) +
+      (limits.maxExperience || 5) +
+      (limits.maxEducation || 5)
+    )
+    
+    return Math.min(100, Math.round((totalCurrent / totalMax) * 100)) || 0
   }
 
+  // ===========================================
+  // العرض
+  // ===========================================
   return (
     <div className="space-y-6" dir="rtl">
-      {/* التحية ومعلومات المستخدم */}
+      {/* ===== المستوى 1: التحية وشريط التقدم ===== */}
       <div className="bg-gradient-to-r from-[#6366f1]/20 to-[#a855f7]/20 rounded-2xl p-6 border border-white/10">
-        <div className="flex items-start justify-between">
-          <div>
+        <div className="flex items-start justify-between flex-wrap gap-4">
+          <div className="flex-1">
             <h1 className="text-2xl font-bold text-white mb-2">
-              {getGreeting()}، {user?.full_name?.split(' ')[0] || 'مستخدم'}! 👋
+              {getGreeting()}، {developer?.full_name?.split(' ')[0] || 'مستخدم'}! 👋
             </h1>
             <p className="text-gray-400 mb-4">
               أنت مشترك في باقة <span className="text-[#a855f7] font-semibold">
@@ -333,290 +229,320 @@ const Overview = () => {
               </span>
             </p>
             
-            {/* شريط التقدم الكلي */}
+            {/* شريط التقدم */}
             <div className="max-w-md">
               <div className="flex items-center justify-between text-sm mb-1">
                 <span className="text-gray-400">اكتمال الملف الشخصي</span>
-                <span className="text-white font-semibold">{calculateOverallProgress}%</span>
+                <span className="text-white font-semibold">{calculateOverallProgress()}%</span>
               </div>
               <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7] transition-all duration-500"
-                  style={{ width: `${calculateOverallProgress}%` }}
+                  style={{ width: `${calculateOverallProgress()}%` }}
                 />
               </div>
             </div>
           </div>
           
-          {/* زر عرض الباقات للمجانيين */}
+          {/* زر الترقية للمجانيين */}
           {isFree && (
             <Link
               to="/plans"
-              className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-all"
+              className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-all flex items-center gap-2"
             >
               <Sparkles className="w-5 h-5 text-[#a855f7]" />
+              <span className="text-white">ترقية</span>
             </Link>
           )}
         </div>
       </div>
 
-      {/* البطاقات الرئيسية */}
+      {/* ===== المستوى 1: بطاقات الإحصائيات الأساسية ===== */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          icon={Eye}
-          label="المشاهدات"
-          value={dashboardData.stats?.views?.toLocaleString() || '0'}
-          trend={dashboardData.stats?.weeklyTrend || 0}
-          color="from-blue-500 to-cyan-500"
-        />
-        <StatCard
-          icon={ThumbsUp}
-          label="الإعجابات"
-          value={dashboardData.stats?.likes?.toLocaleString() || '0'}
-          color="from-purple-500 to-pink-500"
-        />
-        <StatCard
-          icon={MessageSquare}
-          label="الرسائل"
-          value={dashboardData.stats?.messages?.toLocaleString() || '0'}
-          badge={dashboardData.stats?.unreadMessages > 0 ? `${dashboardData.stats.unreadMessages} جديد` : null}
-          color="from-yellow-500 to-orange-500"
-        />
-        <StatCard
-          icon={Users}
-          label="الزوار"
-          value={dashboardData.stats?.visitors?.toLocaleString() || '0'}
-          subValue={!canUseFeature('analytics') ? '🔒 متاح في الباقات المدفوعة' : null}
-          color="from-green-500 to-emerald-500"
-        />
+        {loading.developer ? (
+          <StatCardSkeleton />
+        ) : (
+          <StatCard
+            icon={Eye}
+            label="المشاهدات"
+            value={developer?.views_count || 0}
+            trend={stats?.weeklyTrend || 0}
+            color="from-blue-500 to-cyan-500"
+          />
+        )}
+        
+        {loading.developer ? (
+          <StatCardSkeleton />
+        ) : (
+          <StatCard
+            icon={ThumbsUp}
+            label="الإعجابات"
+            value={developer?.likes_count || 0}
+            color="from-purple-500 to-pink-500"
+          />
+        )}
+        
+        {loading.stats ? (
+          <StatCardSkeleton />
+        ) : (
+          <StatCard
+            icon={MessageSquare}
+            label="الرسائل"
+            value={stats?.messages || 0}
+            badge={unreadCount > 0 ? `${unreadCount} جديد` : null}
+            color="from-yellow-500 to-orange-500"
+          />
+        )}
+        
+        {loading.stats ? (
+          <StatCardSkeleton />
+        ) : (
+          <StatCard
+            icon={Users}
+            label="الزوار"
+            value={stats?.visitors || 0}
+            subValue={!canUseFeature('analytics') ? '🔒 متاح في الباقات المدفوعة' : null}
+            color="from-green-500 to-emerald-500"
+          />
+        )}
       </div>
 
-      {/* إحصائيات المحتوى */}
+      {/* ===== المستوى 2: بطاقات المحتوى ===== */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <ContentMiniCard
-          icon={FolderKanban}
-          label="المشاريع"
-          count={dashboardData.contentStats?.counts?.projects || 0}
-          max={limits?.maxProjects || 1}
-          color="from-blue-500 to-cyan-500"
-          link="/dashboard/projects"
-        />
-        <ContentMiniCard
-          icon={Code}
-          label="المهارات"
-          count={dashboardData.contentStats?.counts?.skills || 0}
-          max={limits?.maxSkills || 2}
-          color="from-purple-500 to-pink-500"
-          link="/dashboard/skills"
-        />
-        <ContentMiniCard
-          icon={Award}
-          label="الشهادات"
-          count={dashboardData.contentStats?.counts?.certificates || 0}
-          max={limits?.maxCertificates || 1}
-          color="from-yellow-500 to-orange-500"
-          link="/dashboard/certificates"
-        />
-        <ContentMiniCard
-          icon={Briefcase}
-          label="الخبرات"
-          count={dashboardData.contentStats?.counts?.experience || 0}
-          max={limits?.maxExperience || 1}
-          color="from-green-500 to-emerald-500"
-          link="/dashboard/experience"
-        />
-        <ContentMiniCard
-          icon={GraduationCap}
-          label="التعليم"
-          count={dashboardData.contentStats?.counts?.education || 0}
-          max={limits?.maxEducation || 1}
-          color="from-red-500 to-rose-500"
-          link="/dashboard/education"
-        />
+        {loading.projects ? (
+          <ContentCardSkeleton />
+        ) : (
+          <ContentCard
+            icon={FolderKanban}
+            label="المشاريع"
+            count={projects?.length || 0}
+            max={limits?.maxProjects || 3}
+            color="from-blue-500 to-cyan-500"
+            link="/dashboard/projects"
+          />
+        )}
+        
+        {loading.skills ? (
+          <ContentCardSkeleton />
+        ) : (
+          <ContentCard
+            icon={Code}
+            label="المهارات"
+            count={skills?.length || 0}
+            max={limits?.maxSkills || 10}
+            color="from-purple-500 to-pink-500"
+            link="/dashboard/skills"
+          />
+        )}
+        
+        {loading.other ? (
+          <ContentCardSkeleton />
+        ) : (
+          <ContentCard
+            icon={Award}
+            label="الشهادات"
+            count={otherTables?.certificates || 0}
+            max={limits?.maxCertificates || 3}
+            color="from-yellow-500 to-orange-500"
+            link="/dashboard/certificates"
+          />
+        )}
+        
+        {loading.other ? (
+          <ContentCardSkeleton />
+        ) : (
+          <ContentCard
+            icon={Briefcase}
+            label="الخبرات"
+            count={otherTables?.experience || 0}
+            max={limits?.maxExperience || 5}
+            color="from-green-500 to-emerald-500"
+            link="/dashboard/experience"
+          />
+        )}
+        
+        {loading.other ? (
+          <ContentCardSkeleton />
+        ) : (
+          <ContentCard
+            icon={GraduationCap}
+            label="التعليم"
+            count={otherTables?.education || 0}
+            max={limits?.maxEducation || 5}
+            color="from-red-500 to-rose-500"
+            link="/dashboard/education"
+          />
+        )}
       </div>
 
-      {/* قسمين رئيسيين */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* تحليلات الذكاء الاصطناعي */}
-        <div className="lg:col-span-1 space-y-6">
-          {planId >= 3 && dashboardData.aiStats && (
-            <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <Zap className="w-5 h-5 text-[#a855f7]" />
-                تحليلات الذكاء الاصطناعي
-              </h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm text-gray-400">عدد التحليلات</p>
-                  <p className="text-2xl text-white">{dashboardData.aiStats.totalAnalyses}</p>
-                </div>
-                
-                {dashboardData.aiStats.suggestions?.length > 0 && (
-                  <div>
-                    <p className="text-sm text-gray-400 mb-2">اقتراحات للتحسين</p>
-                    <ul className="space-y-2">
-                      {dashboardData.aiStats.suggestions.slice(0, 3).map((s, i) => (
-                        <li key={i} className="text-xs text-gray-300 flex items-start gap-2">
-                          <span className="text-green-400">•</span>
-                          {s}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                <Link
-                  to="/app/builder"
-                  className="block text-center py-2 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg text-sm hover:scale-105 transition-all"
-                >
-                  تحليل سيرة ذاتية جديدة
-                </Link>
-              </div>
+      {/* ===== المستوى 3: المشاريع (بتفاصيل) ===== */}
+      {loading.projects ? (
+        <ProjectsSkeleton />
+      ) : (
+        projects && projects.length > 0 && (
+          <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">أحدث المشاريع</h3>
+              <Link 
+                to="/dashboard/projects" 
+                className="text-sm text-[#a855f7] hover:text-[#6366f1] flex items-center gap-1"
+              >
+                عرض الكل <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
-          )}
-
-          {/* أحدث المشاريع */}
-          {dashboardData.projects?.length > 0 && (
-            <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-              <h3 className="text-lg font-semibold text-white mb-4">أحدث المشاريع</h3>
-              <div className="space-y-3">
-                {dashboardData.projects.slice(0, 3).map((project, i) => (
-                  <div key={i} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg">
-                    {project.image ? (
-                      <img src={project.image} alt="" className="w-10 h-10 rounded-lg object-cover" />
-                    ) : (
-                      <div className="w-10 h-10 bg-[#6366f1]/20 rounded-lg flex items-center justify-center">
-                        <FolderKanban className="w-5 h-5 text-[#6366f1]" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white truncate">{project.title}</p>
-                      <p className="text-xs text-gray-400">
-                        {new Date(project.created_at).toLocaleDateString('ar-SA')}
-                      </p>
+            <div className="space-y-3">
+              {projects.map((project) => (
+                <Link 
+                  key={project.id} 
+                  to={`/dashboard/projects/edit/${project.id}`}
+                  className="flex items-center gap-3 p-2 bg-white/5 rounded-lg hover:bg-white/10 transition-all"
+                >
+                  {project.image ? (
+                    <img src={project.image} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                  ) : (
+                    <div className="w-10 h-10 bg-[#6366f1]/20 rounded-lg flex items-center justify-center">
+                      <FolderKanban className="w-5 h-5 text-[#6366f1]" />
                     </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white truncate">{project.title}</p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(project.created_at).toLocaleDateString('ar-SA')}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )
+      )}
+
+      {/* ===== المستوى 4: المهارات (بتفاصيل) ===== */}
+      {!loading.skills && skills && skills.length > 0 && (
+        <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white">أفضل المهارات</h3>
+            <Link 
+              to="/dashboard/skills" 
+              className="text-sm text-[#a855f7] hover:text-[#6366f1] flex items-center gap-1"
+            >
+              إدارة المهارات <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {skills.slice(0, 6).map((skill) => (
+              <div key={skill.id} className="bg-white/5 p-3 rounded-lg">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-white font-medium text-sm">{skill.name}</p>
+                  <span className="text-xs text-gray-400">{skill.proficiency}%</span>
+                </div>
+                <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
+                    style={{ width: `${skill.proficiency}%` }}
+                  />
+                </div>
+                {skill.category && (
+                  <p className="text-xs text-gray-500 mt-1">{skill.category}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ===== المستوى 5: تحليلات متقدمة (للمدفوع) ===== */}
+      {!loading.advanced && canUseFeature('analytics') && visitorStats && (
+        <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-[#a855f7]" />
+            تحليلات الزوار
+          </h3>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="text-center">
+              <Globe className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
+              <p className="text-xl text-white">{visitorStats.countries?.length || 0}</p>
+              <p className="text-xs text-gray-400">دولة</p>
+            </div>
+            <div className="text-center">
+              <Smartphone className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
+              <p className="text-xl text-white">{visitorStats.devices?.mobile || 0}</p>
+              <p className="text-xs text-gray-400">جوال</p>
+            </div>
+            <div className="text-center">
+              <Monitor className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
+              <p className="text-xl text-white">{visitorStats.devices?.desktop || 0}</p>
+              <p className="text-xs text-gray-400">كمبيوتر</p>
+            </div>
+            <div className="text-center">
+              <Target className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
+              <p className="text-xl text-white">{visitorStats.referrers?.length || 0}</p>
+              <p className="text-xs text-gray-400">مصدر</p>
+            </div>
+          </div>
+
+          {visitorStats.countries?.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-gray-400 mb-3">أفضل الدول</h4>
+              <div className="space-y-2">
+                {visitorStats.countries.slice(0, 5).map(([country, count], i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-sm text-white w-24 truncate">{country}</span>
+                    <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
+                        style={{ width: `${(count / visitorStats.total) * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-400">{count}</span>
                   </div>
                 ))}
               </div>
             </div>
           )}
         </div>
+      )}
 
-        {/* إحصائيات الزوار */}
-        <div className="lg:col-span-2 space-y-6">
-          {canUseFeature('analytics') && dashboardData.visitorStats ? (
-            <>
-              <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-semibold text-white">تحليلات الزوار</h3>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setSelectedPeriod('week')}
-                      className={`px-3 py-1 text-sm rounded-lg transition-all ${
-                        selectedPeriod === 'week' 
-                          ? 'bg-[#6366f1] text-white' 
-                          : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                      }`}
-                    >
-                      أسبوع
-                    </button>
-                    <button
-                      onClick={() => setSelectedPeriod('month')}
-                      className={`px-3 py-1 text-sm rounded-lg transition-all ${
-                        selectedPeriod === 'month' 
-                          ? 'bg-[#6366f1] text-white' 
-                          : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                      }`}
-                    >
-                      شهر
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div className="text-center">
-                    <Globe className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                    <p className="text-xl text-white">{dashboardData.visitorStats.countries?.length || 0}</p>
-                    <p className="text-xs text-gray-400">دولة</p>
-                  </div>
-                  <div className="text-center">
-                    <Smartphone className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                    <p className="text-xl text-white">{dashboardData.visitorStats.devices?.mobile || 0}</p>
-                    <p className="text-xs text-gray-400">جوال</p>
-                  </div>
-                  <div className="text-center">
-                    <Monitor className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                    <p className="text-xl text-white">{dashboardData.visitorStats.devices?.desktop || 0}</p>
-                    <p className="text-xs text-gray-400">كمبيوتر</p>
-                  </div>
-                  <div className="text-center">
-                    <Target className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                    <p className="text-xl text-white">{dashboardData.visitorStats.referrers?.length || 0}</p>
-                    <p className="text-xs text-gray-400">مصدر</p>
-                  </div>
-                </div>
-
-                {dashboardData.visitorStats.countries?.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-400 mb-3">أفضل الدول</h4>
-                    <div className="space-y-2">
-                      {dashboardData.visitorStats.countries.slice(0, 5).map(([country, count], i) => (
-                        <div key={i} className="flex items-center gap-2">
-                          <span className="text-sm text-white w-24 truncate">{country}</span>
-                          <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
-                              style={{ width: `${(count / dashboardData.visitorStats.total) * 100}%` }}
-                            />
-                          </div>
-                          <span className="text-xs text-gray-400">{count}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-                <h3 className="text-lg font-semibold text-white mb-4">مصادر الزيارات</h3>
-                <div className="space-y-3">
-                  {dashboardData.visitorStats.referrers?.map(([source, count], i) => (
-                    <div key={i} className="flex items-center justify-between">
-                      <span className="text-sm text-gray-300">{source}</span>
-                      <div className="flex items-center gap-3">
-                        <div className="w-32 h-2 bg-white/10 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
-                            style={{ width: `${(count / dashboardData.visitorStats.total) * 100}%` }}
-                          />
-                        </div>
-                        <span className="text-xs text-gray-400">{count}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="bg-gradient-to-r from-[#6366f1]/10 to-[#a855f7]/10 rounded-2xl p-8 border border-[#6366f1]/20 text-center">
-              <TrendingUp className="w-12 h-12 text-[#6366f1] mx-auto mb-4" />
-              <h3 className="text-xl text-white mb-2">إحصائيات متقدمة</h3>
-              <p className="text-gray-400 mb-4">
-                قم بترقية باقتك للوصول إلى تحليلات مفصلة للزوار ومعرفة من أين يأتون
-              </p>
-              <Link
-                to="/plans"
-                className="inline-block px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg hover:scale-105 transition-all"
-              >
-                عرض الباقات
-              </Link>
+      {/* ===== المستوى 5: تحليلات الذكاء الاصطناعي (للمدفوع) ===== */}
+      {!loading.advanced && planId >= 3 && aiStats && (
+        <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Zap className="w-5 h-5 text-[#a855f7]" />
+            تحليلات الذكاء الاصطناعي
+          </h3>
+          
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-400">عدد التحليلات</p>
+              <p className="text-2xl text-white">{aiStats.totalAnalyses}</p>
             </div>
-          )}
-        </div>
-      </div>
+            
+            {aiStats.suggestions?.length > 0 && (
+              <div>
+                <p className="text-sm text-gray-400 mb-2">اقتراحات للتحسين</p>
+                <ul className="space-y-2">
+                  {aiStats.suggestions.slice(0, 3).map((s, i) => (
+                    <li key={i} className="text-xs text-gray-300 flex items-start gap-2">
+                      <span className="text-green-400">•</span>
+                      {s}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
-      {/* Banner للمجانيين */}
+            <Link
+              to="/app/builder"
+              className="block text-center py-2 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-lg text-sm hover:scale-105 transition-all"
+            >
+              تحليل سيرة ذاتية جديدة
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Banner للمجانيين ===== */}
       {isFree && (
         <div className="bg-gradient-to-r from-[#6366f1]/10 to-[#a855f7]/10 rounded-2xl p-4 border border-[#6366f1]/20">
           <div className="flex items-center justify-between flex-wrap gap-4">
@@ -655,7 +581,7 @@ const StatCard = ({ icon: Icon, label, value, trend, badge, subValue, color }) =
         </span>
       )}
     </div>
-    <p className="text-2xl font-bold text-white mb-1">{value}</p>
+    <p className="text-2xl font-bold text-white mb-1">{value.toLocaleString()}</p>
     <p className="text-sm text-gray-400">{label}</p>
     {trend > 0 && (
       <p className="text-xs text-green-400 mt-2">+{trend} هذا الأسبوع</p>
@@ -666,7 +592,7 @@ const StatCard = ({ icon: Icon, label, value, trend, badge, subValue, color }) =
   </div>
 )
 
-const ContentMiniCard = ({ icon: Icon, label, count, max, color, link }) => {
+const ContentCard = ({ icon: Icon, label, count, max, color, link }) => {
   const percentage = max === -1 ? 0 : Math.min(100, Math.round((count / max) * 100))
   
   return (
