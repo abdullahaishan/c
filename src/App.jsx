@@ -123,7 +123,7 @@ const AppRoutes = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           // ضمن Routes
-<Route path="/verify-otp" element={<VerifyOtp />} />
+          <Route path="/verify-otp" element={<VerifyOtp />} />
           <Route path="/u/:username" element={<PublicPortfolioWrapper />} />
           <Route path="/project/:id" element={<ProjectDetail />} />
           
@@ -155,7 +155,7 @@ const AppRoutes = () => {
             <Route path="settings" element={<Settings />} />
             <Route path="plan-status" element={<PlanStatus />} />
             <Route path="messages" element={<Messages />} />
-            <Route path="dashboard/notifications" element={<Notifications />} />
+            <Route path="notifications" element={<Notifications />} />
             
           </Route>
           
