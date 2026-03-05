@@ -665,14 +665,7 @@ const Portfolio = ({ developer: propDeveloper }) => {
           )}
         </div>
 
-        {/* Free Plan Notice */}
-        {isFreePlan && (
-          <div className="mt-8 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-center">
-            <p className="text-yellow-400 text-sm">
-              ✨ You're on the Free Plan - Upgrade to showcase more projects
-            </p>
-          </div>
-        )}
+        
       </div>
     </div>
   );
