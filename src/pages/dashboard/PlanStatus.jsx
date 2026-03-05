@@ -351,7 +351,6 @@ const PlanStatus = () => {
   }, [user])
 
   const fetchAllData = async () => {
-  const fetchAllData = async () => {
   setLoading(true)
   try {
     // 1️⃣ جلب جميع الباقات
