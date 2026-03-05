@@ -14,7 +14,7 @@ export const useAuth = () => {
         .from('developers')
         .select('*')
         .eq('id', userId)
-        .maybeSingle()
+        .single()
       
       if (error) throw error
       
@@ -54,7 +54,7 @@ export const useAuth = () => {
             .from('developers')
             .select('*')
             .eq('id', session.user.id)
-            .maybeSingle()
+            .single()
 
           if (developer) {
             setUser(developer)
