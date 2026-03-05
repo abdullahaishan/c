@@ -1,4 +1,4 @@
-// components/plans/PaymentModel.jsx
+// components/plans/PaymentModal.jsx
 import React, { useState } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { supabase } from '../../lib/supabase'
@@ -16,11 +16,12 @@ import {
   Send,
   MessageCircle,
   Phone,
-  Banknote
+  Banknote,
+  Bell
 } from 'lucide-react'
 
 // ============================================
-// بيانات العملات (مضافة مباشرة)
+// بيانات العملات
 // ============================================
 const CURRENCIES = {
   USD: { symbol: '$', name: 'دولار أمريكي', code: 'USD' },
@@ -28,27 +29,6 @@ const CURRENCIES = {
   SAR: { symbol: 'ر.س', name: 'ريال سعودي', code: 'SAR' },
   AED: { symbol: 'د.إ', name: 'درهم إماراتي', code: 'AED' },
   EGP: { symbol: 'ج.م', name: 'جنيه مصري', code: 'EGP' }
-}
-
-// ============================================
-// خدمة رفع الصور
-// ============================================
-const storageService = {
-  async uploadImage(file, path) {
-    const fileName = `${path}_${file.name}`
-    
-    const { error: uploadError } = await supabase.storage
-      .from('payments')
-      .upload(fileName, file)
-
-    if (uploadError) throw uploadError
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('payments')
-      .getPublicUrl(fileName)
-
-    return publicUrl
-  }
 }
 
 const PaymentModal = ({ 
@@ -64,13 +44,12 @@ const PaymentModal = ({
   const [step, setStep] = useState('method')
   const [method, setMethod] = useState('')
   const [cryptoType, setCryptoType] = useState('')
-  const [imageFile, setImageFile] = useState(null)
-  const [imagePreview, setImagePreview] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
   const [transferDetails, setTransferDetails] = useState('')
   const [selectedBank, setSelectedBank] = useState('')
+  const [notificationSent, setNotificationSent] = useState(false)
   
   const { user } = useAuth()
   
@@ -136,12 +115,12 @@ const PaymentModal = ({
 ${cryptoType ? `🪙 *العملة:* ${cryptoType.toUpperCase()}` : ''}
 ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
 
-📝 *التفاصيل:* ${transferDetails || 'لا يوجد'}
-🖼️ *صورة التحويل:* ${imagePreview ? 'مرفقة' : 'غير مرفقة'}
+📝 *التفاصيل:* ${transferDetails || 'لا يوجد تفاصيل إضافية'}
 
 ⏰ *التاريخ:* ${new Date().toLocaleString('ar')}
 ━━━━━━━━━━━━━━━━
 ✅ الرجاء تأكيد الدفع بعد التحقق
+⚠️ سيتم إرسال صورة التحويل عبر واتساب من قبل العميل
     `.trim()
     
     return `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(message)}`
@@ -158,54 +137,61 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
     return methods[methodId] || methodId
   }
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-
-    if (file.size > 5 * 1024 * 1024) {
-      setError('حجم الملف يجب أن يكون أقل من 5 ميجابايت')
-      return
-    }
-
-    if (!file.type.startsWith('image/')) {
-      setError('الرجاء رفع صورة فقط')
-      return
-    }
-
-    setImageFile(file)
-    const reader = new FileReader()
-    reader.onloadend = () => setImagePreview(reader.result)
-    reader.readAsDataURL(file)
-    setError('')
-  }
-
   const handleCopyAddress = (text) => {
     navigator.clipboard.writeText(text)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const handleSubmit = async () => {
-    if (!imageFile) {
-      setError('الرجاء رفع صورة التحويل')
-      return
-    }
-
-    setLoading(true)
-    setError('')
-
+  // ✅ دالة إرسال الإشعارات (بدون رفع صور)
+  const sendNotifications = async () => {
     try {
-      // رفع صورة التحويل
-      let imageUrl = null
-      if (imageFile) {
-        imageUrl = await storageService.uploadImage(
-          imageFile,
-          `payments/${user?.id || 'anonymous'}/${Date.now()}`
-        )
-      }
+      // 1️⃣ إشعار للمستخدم
+      await supabase
+        .from('notifications')
+        .insert([{
+          user_id: user?.id,
+          title: 'تم استلام طلب الدفع',
+          message: `تم استلام طلب ترقية إلى باقة ${plan?.name_ar || 'الباقة'}. الرجاء التواصل مع الدعم عبر واتساب لإرسال صورة التحويل.`,
+          type: 'payment',
+          metadata: {
+            plan_id: plan?.id,
+            amount: convertedPrice?.price || plan?.price_monthly,
+            currency,
+            payment_method: method,
+            whatsapp_link: createWhatsAppLink()
+          },
+          created_at: new Date().toISOString()
+        }])
 
-      // حفظ بيانات الدفع
-      const { error: dbError } = await supabase
+      // 2️⃣ إشعار للأدمن
+      await supabase
+        .from('admin_notifications')
+        .insert([{
+          title: '🚀 طلب دفع جديد - انتظار صورة التحويل',
+          message: `طلب جديد من ${user?.full_name || user?.email} لشراء باقة ${plan?.name_ar}. الرجاء متابعة المحادثة عبر واتساب.`,
+          type: 'payment_request',
+          user_id: user?.id,
+          metadata: {
+            plan_id: plan?.id,
+            plan_name: plan?.name_ar,
+            amount: convertedPrice?.price || plan?.price_monthly,
+            currency,
+            payment_method: method,
+            crypto_type: cryptoType,
+            bank_name: selectedBank,
+            transfer_details: transferDetails,
+            billing_cycle: billingCycle,
+            user_name: user?.full_name,
+            user_email: user?.email,
+            whatsapp_link: createWhatsAppLink()
+          },
+          priority: 'high',
+          created_at: new Date().toISOString()
+        }])
+
+      // 3️⃣ حفظ بيانات الدفع في جدول payments
+      await supabase
         .from('payments')
         .insert([{
           developer_id: user?.id,
@@ -215,47 +201,36 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
           payment_method: method,
           crypto_type: cryptoType,
           bank_name: selectedBank,
-          transaction_image: imageUrl,
           transfer_details: transferDetails,
           billing_cycle: billingCycle,
           status: 'pending',
-          created_at: new Date().toISOString()
-        }])
-
-      if (dbError) throw dbError
-
-      // إشعار للمستخدم
-      await supabase
-        .from('notifications')
-        .insert([{
-          user_id: user?.id,
-          title: 'تم استلام طلب الدفع',
-          message: `تم استلام طلب ترقية إلى باقة ${plan?.name_ar || 'الباقة'}. سنتواصل معك قريباً.`,
-          type: 'payment',
-          created_at: new Date().toISOString()
-        }])
-
-      // إشعار للأدمن
-      await supabase
-        .from('admin_notifications')
-        .insert([{
-          title: 'طلب دفع جديد',
-          message: `طلب جديد من ${user?.full_name || user?.email} لشراء باقة ${plan?.name_ar}`,
-          type: 'payment_request',
-          user_id: user?.id,
           metadata: {
-            plan_id: plan?.id,
-            amount: convertedPrice?.price || plan?.price_monthly,
-            currency,
-            payment_method: method
+            requires_image: true,
+            whatsapp_contact: ADMIN_WHATSAPP
           },
           created_at: new Date().toISOString()
         }])
 
+      setNotificationSent(true)
+      return true
+    } catch (err) {
+      console.error('Error sending notifications:', err)
+      throw err
+    }
+  }
+
+  const handleSubmit = async () => {
+    setLoading(true)
+    setError('')
+
+    try {
+      // إرسال الإشعارات فقط (بدون رفع صور)
+      await sendNotifications()
+      
       setStep('success')
     } catch (err) {
       console.error('Payment error:', err)
-      setError('فشل في معالجة الدفع. الرجاء المحاولة مرة أخرى.')
+      setError('فشل في معالجة الطلب. الرجاء المحاولة مرة أخرى.')
     } finally {
       setLoading(false)
     }
@@ -308,23 +283,6 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
                 )}
               </div>
             </div>
-          </div>
-
-          {/* زر التواصل المباشر مع الأدمن */}
-          <div className="mb-6">
-            <button
-              onClick={contactAdminViaWhatsApp}
-              className="w-full p-4 bg-green-600/20 border border-green-500/30 rounded-xl hover:bg-green-600/30 transition-all flex items-center gap-4"
-            >
-              <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
-                <MessageCircle className="w-6 h-6 text-white" />
-              </div>
-              <div className="flex-1 text-right">
-                <h3 className="text-white font-semibold">تواصل مع الدعم عبر واتساب</h3>
-                <p className="text-sm text-green-400">للتواصل المباشر مع مدير الموقع</p>
-              </div>
-              <Send className="w-5 h-5 text-green-400" />
-            </button>
           </div>
 
           {/* Error Message */}
@@ -483,7 +441,7 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
             </div>
           )}
 
-          {/* Step 2: Upload Proof */}
+          {/* Step 2: Upload Proof - ✅ بدون رفع صور */}
           {step === 'upload' && (
             <div className="space-y-6">
               {/* Payment Instructions */}
@@ -497,7 +455,6 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
                         <p>الاسم: احمد زبن الله علي عيشان</p>
                         <p>البلد: اليمن - صنعاء</p>
                         <p>الهاتف: +967771315459</p>
-                        <p className="text-yellow-400 mt-2">⚠️ بعد الإرسال، أرفق صورة الإيصال</p>
                       </div>
                     </>
                   )}
@@ -508,7 +465,6 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
                       <div className="mt-2 p-3 bg-black/30 rounded-lg text-gray-300">
                         <p>رقم المحفظة: 102515815</p>
                         <p>الاسم: احمد زبن الله علي عيشان</p>
-                        <p className="text-yellow-400 mt-2">⚠️ بعد الإرسال، أرفق صورة التحويل</p>
                       </div>
                     </>
                   )}
@@ -519,7 +475,6 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
                       <div className="mt-2 p-3 bg-black/30 rounded-lg text-gray-300">
                         <p>رقم المحفظة: 2844083</p>
                         <p>الاسم: احمد زبن الله علي عيشان</p>
-                        <p className="text-yellow-400 mt-2">⚠️ بعد الإرسال، أرفق صورة التحويل</p>
                       </div>
                     </>
                   )}
@@ -531,7 +486,6 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
                         <p>رقم الحساب: 3101557757</p>
                         <p>الاسم: احمد زبن الله علي عيشان</p>
                         <p>الفرع: الرئيسي - صنعاء</p>
-                        <p className="text-yellow-400 mt-2">⚠️ بعد الإرسال، أرفق صورة الإيصال</p>
                       </div>
                     </>
                   )}
@@ -572,37 +526,19 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
                 />
               </div>
 
-              {/* Image Upload */}
-              {!imagePreview ? (
-                <label className="block border-2 border-dashed border-white/20 rounded-xl p-8 text-center cursor-pointer hover:border-[#a855f7]/50 transition-all">
-                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-white mb-2">اضغط لرفع صورة التحويل</p>
-                  <p className="text-sm text-gray-500">صورة الإيصال - PNG, JPG (أقل من 5 ميجابايت)</p>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                  />
-                </label>
-              ) : (
-                <div className="relative">
-                  <img
-                    src={imagePreview}
-                    alt="Payment proof"
-                    className="w-full rounded-xl"
-                  />
-                  <button
-                    onClick={() => {
-                      setImagePreview(null)
-                      setImageFile(null)
-                    }}
-                    className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+              {/* ✅ إشعار بأنه سيتم التواصل عبر واتساب */}
+              <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+                <div className="flex items-start gap-3">
+                  <Bell className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-white font-medium mb-1">📱 سيتم التواصل عبر واتساب</h4>
+                    <p className="text-sm text-yellow-400">
+                      بعد إرسال الطلب، سيتم تحويلك إلى واتساب للتواصل مع المدير وإرسال صورة التحويل مباشرة.
+                      الرجاء التأكد من توفر صورة التحويل في جهازك.
+                    </p>
+                  </div>
                 </div>
-              )}
+              </div>
 
               {/* Action Buttons */}
               <div className="flex gap-3">
@@ -614,7 +550,7 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
                 </button>
                 <button
                   onClick={handleSubmit}
-                  disabled={loading || !imageFile}
+                  disabled={loading}
                   className="flex-1 px-4 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-[1.02] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {loading ? (
@@ -627,41 +563,50 @@ ${selectedBank ? `🏦 *البنك:* ${selectedBank}` : ''}
                   )}
                 </button>
               </div>
-
-              {/* Contact Admin Button */}
-              <button
-                onClick={contactAdminViaWhatsApp}
-                className="w-full p-3 bg-green-600/20 border border-green-500/30 rounded-lg hover:bg-green-600/30 transition-all flex items-center justify-center gap-2 text-green-400"
-              >
-                <MessageCircle className="w-5 h-5" />
-                تواصل مع الدعم عبر واتساب
-              </button>
             </div>
           )}
 
-          {/* Step 3: Success */}
+          {/* Step 3: Success - ✅ مع توجيه مباشر للواتساب */}
           {step === 'success' && (
             <div className="text-center py-8">
               <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="w-10 h-10 text-green-400" />
               </div>
               <h3 className="text-xl font-bold text-white mb-2">تم إرسال طلب الدفع!</h3>
-              <p className="text-gray-400 mb-4">
-                شكراً لك! تم استلام طلب ترقية باقتك. سنقوم بمراجعته وتفعيلها في اقرب وقت.
+              <p className="text-gray-400 mb-6">
+                شكراً لك! تم إرسال إشعار للمدير. الآن يمكنك التواصل عبر واتساب لإرسال صورة التحويل.
               </p>
               
-              {/* زر التواصل بعد النجاح */}
+              {/* ✅ زر التواصل مع المدير عبر واتساب */}
               <button
                 onClick={contactAdminViaWhatsApp}
-                className="mt-4 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all flex items-center justify-center gap-2 mx-auto"
+                className="w-full px-6 py-4 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all flex items-center justify-center gap-2 text-lg font-semibold mb-4"
               >
-                <MessageCircle className="w-5 h-5" />
-                تواصل مع الدعم عبر واتساب
+                <MessageCircle className="w-6 h-6" />
+                تواصل مع المدير عبر واتساب
               </button>
               
-              <p className="text-sm text-gray-500 mt-4">
-                يمكنك التواصل معنا مباشرة عبر واتساب للاستفسار عن حالة طلبك
-              </p>
+              {/* ✅ تأكيد إرسال الإشعارات */}
+              {notificationSent && (
+                <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl text-right">
+                  <div className="flex items-start gap-3">
+                    <Bell className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-white font-medium mb-1">تم إرسال إشعار للمدير</h4>
+                      <p className="text-sm text-blue-400">
+                        سيتم مراجعة طلبك قريباً. يمكنك متابعة حالة الطلب عبر واتساب.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <button
+                onClick={onClose}
+                className="mt-4 text-gray-400 hover:text-white transition-all"
+              >
+                إغلاق النافذة
+              </button>
             </div>
           )}
         </div>
