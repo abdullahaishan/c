@@ -1,8 +1,7 @@
-// Overview.jsx
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { usePlan } from '../../hooks/usePlan'
-import { statsService } from '../../lib/supabase'
+import { statsService, developerService, projectService } from '../../lib/supabase'
 import { Link } from 'react-router-dom'
 import {
   Eye,
@@ -21,8 +20,6 @@ import {
   Globe,
   Smartphone,
   Monitor,
-  Calendar,
-  Clock,
   Target,
   Zap
 } from 'lucide-react'
@@ -31,7 +28,6 @@ import {
 // مكونات Skeleton Loading
 // ============================================
 
-// Skeleton للبطاقة الرئيسية (التحية)
 const GreetingCardSkeleton = () => (
   <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
     <div className="flex items-start justify-between">
@@ -53,7 +49,6 @@ const GreetingCardSkeleton = () => (
   </div>
 )
 
-// Skeleton لبطاقة الإحصائيات الرئيسية
 const StatCardSkeleton = () => (
   <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
     <div className="flex items-start justify-between mb-4">
@@ -66,7 +61,6 @@ const StatCardSkeleton = () => (
   </div>
 )
 
-// Skeleton لبطاقة المحتوى المصغرة
 const ContentMiniCardSkeleton = () => (
   <div className="bg-white/5 rounded-xl p-4 border border-white/10 animate-pulse">
     <div className="w-10 h-10 bg-white/10 rounded-lg mb-3"></div>
@@ -78,7 +72,6 @@ const ContentMiniCardSkeleton = () => (
   </div>
 )
 
-// Skeleton لقسم تحليلات الذكاء الاصطناعي
 const AISectionSkeleton = () => (
   <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
     <div className="flex items-center gap-2 mb-4">
@@ -106,7 +99,6 @@ const AISectionSkeleton = () => (
   </div>
 )
 
-// Skeleton لأحدث المشاريع
 const LatestProjectsSkeleton = () => (
   <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
     <div className="h-6 w-32 bg-white/10 rounded-lg mb-4"></div>
@@ -124,7 +116,6 @@ const LatestProjectsSkeleton = () => (
   </div>
 )
 
-// Skeleton لتحليلات الزوار
 const VisitorStatsSkeleton = () => (
   <>
     <div className="bg-white/5 rounded-2xl p-6 border border-white/10 animate-pulse">
@@ -181,15 +172,11 @@ const VisitorStatsSkeleton = () => (
   </>
 )
 
-// Skeleton لصفحة Overview كاملة
 const OverviewSkeleton = () => {
-  const [selectedPeriod, setSelectedPeriod] = useState('week')
-  
   return (
     <div className="space-y-6" dir="rtl">
       <GreetingCardSkeleton />
       
-      {/* بطاقات الإحصائيات الرئيسية */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCardSkeleton />
         <StatCardSkeleton />
@@ -197,7 +184,6 @@ const OverviewSkeleton = () => {
         <StatCardSkeleton />
       </div>
 
-      {/* بطاقات المحتوى المصغرة */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <ContentMiniCardSkeleton />
         <ContentMiniCardSkeleton />
@@ -206,21 +192,16 @@ const OverviewSkeleton = () => {
         <ContentMiniCardSkeleton />
       </div>
 
-      {/* قسمين رئيسيين */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* القسم الأيسر */}
         <div className="lg:col-span-1 space-y-6">
           <AISectionSkeleton />
           <LatestProjectsSkeleton />
         </div>
-
-        {/* القسم الأيمن */}
         <div className="lg:col-span-2 space-y-6">
           <VisitorStatsSkeleton />
         </div>
       </div>
 
-      {/* Banner للمجانيين */}
       <div className="bg-white/5 rounded-2xl p-4 border border-white/10 animate-pulse">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-3">
@@ -243,68 +224,78 @@ const Overview = () => {
   const { 
     planId, 
     limits, 
-    usage,
-    getUsagePercentage,
+    getRemainingAnalyses,
     canUseFeature, 
     isFree,
-    getRemainingAnalyses,
     loading: planLoading 
   } = usePlan()
   
-  const [stats, setStats] = useState(null)
-  const [contentStats, setContentStats] = useState(null)
-  const [visitorStats, setVisitorStats] = useState(null)
-  const [aiStats, setAiStats] = useState(null)
-  const [remainingAnalyses, setRemainingAnalyses] = useState(0)
+  const [dashboardData, setDashboardData] = useState({
+    stats: null,
+    contentStats: null,
+    visitorStats: null,
+    aiStats: null,
+    remainingAnalyses: 0,
+    projects: null,
+    skills: null
+  })
   const [loading, setLoading] = useState(true)
   const [selectedPeriod, setSelectedPeriod] = useState('week')
-  const [dataLoaded, setDataLoaded] = useState(false)
 
   useEffect(() => {
-    if (user) {
-      fetchAllStats()
-    }
-  }, [user])
+    if (!user?.id) return
 
-  const fetchAllStats = async () => {
-    setLoading(true)
-    try {
-      const basicStats = await statsService.getDeveloperStats(user.id)
-      setStats(basicStats)
+    let isMounted = true
 
-      const content = await statsService.getContentStats(user.id)
-      setContentStats(content)
+    const fetchAllStats = async () => {
+      setLoading(true)
+      try {
+        // تنفيذ جميع الاستعلامات بالتوازي
+        const [basicStats, content, remaining, projects, skills] = await Promise.all([
+          statsService.getDeveloperStats(user.id),
+          statsService.getContentStats(user.id),
+          getRemainingAnalyses(),
+          statsService.getProjects ? statsService.getProjects(user.id) : Promise.resolve([]),
+          supabase.from('skills').select('*').eq('developer_id', user.id)
+        ])
 
-      const remaining = await getRemainingAnalyses()
-      setRemainingAnalyses(remaining)
+        let advanced = null
+        if (canUseFeature('analytics')) {
+          advanced = await statsService.getAdvancedVisitorStats(user.id)
+        }
 
-      if (canUseFeature('analytics')) {
-        const advanced = await statsService.getAdvancedVisitorStats(user.id)
-        setVisitorStats(advanced)
+        let ai = null
+        if (planId >= 3) {
+          ai = await statsService.getAIAnalysisStats(user.id)
+        }
+
+        if (isMounted) {
+          setDashboardData({
+            stats: basicStats,
+            contentStats: content,
+            visitorStats: advanced,
+            aiStats: ai,
+            remainingAnalyses: remaining,
+            projects: projects || [],
+            skills: skills.data || []
+          })
+        }
+      } catch (error) {
+        console.error('Error fetching stats:', error)
+      } finally {
+        if (isMounted) setLoading(false)
       }
-
-      if (planId >= 3) {
-        const ai = await statsService.getAIAnalysisStats(user.id)
-        setAiStats(ai)
-      }
-
-      // تأخير بسيط لإظهار الـ Skeleton
-      setTimeout(() => {
-        setDataLoaded(true)
-        setLoading(false)
-      }, 500)
-
-    } catch (error) {
-      console.error('Error fetching stats:', error)
-      setLoading(false)
-      setDataLoaded(true)
     }
-  }
 
-  const calculateOverallProgress = () => {
-    if (!contentStats || !limits) return 0
+    fetchAllStats()
+
+    return () => { isMounted = false }
+  }, [user?.id, canUseFeature, getRemainingAnalyses, planId])
+
+  const calculateOverallProgress = useMemo(() => {
+    if (!dashboardData.contentStats || !limits) return 0
     
-    const totalCurrent = Object.values(contentStats.counts).reduce((a, b) => a + b, 0)
+    const totalCurrent = Object.values(dashboardData.contentStats.counts).reduce((a, b) => a + b, 0)
     const totalMax = [
       limits.maxProjects || 3,
       limits.maxSkills || 10,
@@ -314,7 +305,7 @@ const Overview = () => {
     ].reduce((a, b) => a + b, 0)
     
     return Math.min(100, Math.round((totalCurrent / totalMax) * 100))
-  }
+  }, [dashboardData.contentStats, limits])
 
   const getGreeting = () => {
     const hour = new Date().getHours()
@@ -323,8 +314,7 @@ const Overview = () => {
     return 'مساء الخير'
   }
 
-  // عرض Skeleton أثناء التحميل
-  if (loading || !dataLoaded || planLoading) {
+  if (loading || planLoading) {
     return <OverviewSkeleton />
   }
 
@@ -347,12 +337,12 @@ const Overview = () => {
             <div className="max-w-md">
               <div className="flex items-center justify-between text-sm mb-1">
                 <span className="text-gray-400">اكتمال الملف الشخصي</span>
-                <span className="text-white font-semibold">{calculateOverallProgress()}%</span>
+                <span className="text-white font-semibold">{calculateOverallProgress}%</span>
               </div>
               <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7] transition-all duration-500"
-                  style={{ width: `${calculateOverallProgress()}%` }}
+                  style={{ width: `${calculateOverallProgress}%` }}
                 />
               </div>
             </div>
@@ -375,27 +365,27 @@ const Overview = () => {
         <StatCard
           icon={Eye}
           label="المشاهدات"
-          value={stats?.views?.toLocaleString() || '0'}
-          trend={stats?.weeklyTrend || 0}
+          value={dashboardData.stats?.views?.toLocaleString() || '0'}
+          trend={dashboardData.stats?.weeklyTrend || 0}
           color="from-blue-500 to-cyan-500"
         />
         <StatCard
           icon={ThumbsUp}
           label="الإعجابات"
-          value={stats?.likes?.toLocaleString() || '0'}
+          value={dashboardData.stats?.likes?.toLocaleString() || '0'}
           color="from-purple-500 to-pink-500"
         />
         <StatCard
           icon={MessageSquare}
           label="الرسائل"
-          value={stats?.messages?.toLocaleString() || '0'}
-          badge={stats?.unreadMessages > 0 ? `${stats.unreadMessages} جديد` : null}
+          value={dashboardData.stats?.messages?.toLocaleString() || '0'}
+          badge={dashboardData.stats?.unreadMessages > 0 ? `${dashboardData.stats.unreadMessages} جديد` : null}
           color="from-yellow-500 to-orange-500"
         />
         <StatCard
           icon={Users}
           label="الزوار"
-          value={stats?.visitors?.toLocaleString() || '0'}
+          value={dashboardData.stats?.visitors?.toLocaleString() || '0'}
           subValue={!canUseFeature('analytics') ? '🔒 متاح في الباقات المدفوعة' : null}
           color="from-green-500 to-emerald-500"
         />
@@ -406,7 +396,7 @@ const Overview = () => {
         <ContentMiniCard
           icon={FolderKanban}
           label="المشاريع"
-          count={contentStats?.counts?.projects || 0}
+          count={dashboardData.contentStats?.counts?.projects || 0}
           max={limits?.maxProjects || 1}
           color="from-blue-500 to-cyan-500"
           link="/dashboard/projects"
@@ -414,7 +404,7 @@ const Overview = () => {
         <ContentMiniCard
           icon={Code}
           label="المهارات"
-          count={contentStats?.counts?.skills || 0}
+          count={dashboardData.contentStats?.counts?.skills || 0}
           max={limits?.maxSkills || 2}
           color="from-purple-500 to-pink-500"
           link="/dashboard/skills"
@@ -422,7 +412,7 @@ const Overview = () => {
         <ContentMiniCard
           icon={Award}
           label="الشهادات"
-          count={contentStats?.counts?.certificates || 0}
+          count={dashboardData.contentStats?.counts?.certificates || 0}
           max={limits?.maxCertificates || 1}
           color="from-yellow-500 to-orange-500"
           link="/dashboard/certificates"
@@ -430,7 +420,7 @@ const Overview = () => {
         <ContentMiniCard
           icon={Briefcase}
           label="الخبرات"
-          count={contentStats?.counts?.experience || 0}
+          count={dashboardData.contentStats?.counts?.experience || 0}
           max={limits?.maxExperience || 1}
           color="from-green-500 to-emerald-500"
           link="/dashboard/experience"
@@ -438,7 +428,7 @@ const Overview = () => {
         <ContentMiniCard
           icon={GraduationCap}
           label="التعليم"
-          count={contentStats?.counts?.education || 0}
+          count={dashboardData.contentStats?.counts?.education || 0}
           max={limits?.maxEducation || 1}
           color="from-red-500 to-rose-500"
           link="/dashboard/education"
@@ -449,7 +439,7 @@ const Overview = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* تحليلات الذكاء الاصطناعي */}
         <div className="lg:col-span-1 space-y-6">
-          {planId >= 3 && aiStats && (
+          {planId >= 3 && dashboardData.aiStats && (
             <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
               <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                 <Zap className="w-5 h-5 text-[#a855f7]" />
@@ -459,14 +449,14 @@ const Overview = () => {
               <div className="space-y-4">
                 <div>
                   <p className="text-sm text-gray-400">عدد التحليلات</p>
-                  <p className="text-2xl text-white">{aiStats.totalAnalyses}</p>
+                  <p className="text-2xl text-white">{dashboardData.aiStats.totalAnalyses}</p>
                 </div>
                 
-                {aiStats.suggestions?.length > 0 && (
+                {dashboardData.aiStats.suggestions?.length > 0 && (
                   <div>
                     <p className="text-sm text-gray-400 mb-2">اقتراحات للتحسين</p>
                     <ul className="space-y-2">
-                      {aiStats.suggestions.slice(0, 3).map((s, i) => (
+                      {dashboardData.aiStats.suggestions.slice(0, 3).map((s, i) => (
                         <li key={i} className="text-xs text-gray-300 flex items-start gap-2">
                           <span className="text-green-400">•</span>
                           {s}
@@ -487,11 +477,11 @@ const Overview = () => {
           )}
 
           {/* أحدث المشاريع */}
-          {contentStats?.latestProjects?.length > 0 && (
+          {dashboardData.projects?.length > 0 && (
             <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
               <h3 className="text-lg font-semibold text-white mb-4">أحدث المشاريع</h3>
               <div className="space-y-3">
-                {contentStats.latestProjects.map((project, i) => (
+                {dashboardData.projects.slice(0, 3).map((project, i) => (
                   <div key={i} className="flex items-center gap-3 p-2 bg-white/5 rounded-lg">
                     {project.image ? (
                       <img src={project.image} alt="" className="w-10 h-10 rounded-lg object-cover" />
@@ -515,7 +505,7 @@ const Overview = () => {
 
         {/* إحصائيات الزوار */}
         <div className="lg:col-span-2 space-y-6">
-          {canUseFeature('analytics') && visitorStats ? (
+          {canUseFeature('analytics') && dashboardData.visitorStats ? (
             <>
               <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
                 <div className="flex items-center justify-between mb-6">
@@ -547,37 +537,37 @@ const Overview = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div className="text-center">
                     <Globe className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                    <p className="text-xl text-white">{visitorStats.countries?.length || 0}</p>
+                    <p className="text-xl text-white">{dashboardData.visitorStats.countries?.length || 0}</p>
                     <p className="text-xs text-gray-400">دولة</p>
                   </div>
                   <div className="text-center">
                     <Smartphone className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                    <p className="text-xl text-white">{visitorStats.devices?.mobile || 0}</p>
+                    <p className="text-xl text-white">{dashboardData.visitorStats.devices?.mobile || 0}</p>
                     <p className="text-xs text-gray-400">جوال</p>
                   </div>
                   <div className="text-center">
                     <Monitor className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                    <p className="text-xl text-white">{visitorStats.devices?.desktop || 0}</p>
+                    <p className="text-xl text-white">{dashboardData.visitorStats.devices?.desktop || 0}</p>
                     <p className="text-xs text-gray-400">كمبيوتر</p>
                   </div>
                   <div className="text-center">
                     <Target className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                    <p className="text-xl text-white">{visitorStats.referrers?.length || 0}</p>
+                    <p className="text-xl text-white">{dashboardData.visitorStats.referrers?.length || 0}</p>
                     <p className="text-xs text-gray-400">مصدر</p>
                   </div>
                 </div>
 
-                {visitorStats.countries?.length > 0 && (
+                {dashboardData.visitorStats.countries?.length > 0 && (
                   <div>
                     <h4 className="text-sm font-medium text-gray-400 mb-3">أفضل الدول</h4>
                     <div className="space-y-2">
-                      {visitorStats.countries.slice(0, 5).map(([country, count], i) => (
+                      {dashboardData.visitorStats.countries.slice(0, 5).map(([country, count], i) => (
                         <div key={i} className="flex items-center gap-2">
                           <span className="text-sm text-white w-24 truncate">{country}</span>
                           <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
                             <div 
                               className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
-                              style={{ width: `${(count / visitorStats.total) * 100}%` }}
+                              style={{ width: `${(count / dashboardData.visitorStats.total) * 100}%` }}
                             />
                           </div>
                           <span className="text-xs text-gray-400">{count}</span>
@@ -591,14 +581,14 @@ const Overview = () => {
               <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
                 <h3 className="text-lg font-semibold text-white mb-4">مصادر الزيارات</h3>
                 <div className="space-y-3">
-                  {visitorStats.referrers?.map(([source, count], i) => (
+                  {dashboardData.visitorStats.referrers?.map(([source, count], i) => (
                     <div key={i} className="flex items-center justify-between">
                       <span className="text-sm text-gray-300">{source}</span>
                       <div className="flex items-center gap-3">
                         <div className="w-32 h-2 bg-white/10 rounded-full overflow-hidden">
                           <div 
                             className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
-                            style={{ width: `${(count / visitorStats.total) * 100}%` }}
+                            style={{ width: `${(count / dashboardData.visitorStats.total) * 100}%` }}
                           />
                         </div>
                         <span className="text-xs text-gray-400">{count}</span>
@@ -650,32 +640,9 @@ const Overview = () => {
 }
 
 // ===========================================
-// المكونات المساعدة (في نهاية الملف)
+// المكونات المساعدة
 // ===========================================
 
-// مكون بطاقة الاستخدام
-const UsageCard = ({ label, current, max, color }) => {
-  const percentage = max === -1 ? 0 : Math.min(100, (current / max) * 100)
-  
-  return (
-    <div className="bg-white/5 backdrop-blur-xl rounded-xl p-4 border border-white/10">
-      <p className="text-sm text-gray-400 mb-2">{label}</p>
-      <p className="text-xl font-bold text-white mb-2">
-        {current} / {max === -1 ? '∞' : max}
-      </p>
-      {max !== -1 && (
-        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-          <div 
-            className={`h-full bg-gradient-to-r ${color} transition-all duration-300`}
-            style={{ width: `${percentage}%` }}
-          />
-        </div>
-      )}
-    </div>
-  )
-}
-
-// مكون بطاقة الإحصائيات الرئيسية
 const StatCard = ({ icon: Icon, label, value, trend, badge, subValue, color }) => (
   <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all group">
     <div className="flex items-start justify-between mb-4">
@@ -699,7 +666,6 @@ const StatCard = ({ icon: Icon, label, value, trend, badge, subValue, color }) =
   </div>
 )
 
-// مكون البطاقات المصغرة للمحتوى
 const ContentMiniCard = ({ icon: Icon, label, count, max, color, link }) => {
   const percentage = max === -1 ? 0 : Math.min(100, Math.round((count / max) * 100))
   
