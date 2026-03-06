@@ -81,8 +81,7 @@ const About = () => {
 
   if (error || !aboutData) {
     return (
-      <div className="relative min-h-screen bg-[#030014] overflow-hidden">
-        
+         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-20">
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <div className="text-center max-w-md px-4">
             <div className="relative inline-block mb-6">
