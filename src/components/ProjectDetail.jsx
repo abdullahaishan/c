@@ -424,14 +424,14 @@ const ProjectDetails = () => {
             <div className="flex flex-wrap gap-4 pt-4">
               {project.live_url ? (
                 <a
-                  href={project.live_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-xl flex items-center gap-2 hover:scale-105 transition font-medium"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  معاينة المشروع
-                </a>
+  href={project.live_url}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] rounded-xl flex items-center gap-2 hover:scale-105 transition font-medium text-white"
+>
+  <ExternalLink className="w-4 h-4" />
+  معاينة المشروع
+</a>
               ) : (
                 <div className="px-6 py-3 bg-white/5 rounded-xl flex items-center gap-2 text-gray-400 cursor-not-allowed">
                   <ExternalLink className="w-4 h-4" />
@@ -480,10 +480,10 @@ const ProjectDetails = () => {
             </div>
 
             <div className="pt-4">
-              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Star className="w-5 h-5 text-yellow-400" />
-                الميزات الرئيسية
-              </h3>
+              <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
+  <Star className="w-5 h-5 text-yellow-400" />
+  الميزات الرئيسية
+</h3>
 
               {project.features.length > 0 ? (
                 <ul className="space-y-3 bg-white/5 rounded-xl p-6 border border-white/10">
