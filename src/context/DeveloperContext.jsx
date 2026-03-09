@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react'
-import { developerService, likeService, statsService } from '../lib/supabase' // ✅ استخدم الدوال الموجودة
+import { developerService, likeService, statsService } from '../lib/supabase'
 
 const DeveloperContext = createContext()
 
@@ -10,14 +10,15 @@ export const useDeveloper = () => {
   }
   return context
 }
+
 export const DeveloperProvider = ({ children, username }) => {
   const [developer, setDeveloper] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [visitorIp, setVisitorIp] = useState(null)
-  const [advancedStats, setAdvancedStats] = useState(null) // للباقة المدفوعة
+  const [advancedStats, setAdvancedStats] = useState(null)
 
-  // جلب IP الزائر (موجود مسبقاً)
+  // جلب IP الزائر
   useEffect(() => {
     const getVisitorIp = async () => {
       try {
@@ -26,6 +27,7 @@ export const DeveloperProvider = ({ children, username }) => {
         setVisitorIp(ip)
       } catch (error) {
         console.error('Error getting visitor IP:', error)
+        setVisitorIp('unknown')
       }
     }
     getVisitorIp()
@@ -40,7 +42,7 @@ export const DeveloperProvider = ({ children, username }) => {
         setLoading(true)
         setError(null)
 
-        const data = await developerService.getByUsername(username) // ✅ دالة موجودة
+        const data = await developerService.getByUsername(username)
 
         if (!data) {
           setDeveloper(null)
@@ -48,10 +50,13 @@ export const DeveloperProvider = ({ children, username }) => {
         } else {
           setDeveloper(data)
           
-          // ✅ تسجيل الزيارة (مهم جداً)
+          // تأكد من وجود IP قبل تسجيل الزيارة
+          if (!visitorIp) {
+            await new Promise(resolve => setTimeout(resolve, 1000))
+          }
+          
           await trackVisit(data.id, data.plan_id)
           
-          // ✅ إذا كانت باقة مدفوعة، جلب إحصائيات متقدمة
           if (data.plan_id > 1) {
             fetchAdvancedStats(data.id)
           }
@@ -66,95 +71,108 @@ export const DeveloperProvider = ({ children, username }) => {
     }
 
     fetchDeveloper()
-  }, [username])
+  }, [username, visitorIp])
 
-  // دوال مساعدة لجلب معلومات الزائر (بدون انتهاك خصوصية)
-const getDeviceType = () => {
-  const ua = navigator.userAgent
-  if (/Mobile|Android|iPhone/i.test(ua)) return 'mobile'
-  if (/Tablet|iPad/i.test(ua)) return 'tablet'
-  return 'desktop'
-}
+  // دوال مساعدة
+  const getDeviceType = () => {
+    const ua = navigator.userAgent
+    if (/Mobile|Android|iPhone/i.test(ua)) return 'mobile'
+    if (/Tablet|iPad/i.test(ua)) return 'tablet'
+    return 'desktop'
+  }
 
-const getBrowserName = () => {
-  const ua = navigator.userAgent
-  if (ua.includes('Chrome')) return 'Chrome'
-  if (ua.includes('Firefox')) return 'Firefox'
-  if (ua.includes('Safari')) return 'Safari'
-  if (ua.includes('Edge')) return 'Edge'
-  return 'Other'
-}
-const trackVisit = async (developerId, planId) => {
-  try {
-    // 1️⃣ زيادة عدد الزيارات (للجميع)
-    await developerService.incrementViews(developerId)
+  const getBrowserName = () => {
+    const ua = navigator.userAgent
+    if (ua.includes('Chrome')) return 'Chrome'
+    if (ua.includes('Firefox')) return 'Firefox'
+    if (ua.includes('Safari')) return 'Safari'
+    if (ua.includes('Edge')) return 'Edge'
+    return 'Other'
+  }
 
-    // 2️⃣ بيانات أساسية للجميع (IP فقط)
-    const visitorData = {
-      visitor_ip: visitorIp,
-      visited_at: new Date().toISOString()
-    }
-
-    // 3️⃣ إذا كانت باقة مدفوعة - أضف بيانات تسويقية مفيدة فقط
-    
-      // ✅ معلومات مفيدة للتسويق (بدون انتهاك خصوصية)
-      visitorData.referrer = document.referrer || 'direct'
-      visitorData.device_type = getDeviceType()
-      visitorData.browser = getBrowserName()
-      visitorData.page_visited = window.location.pathname
-      
-      // ✅ الدولة فقط (مهمة للتسويق)
-      if (visitorIp) {
+  const trackVisit = async (developerId, planId) => {
+    try {
+      // تأكد من وجود IP
+      let ip = visitorIp
+      if (!ip || ip === 'unknown') {
         try {
-          const response = await fetch(`https://ipapi.co/${visitorIp}/country_name/`)
-          if (response.ok) {
-            visitorData.visitor_country = await response.text()
-          }
-        } catch (e) {}
+          const response = await fetch('https://api.ipify.org?format=json')
+          const { ip: newIp } = await response.json()
+          ip = newIp
+          setVisitorIp(newIp)
+        } catch (e) {
+          ip = 'unknown'
+        }
       }
 
-      // ✅ معلومات إضافية مفيدة
-      const lastVisit = localStorage.getItem(`last_visit_${developerId}`)
-      visitorData.is_new_visitor = !lastVisit
-      localStorage.setItem(`last_visit_${developerId}`, new Date().toISOString())
+      // زيادة عدد الزيارات
+      await developerService.incrementViews(developerId)
+
+      // بيانات أساسية للجميع
+      const visitorData = {
+        visitor_ip: ip,
+        visited_at: new Date().toISOString()
+      }
+
+      // بيانات إضافية للباقة المدفوعة فقط
+      if (planId > 1) {
+        visitorData.referrer = document.referrer || 'direct'
+        visitorData.device_type = getDeviceType()
+        visitorData.browser = getBrowserName()
+        visitorData.page_visited = window.location.pathname
+        visitorData.os = navigator.platform || 'unknown'
+        
+        // جلب الدولة
+        if (ip && ip !== 'unknown') {
+          try {
+            const response = await fetch(`https://ipapi.co/${ip}/country_name/`)
+            if (response.ok) {
+              visitorData.visitor_country = await response.text()
+            }
+          } catch (e) {}
+        }
+
+        // معلومات إضافية
+        const lastVisit = localStorage.getItem(`last_visit_${developerId}`)
+        visitorData.is_new_visitor = !lastVisit
+        localStorage.setItem(`last_visit_${developerId}`, new Date().toISOString())
+        
+        const month = new Date().getMonth()
+        if (month >= 2 && month <= 4) visitorData.season = 'الربيع'
+        else if (month >= 5 && month <= 7) visitorData.season = 'الصيف'
+        else if (month >= 8 && month <= 10) visitorData.season = 'الخريف'
+        else visitorData.season = 'الشتاء'
+      }
+
+      // تسجيل الزيارة
+      await developerService.trackVisit(developerId, visitorData)
       
-      const month = new Date().getMonth()
-      if (month >= 2 && month <= 4) visitorData.season = 'الربيع'
-      else if (month >= 5 && month <= 7) visitorData.season = 'الصيف'
-      else if (month >= 8 && month <= 10) visitorData.season = 'الخريف'
-      else visitorData.season = 'الشتاء'
-    
-
-    // 4️⃣ تسجيل الزيارة
-    await developerService.trackVisit(developerId, visitorData)
-    
-  } catch (error) {
-    console.error('Error tracking visit:', error)
+    } catch (error) {
+      console.error('Error tracking visit:', error)
+    }
   }
-}
 
-  // ✅ جلب الإحصائيات المتقدمة (للباقات المدفوعة)
+  // جلب الإحصائيات المتقدمة
   const fetchAdvancedStats = async (developerId) => {
     try {
-      const stats = await statsService.getAdvancedVisitorStats(developerId) // ✅ دالة موجودة
+      const stats = await statsService.getAdvancedVisitorStats(developerId)
       setAdvancedStats(stats)
     } catch (error) {
       console.error('Error fetching advanced stats:', error)
     }
   }
 
-  // ✅ دوال الباقات
+  // دوال الباقات
   const isFreePlan = () => developer?.plan_id === 1
   const isPaidPlan = () => developer?.plan_id > 1
 
-  // ✅ دالة اللايك (تستخدم likeService الموجود)
+  // دالة اللايك
   const handleLike = async () => {
     if (!developer || !visitorIp) return { success: false, error: 'No developer or IP' }
 
     try {
-      await likeService.addLike(developer.id, visitorIp) // ✅ دالة موجودة
+      await likeService.addLike(developer.id, visitorIp)
       
-      // تحديث العداد محلياً
       setDeveloper(prev => ({
         ...prev,
         likes_count: (prev.likes_count || 0) + 1
@@ -166,7 +184,7 @@ const trackVisit = async (developerId, planId) => {
     }
   }
 
-  // ✅ الحصول على إحصائيات الزيارات (حسب الباقة)
+  // الحصول على إحصائيات الزيارات
   const getVisitStats = () => {
     if (!developer) return null
 
@@ -175,19 +193,17 @@ const trackVisit = async (developerId, planId) => {
       likes: developer.likes_count || 0
     }
 
-    // الباقة المجانية: إحصائيات أساسية فقط
     if (isFreePlan()) {
       return baseStats
     }
 
-    // الباقة المدفوعة: إحصائيات متقدمة
     return {
       ...baseStats,
       advanced: advancedStats
     }
   }
 
-  // ✅ الدوال الموجودة مسبقاً
+  // الدوال المساعدة للمحتوى
   const getProjects = () => developer?.projects || []
   const getSkills = () => developer?.skills || []
   const getCertificates = () => developer?.certificates || []
@@ -217,41 +233,35 @@ const trackVisit = async (developerId, planId) => {
     return Math.round(totalYears * 10) / 10 || 0
   }
 
-  // ✅ دالة جديدة لجلب المهارات الرئيسية
-const getMainSkills = () => {
-  if (!developer?.skills || developer.skills.length === 0) return []
-  
-  // فلترة المهارات الرئيسية (is_main = true)
-  const mainSkillsList = developer.skills
-    .filter(skill => skill.is_main === true)
-    .map(skill => skill.name)
-  
-  // إذا لم توجد مهارات رئيسية، استخدم كل المهارات
-  if (mainSkillsList.length === 0) {
-    return developer.skills.map(skill => skill.name)
+  const getMainSkills = () => {
+    if (!developer?.skills || developer.skills.length === 0) return []
+    
+    const mainSkillsList = developer.skills
+      .filter(skill => skill.is_main === true)
+      .map(skill => skill.name)
+    
+    if (mainSkillsList.length === 0) {
+      return developer.skills.map(skill => skill.name)
+    }
+    
+    return mainSkillsList
   }
-  
-  return mainSkillsList
-}
 
-// ✅ دالة إضافية: جلب المهارات حسب التصنيف (اختياري)
-const getSkillsByCategory = (category) => {
-  if (!developer?.skills) return []
-  return developer.skills.filter(skill => skill.category === category)
-}
+  const getSkillsByCategory = (category) => {
+    if (!developer?.skills) return []
+    return developer.skills.filter(skill => skill.category === category)
+  }
+
   const value = {
     developer,
     publicLoading: loading,
     publicError: error,
     loading,
     error,
-    // ✅ دوال الباقات
     isFreePlan,
     isPaidPlan,
-    // ✅ دوال اللايكات والزيارات
     handleLike,
     visitStats: getVisitStats(),
-    // ✅ الدوال الموجودة
     getProjects,
     getSkills,
     getCertificates,
@@ -260,8 +270,8 @@ const getSkillsByCategory = (category) => {
     getSocialLinks,
     getProfileImage,
     getTotalExperienceYears,
-    getMainSkills,        // 👈 أضف هذا
-  getSkillsByCategory
+    getMainSkills,
+    getSkillsByCategory
   }
 
   return (
