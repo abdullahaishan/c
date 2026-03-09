@@ -48,23 +48,19 @@ export const DeveloperProvider = ({ children, username }) => {
     return 'fp_' + Math.abs(hash).toString(36)
   }
 
-  // جلب الموقع في الخلفية (لا يمنع أي شيء)
+  // جلب الموقع في الخلفية
   const fetchLocationInBackground = async () => {
     if (locationAttempted.current) return
-    
     locationAttempted.current = true
     
     try {
-      // محاولة ipapi أولاً (يعطي مدينة)
       const response = await fetch('https://ipapi.co/json/')
       const data = await response.json()
-      
       if (data.country_name) {
         setVisitorCountry(data.country_name)
         setVisitorCity(data.city || null)
       }
     } catch (e) {
-      // إذا فشل ipapi، جرب Cloudflare
       try {
         const cfResponse = await fetch('https://1.1.1.1/cdn-cgi/trace')
         const text = await cfResponse.text()
@@ -74,23 +70,17 @@ export const DeveloperProvider = ({ children, username }) => {
           const [key, value] = line.split('=')
           if (key) cfData[key] = value
         })
-        if (cfData.loc) {
-          setVisitorCountry(cfData.loc)
-          // Cloudflare لا يعطي مدينة
-        }
-      } catch (cfError) {
-        // كل شيء فشل - نستمر بدون موقع
-      }
+        if (cfData.loc) setVisitorCountry(cfData.loc)
+      } catch (cfError) {}
     }
   }
 
   // جلب معرف الزائر فوراً
   useEffect(() => {
-    const fp = generateFingerprint()
-    setVisitorId(fp)
+    setVisitorId(generateFingerprint())
   }, [])
 
-  // جلب بيانات المطور - يتم فوراً
+  // جلب بيانات المطور
   useEffect(() => {
     if (!username) return
 
@@ -107,10 +97,8 @@ export const DeveloperProvider = ({ children, username }) => {
         } else {
           setDeveloper(data)
           
-          // 1️⃣ زيادة عدد الزيارات فوراً (بدون انتظار)
           developerService.incrementViews(data.id).catch(e => {})
           
-          // 2️⃣ جلب الموقع في الخلفية (للمدفوع فقط)
           if (data.plan_id > 1) {
             fetchLocationInBackground()
             fetchAdvancedStats(data.id)
@@ -128,21 +116,19 @@ export const DeveloperProvider = ({ children, username }) => {
     fetchDeveloper()
   }, [username])
 
-  // تسجيل الزيارة في الخلفية - يتم مرة واحدة فقط
+  // تسجيل الزيارة (مرة واحدة فقط)
   useEffect(() => {
     if (!developer || !visitorId || visitRecorded.current) return
     
     visitRecorded.current = true
-    
+
     const recordVisit = async () => {
       try {
-        // البيانات الأساسية للجميع
         const visitorData = {
           visitor_ip: visitorId,
           visited_at: new Date().toISOString()
         }
 
-        // بيانات إضافية للباقة المدفوعة فقط (قد تكون null إذا لم يجلب الموقع بعد)
         if (developer.plan_id > 1) {
           visitorData.referrer = document.referrer || 'direct'
           visitorData.device_type = getDeviceType()
@@ -150,16 +136,13 @@ export const DeveloperProvider = ({ children, username }) => {
           visitorData.page_visited = window.location.pathname
           visitorData.os = navigator.platform || 'unknown'
           
-          // إضافة الموقع إذا كان متوفراً (قد يكون null)
           if (visitorCountry) visitorData.visitor_country = visitorCountry
           if (visitorCity) visitorData.visitor_city = visitorCity
 
-          // هل الزائر جديد أم عائد؟
           const lastVisit = localStorage.getItem(`last_visit_${developer.id}`)
           visitorData.is_new_visitor = !lastVisit
           localStorage.setItem(`last_visit_${developer.id}`, new Date().toISOString())
           
-          // الموسم الحالي
           const month = new Date().getMonth()
           if (month >= 2 && month <= 4) visitorData.season = 'الربيع'
           else if (month >= 5 && month <= 7) visitorData.season = 'الصيف'
@@ -167,34 +150,22 @@ export const DeveloperProvider = ({ children, username }) => {
           else visitorData.season = 'الشتاء'
         }
 
-        // تسجيل الزيارة في الخلفية (حتى لو خرج المستخدم)
-        if (navigator.sendBeacon) {
-          // استخدام sendBeacon للتسجيل حتى بعد الخروج
-          const blob = new Blob([JSON.stringify({
-            developerId: developer.id,
-            visitorData
-          })], { type: 'application/json' })
-          navigator.sendBeacon('/api/track-visit', blob)
-        } else {
-          // إذا لم يدعم sendBeacon، استخدم fetch عادي
-          developerService.trackVisit(developer.id, visitorData).catch(e => {})
-        }
+        await developerService.trackVisit(developer.id, visitorData)
         
       } catch (error) {
-        // تجاهل الأخطاء - لا نريد التأثير على المستخدم
+        console.error('Error recording visit:', error)
       }
     }
 
     recordVisit()
   }, [developer, visitorId, visitorCountry, visitorCity])
 
-  // تحديث بيانات الزيارة إذا تم جلب الموقع لاحقاً
+  // تحديث الموقع إذا تم جلبها لاحقاً
   useEffect(() => {
     if (!developer || !visitorId || !visitorCountry || developer.plan_id <= 1) return
     
     const updateLocation = async () => {
       try {
-        // جلب آخر زيارة للمستخدم
         const { data: lastVisit } = await supabase
           .from('visitors')
           .select('id')
@@ -213,15 +184,13 @@ export const DeveloperProvider = ({ children, username }) => {
             })
             .eq('id', lastVisit.id)
         }
-      } catch (e) {
-        // تجاهل أخطاء التحديث
-      }
+      } catch (e) {}
     }
     
     updateLocation()
   }, [visitorCountry, visitorCity])
 
-  // دوال مساعدة لتحديد نوع الجهاز والمتصفح
+  // دوال مساعدة
   const getDeviceType = () => {
     const ua = navigator.userAgent
     if (/Mobile|Android|iPhone/i.test(ua)) return 'mobile'
@@ -258,12 +227,10 @@ export const DeveloperProvider = ({ children, username }) => {
 
     try {
       await likeService.addLike(developer.id, visitorId)
-      
       setDeveloper(prev => ({
         ...prev,
         likes_count: (prev.likes_count || 0) + 1
       }))
-
       return { success: true }
     } catch (error) {
       return { success: false, error: error.message }
@@ -273,20 +240,8 @@ export const DeveloperProvider = ({ children, username }) => {
   // الحصول على إحصائيات الزيارات
   const getVisitStats = () => {
     if (!developer) return null
-
-    const baseStats = {
-      views: developer.views_count || 0,
-      likes: developer.likes_count || 0
-    }
-
-    if (isFreePlan()) {
-      return baseStats
-    }
-
-    return {
-      ...baseStats,
-      advanced: advancedStats
-    }
+    const baseStats = { views: developer.views_count || 0, likes: developer.likes_count || 0 }
+    return isFreePlan() ? baseStats : { ...baseStats, advanced: advancedStats }
   }
 
   // الدوال المساعدة للمحتوى
@@ -298,9 +253,7 @@ export const DeveloperProvider = ({ children, username }) => {
   
   const getSocialLinks = () => {
     const links = {}
-    ;(developer?.social_links || []).forEach(link => {
-      links[link.platform] = link.url
-    })
+    ;(developer?.social_links || []).forEach(link => links[link.platform] = link.url)
     return links
   }
 
@@ -312,8 +265,7 @@ export const DeveloperProvider = ({ children, username }) => {
       if (exp.start_date) {
         const start = new Date(exp.start_date)
         const end = exp.is_current ? new Date() : (exp.end_date ? new Date(exp.end_date) : new Date())
-        const years = (end - start) / (1000 * 60 * 60 * 24 * 365)
-        totalYears += years
+        totalYears += (end - start) / (1000 * 60 * 60 * 24 * 365)
       }
     })
     return Math.round(totalYears * 10) / 10 || 0
@@ -321,21 +273,12 @@ export const DeveloperProvider = ({ children, username }) => {
 
   const getMainSkills = () => {
     if (!developer?.skills || developer.skills.length === 0) return []
-    
-    const mainSkillsList = developer.skills
-      .filter(skill => skill.is_main === true)
-      .map(skill => skill.name)
-    
-    if (mainSkillsList.length === 0) {
-      return developer.skills.map(skill => skill.name)
-    }
-    
-    return mainSkillsList
+    const mainSkills = developer.skills.filter(skill => skill.is_main).map(skill => skill.name)
+    return mainSkills.length ? mainSkills : developer.skills.map(skill => skill.name)
   }
 
   const getSkillsByCategory = (category) => {
-    if (!developer?.skills) return []
-    return developer.skills.filter(skill => skill.category === category)
+    return developer?.skills?.filter(skill => skill.category === category) || []
   }
 
   const value = {
