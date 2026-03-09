@@ -507,166 +507,165 @@ const getPlatformIcon = (platform) => {
         </div>
       )}
 
-      {/* Profile Tab */}
-      {activeTab === 'profile' && (
-  
-<div className="flex items-end gap-6 -mt-16 px-6">
-          {/* Profile Image and Username */}
-          <div className="flex items-end gap-6 -mt-16 px-6">
-            <div className="relative">
-              <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-[#030014] bg-gradient-to-r from-[#6366f1] to-[#a855f7]">
-                {profileData.profile_image ? (
-                  <img
-                    src={profileData.profile_image}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <User className="w-12 h-12 text-white" />
-                  </div>
-                )}
-              </div>
-              
-              <label className="absolute bottom-0 right-0 p-2 bg-[#6366f1] rounded-full cursor-pointer hover:bg-[#a855f7] transition-all">
-                <Upload className="w-4 h-4 text-white" />
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleProfileImageChange}
-                  className="hidden"
-                />
-              </label>
-            </div>
-
-            {/* Username مع إمكانية التعديل */}
-            <div className="flex-1 pb-4">
-              <div className="flex items-center gap-3">
-                <div>
-                  <p className="text-sm text-gray-400">اسم المستخدم</p>
-                  <div className="flex items-center gap-2">
-                    <p className="text-lg text-white">@{username}</p>
-                    <button
-                      onClick={handleOpenUsernameModal}
-                      className="p-1 text-gray-400 hover:text-[#6366f1] transition-colors"
-                      title="تغيير اسم المستخدم (مرة واحدة في الأسبوع)"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-                {!canChangeUsername() && (
-                  <span className="text-xs text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded-full">
-                    متبقي {getRemainingDays()} أيام
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Profile Form */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">الاسم الكامل</label>
-              <input
-                type="text"
-                value={profileData.full_name}
-                onChange={(e) => setProfileData({ ...profileData, full_name: e.target.value })}
-                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">المسمى الوظيفي</label>
-              <input
-                type="text"
-                value={profileData.title}
-                onChange={(e) => setProfileData({ ...profileData, title: e.target.value })}
-                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                placeholder="مثال: مطور واجهات أمامية"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">الموقع</label>
-              <input
-                type="text"
-                value={profileData.location}
-                onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
-                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                placeholder="مثال: القاهرة، مصر"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">رقم الهاتف</label>
-              <input
-                type="tel"
-                value={profileData.phone}
-                onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-                placeholder="+20123456789"
-              />
-            </div>
-          </div>
-
-          {/* Bio */}
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">نبذة عنك</label>
-            <textarea
-              value={profileData.bio}
-              onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
-              rows="4"
-              className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
-              placeholder="اكتب نبذة عن نفسك..."
+                     {/* Profile Tab */}
+{activeTab === 'profile' && (
+  <div className="space-y-6">
+    {/* Profile Image and Username */}
+    <div className="flex items-end gap-6 -mt-16 px-6">
+      <div className="relative">
+        <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-[#030014] bg-gradient-to-r from-[#6366f1] to-[#a855f7]">
+          {profileData.profile_image ? (
+            <img
+              src={profileData.profile_image}
+              alt="Profile"
+              className="w-full h-full object-cover"
             />
-          </div>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <User className="w-12 h-12 text-white" />
+            </div>
+          )}
+        </div>
+        
+        <label className="absolute bottom-0 right-0 p-2 bg-[#6366f1] rounded-full cursor-pointer hover:bg-[#a855f7] transition-all">
+          <Upload className="w-4 h-4 text-white" />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleProfileImageChange}
+            className="hidden"
+          />
+        </label>
+      </div>
 
-          {/* Resume */}
+      {/* Username مع إمكانية التعديل */}
+      <div className="flex-1 pb-4">
+        <div className="flex items-center gap-3">
           <div>
-            <label className="block text-sm text-gray-400 mb-2">السيرة الذاتية (PDF)</label>
-            <div className="flex items-center gap-4">
-              {profileData.resume_file ? (
-                <>
-                  <a
-                    href={profileData.resume_file}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30"
-                  >
-                    <Eye className="w-4 h-4" />
-                    عرض السيرة
-                  </a>
-                  <button
-                    onClick={() => setProfileData({ ...profileData, resume_file: null })}
-                    className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </>
-              ) : (
-                <label className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg cursor-pointer hover:bg-white/10">
-                  <Upload className="w-4 h-4 text-gray-400" />
-                  <span className="text-gray-300">رفع السيرة الذاتية</span>
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={handleResumeUpload}
-                    className="hidden"
-                  />
-                </label>
-              )}
+            <p className="text-sm text-gray-400">اسم المستخدم</p>
+            <div className="flex items-center gap-2">
+              <p className="text-lg text-white">@{username}</p>
+              <button
+                onClick={handleOpenUsernameModal}
+                className="p-1 text-gray-400 hover:text-[#6366f1] transition-colors"
+                title="تغيير اسم المستخدم (مرة واحدة في الأسبوع)"
+              >
+                <Edit className="w-4 h-4" />
+              </button>
             </div>
           </div>
-
-          {/* Save button */}
-          <button
-            onClick={handleSaveProfile}
-            disabled={saving || uploading}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-[1.02] transition-all disabled:opacity-50"
-          >
-            {saving ? <Loader className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-            حفظ التغييرات
-          </button>
+          {!canChangeUsername() && (
+            <span className="text-xs text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded-full">
+              متبقي {getRemainingDays()} أيام
+            </span>
+          )}
         </div>
-      )}
+      </div>
+    </div>
+
+    {/* Profile Form */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label className="block text-sm text-gray-400 mb-2">الاسم الكامل</label>
+        <input
+          type="text"
+          value={profileData.full_name}
+          onChange={(e) => setProfileData({ ...profileData, full_name: e.target.value })}
+          className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+        />
+      </div>
+      <div>
+        <label className="block text-sm text-gray-400 mb-2">المسمى الوظيفي</label>
+        <input
+          type="text"
+          value={profileData.title}
+          onChange={(e) => setProfileData({ ...profileData, title: e.target.value })}
+          className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+          placeholder="مثال: مطور واجهات أمامية"
+        />
+      </div>
+      <div>
+        <label className="block text-sm text-gray-400 mb-2">الموقع</label>
+        <input
+          type="text"
+          value={profileData.location}
+          onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
+          className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+          placeholder="مثال: القاهرة، مصر"
+        />
+      </div>
+      <div>
+        <label className="block text-sm text-gray-400 mb-2">رقم الهاتف</label>
+        <input
+          type="tel"
+          value={profileData.phone}
+          onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+          className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+          placeholder="+20123456789"
+        />
+      </div>
+    </div>
+
+    {/* Bio */}
+    <div>
+      <label className="block text-sm text-gray-400 mb-2">نبذة عنك</label>
+      <textarea
+        value={profileData.bio}
+        onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+        rows="4"
+        className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white"
+        placeholder="اكتب نبذة عن نفسك..."
+      />
+    </div>
+
+    {/* Resume */}
+    <div>
+      <label className="block text-sm text-gray-400 mb-2">السيرة الذاتية (PDF)</label>
+      <div className="flex items-center gap-4">
+        {profileData.resume_file ? (
+          <>
+            <a
+              href={profileData.resume_file}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30"
+            >
+              <Eye className="w-4 h-4" />
+              عرض السيرة
+            </a>
+            <button
+              onClick={() => setProfileData({ ...profileData, resume_file: null })}
+              className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </>
+        ) : (
+          <label className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-lg cursor-pointer hover:bg-white/10">
+            <Upload className="w-4 h-4 text-gray-400" />
+            <span className="text-gray-300">رفع السيرة الذاتية</span>
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={handleResumeUpload}
+              className="hidden"
+            />
+          </label>
+        )}
+      </div>
+    </div>
+
+    {/* Save button */}
+    <button
+      onClick={handleSaveProfile}
+      disabled={saving || uploading}
+      className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#6366f1] to-[#a855f7] text-white rounded-xl font-semibold hover:scale-[1.02] transition-all disabled:opacity-50"
+    >
+      {saving ? <Loader className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+      حفظ التغييرات
+    </button>
+  </div>
+)}
 
       {/* Social Links Tab */}
       {activeTab === 'social' && (
