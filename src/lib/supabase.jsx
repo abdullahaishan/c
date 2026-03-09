@@ -16,21 +16,23 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 export const likeService = {
   // التحقق مما إذا كان الزائر قد أعجب بالفعل
   async hasLiked(developerId, visitorIp) {
-    try {
-      const { data, error } = await supabase
-        .from('likes')
-        .select('id')
-        .eq('developer_id', developerId)
-        .eq('visitor_ip', visitorIp)
-        .maybeSingle();
+  try {
+    const { count, error } = await supabase
+      .from('likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('developer_id', developerId)
+      .eq('visitor_ip', visitorIp);
 
-      if (error) throw error;
-      return !!data;
-    } catch (error) {
-      console.error('Error checking like:', error);
-      return false;
-    }
-  },
+    if (error) throw error;
+    
+    // ✅ إذا كان count أكبر من 0، يعني أنه أعجب سابقاً
+    return count > 0;
+    
+  } catch (error) {
+    console.error('Error checking like:', error);
+    return false;
+  }
+},
 
   // إضافة إعجاب جديد
   async addLike(developerId, visitorIp) {
