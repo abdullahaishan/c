@@ -685,42 +685,46 @@ export const portfolioService = {
 // ===========================================
 export const projectService = {
 // ✅ النسخة المبسطة - تجلب المشاريع مع plan_id فقط
+// ✅ النسخة المحسنة - تتعامل مع الأخطاء بشكل أفضل
 async getByDeveloperId(developerId) {
   try {
-    // 1️⃣ جلب المشاريع أولاً
+    // 1️⃣ جلب المشاريع - لا ترمي خطأ إذا كانت النتيجة فارغة
     const { data: projects, error: projectsError } = await supabase
       .from('projects')
       .select('*')
       .eq('developer_id', developerId)
       .order('display_order', { ascending: true })
     
-    if (projectsError) throw projectsError
-
-    // 2️⃣ جلب plan_id فقط من جدول المطورين
-    const { data: planData, error: planError } = await supabase
-      .from('developers')
-      .select('plan_id')  // ✅ فقط plan_id
-      .eq('id', developerId)
-      .single()
-
-    if (planError) {
-      console.warn('⚠️ Could not fetch plan_id:', planError)
-      // إذا فشل الجلب، نفترض أنه في الباقة المجانية
-      return {
-        projects: projects || [],
-        plan_id: 1  // ✅ افتراضي مجاني
-      }
+    // ✅ لا ترمي الخطأ، فقط سجله واستمر
+    if (projectsError) {
+      console.error('⚠️ Projects fetch error:', projectsError)
+      // استمر باستخدام مصفوفة فارغة
     }
 
-    // 3️⃣ إرجاع المشاريع مع plan_id
+    // 2️⃣ جلب plan_id
+    const { data: planData, error: planError } = await supabase
+      .from('developers')
+      .select('plan_id')
+      .eq('id', developerId)
+      .maybeSingle()  // ✅ استخدم maybeSingle بدلاً من single
+
+    if (planError) {
+      console.warn('⚠️ Plan fetch error:', planError)
+    }
+
+    // 3️⃣ إرجاع النتيجة حتى لو فشل أحد الاستعلامات
     return {
-      projects: projects || [],
-      plan_id: planData?.plan_id || 1  // ✅ plan_id فقط
+      projects: projects || [],  // ✅ دائماً مصفوفة
+      plan_id: planData?.plan_id || 1
     }
 
   } catch (error) {
-    console.error('❌ Error in getByDeveloperId:', error)
-    throw error
+    console.error('❌ Fatal error in getByDeveloperId:', error)
+    // ✅ في حالة خطأ fatal، نعيد كائن افتراضي
+    return {
+      projects: [],
+      plan_id: 1
+    }
   }
 },
 // ✅ جلب المشاريع المنشورة فقط (للعرض العام)
