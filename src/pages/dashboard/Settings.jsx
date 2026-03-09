@@ -510,7 +510,7 @@ const getPlatformIcon = (platform) => {
       {/* Profile Tab */}
       {activeTab === 'profile' && (
   
-
+<div className="flex items-end gap-6 -mt-16 px-6">
           {/* Profile Image and Username */}
           <div className="flex items-end gap-6 -mt-16 px-6">
             <div className="relative">
