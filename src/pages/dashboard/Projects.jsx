@@ -68,37 +68,39 @@ const Projects = () => {
   // التحقق من وجود المستخدم وجلب المشاريع
   // =============================================
   useEffect(() => {
-  // تأخير بسيط للتأكد من تحميل كل شيء
-  const timer = setTimeout(() => {
     fetchProjects()
-  }, 100)
-  
-  return () => clearTimeout(timer)
 }, [])  // ❌ لا تعتمد على user إطلاقاً
   const fetchProjects = async () => {
-    setLoading(true)
-    try {
-      // ✅ استخدام user.id من useAuth أولاً
-      let userId = user?.id
-
-      const result = await projectService.getByDeveloperId(userId)
-      
-      // ترتيب المشاريع
-      const sorted = (result.projects || []).sort((a, b) => a.display_order - b.display_order)
-      
-      setProjects(sorted)
-      setPlanId(result.plan_id || 1)
-      
-      console.log('📊 User Plan ID:', result.plan_id)
-      
-    } catch (err) {
-      console.error('❌ Error fetching projects:', err)
-      setError('فشل في جلب المشاريع')
-    } finally {
-      setLoading(false)
+  setLoading(true)
+  try {
+    let userId = user?.id
+    if (!userId) {
+      userId = localStorage.getItem('user_id')
     }
-  }
 
+    const result = await projectService.getByDeveloperId(userId)
+    
+    // ✅ تأكد من أن result.projects موجودة
+    if (!result) {
+      setProjects([])
+      setPlanId(1)
+      setLoading(false)
+      return
+    }
+    
+    const sorted = (result.projects || []).sort((a, b) => a.display_order - b.display_order)
+    
+    setProjects(sorted)
+    setPlanId(result.plan_id || 1)
+    
+  } catch (err) {
+    console.error('❌ Error:', err)
+    setError('فشل في جلب المشاريع')
+    setProjects([])  // ✅ تأكد من تعيين مصفوفة فارغة
+  } finally {
+    setLoading(false)
+  }
+}
   // =============================================
   // دوال التحكم بالصلاحيات
   // =============================================
