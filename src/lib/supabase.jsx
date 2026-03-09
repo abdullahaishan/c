@@ -1779,6 +1779,7 @@ export const statsService = {
   // ===========================================
 // إحصائيات متقدمة للمطورين المدفوعين (جديد)
 // ===========================================
+      // 📊 إحصائيات تسويقية متقدمة (للمطورين المدفوعين)
 async getMarketingStats(developerId) {
   try {
     const last90Days = new Date()
@@ -1786,94 +1787,57 @@ async getMarketingStats(developerId) {
 
     const { data: visitors, error } = await supabase
       .from('visitors')
-      .select('*')
+      .select('visitor_country, referrer, device_type, browser, page_visited, is_new_visitor, season, visited_at')
       .eq('developer_id', developerId)
       .gte('visited_at', last90Days.toISOString())
       .order('visited_at', { ascending: false })
 
     if (error) throw error
 
-    // تحليل متقدم للتسويق
-    const marketingStats = {
+    // تحليل البيانات للتسويق
+    const stats = {
       countries: {},
       referrers: {},
-      pages: {},
-      seasons: {},
-      newVsReturning: { new: 0, returning: 0 },
-      peakHours: Array(24).fill(0),
-      dailyTrend: {},
-      monthlyTrend: {},
       devices: { mobile: 0, desktop: 0, tablet: 0 },
-      browsers: {}
+      browsers: {},
+      pages: {},
+      newVsReturning: { new: 0, returning: 0 },
+      seasons: {},
+      dailyTrend: {}
     }
 
-    visitors?.forEach(visit => {
-      // الدول
-      if (visit.visitor_country) {
-        marketingStats.countries[visit.visitor_country] = (marketingStats.countries[visit.visitor_country] || 0) + 1
+    visitors?.forEach(v => {
+      if (v.visitor_country) stats.countries[v.visitor_country] = (stats.countries[v.visitor_country] || 0) + 1
+      if (v.referrer) {
+        const source = v.referrer.includes('google') ? 'Google' : 
+                       v.referrer.includes('facebook') ? 'Facebook' :
+                       v.referrer === 'direct' ? 'مباشر' : 'آخر'
+        stats.referrers[source] = (stats.referrers[source] || 0) + 1
       }
-
-      // المصادر
-      const source = this.extractReferrerSource(visit.referrer)
-      marketingStats.referrers[source] = (marketingStats.referrers[source] || 0) + 1
-
-      // الصفحات
-      if (visit.page_visited) {
-        const page = visit.page_visited.split('/').pop() || 'home'
-        marketingStats.pages[page] = (marketingStats.pages[page] || 0) + 1
+      if (v.device_type) stats.devices[v.device_type]++
+      if (v.browser) stats.browsers[v.browser] = (stats.browsers[v.browser] || 0) + 1
+      if (v.page_visited) {
+        const page = v.page_visited.split('/').pop() || 'home'
+        stats.pages[page] = (stats.pages[page] || 0) + 1
       }
-
-      // الموسم
-      if (visit.season) {
-        marketingStats.seasons[visit.season] = (marketingStats.seasons[visit.season] || 0) + 1
-      }
-
-      // زوار جدد vs عائدين
-      if (visit.is_new_visitor) {
-        marketingStats.newVsReturning.new++
-      } else {
-        marketingStats.newVsReturning.returning++
-      }
-
-      // أوقات الذروة
-      const hour = new Date(visit.visited_at).getHours()
-      marketingStats.peakHours[hour]++
-
-      // اتجاه يومي
-      const date = new Date(visit.visited_at).toLocaleDateString('ar')
-      marketingStats.dailyTrend[date] = (marketingStats.dailyTrend[date] || 0) + 1
-
-      // اتجاه شهري
-      const month = new Date(visit.visited_at).toLocaleDateString('ar', { month: 'long', year: 'numeric' })
-      marketingStats.monthlyTrend[month] = (marketingStats.monthlyTrend[month] || 0) + 1
-
-      // الأجهزة
-      if (visit.device_type) {
-        marketingStats.devices[visit.device_type] = (marketingStats.devices[visit.device_type] || 0) + 1
-      }
-
-      // المتصفحات
-      if (visit.browser) {
-        marketingStats.browsers[visit.browser] = (marketingStats.browsers[visit.browser] || 0) + 1
-      }
+      if (v.is_new_visitor) stats.newVsReturning.new++
+      else stats.newVsReturning.returning++
+      if (v.season) stats.seasons[v.season] = (stats.seasons[v.season] || 0) + 1
+      
+      const date = new Date(v.visited_at).toLocaleDateString('ar')
+      stats.dailyTrend[date] = (stats.dailyTrend[date] || 0) + 1
     })
 
     return {
       total: visitors?.length || 0,
-      ...marketingStats,
-      topCountries: Object.entries(marketingStats.countries)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10),
-      topReferrers: Object.entries(marketingStats.referrers)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5),
-      topPages: Object.entries(marketingStats.pages)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5),
-      conversionRate: marketingStats.newVsReturning.new > 0 
-        ? Math.round((marketingStats.newVsReturning.returning / marketingStats.newVsReturning.new) * 100) 
-        : 0,
-      peakHour: marketingStats.peakHours.indexOf(Math.max(...marketingStats.peakHours))
+      topCountries: Object.entries(stats.countries).sort((a,b) => b[1]-a[1]).slice(0,5),
+      topReferrers: Object.entries(stats.referrers).sort((a,b) => b[1]-a[1]),
+      devices: stats.devices,
+      topBrowsers: Object.entries(stats.browsers).sort((a,b) => b[1]-a[1]).slice(0,3),
+      topPages: Object.entries(stats.pages).sort((a,b) => b[1]-a[1]).slice(0,3),
+      newVsReturning: stats.newVsReturning,
+      seasons: stats.seasons,
+      dailyTrend: stats.dailyTrend
     }
   } catch (error) {
     console.error('Error in getMarketingStats:', error)
