@@ -68,16 +68,8 @@ const Projects = () => {
   // التحقق من وجود المستخدم وجلب المشاريع
   // =============================================
   useEffect(() => {
-    if (!user) {
-      // إذا لم يكن هناك مستخدم، نتحقق من localStorage
-      const userId = localStorage.getItem('user_id')
-      if (!userId) {
-        navigate('/login')
-        return
-      }
-    }
     fetchProjects()
-  }, [user]) // ✅ نعتمد على user في الـ useEffect
+  }, [user]) 
 
   const fetchProjects = async () => {
     setLoading(true)
