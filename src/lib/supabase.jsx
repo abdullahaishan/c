@@ -1319,6 +1319,22 @@ export const socialLinkService = {
     if (error) throw error
     return data[0]
   }
+  // في socialLinkService، أضف هذه الدالة
+async delete(developerId, platform) {
+  try {
+    const { error } = await supabase
+      .from('social_links')
+      .delete()
+      .eq('developer_id', developerId)
+      .eq('platform', platform)
+
+    if (error) throw error
+    return true
+  } catch (error) {
+    console.error('❌ Error deleting social link:', error)
+    throw error
+  }
+}
 }
 
 // ===========================================
