@@ -534,16 +534,32 @@ async getAboutData(username) {
 
 
   // تسجيل زيارة
-  async trackVisit(developerId, visitorData) {
+  // تسجيل زيارة (محدث)
+async trackVisit(developerId, visitorData) {
+  try {
     const { error } = await supabase
       .from('visitors')
       .insert([{
         developer_id: developerId,
-        ...visitorData
+        visitor_ip: visitorData.visitor_ip,
+        visitor_country: visitorData.visitor_country || null,
+        referrer: visitorData.referrer || null,
+        visited_at: visitorData.visited_at || new Date().toISOString(),
+        device_type: visitorData.device_type || null,
+        browser: visitorData.browser || null,
+        page_visited: visitorData.page_visited || null,
+        session_start: visitorData.session_start || null,
+        is_new_visitor: visitorData.is_new_visitor || null,
+        season: visitorData.season || null
       }])
     
     if (error) console.error('Error tracking visit:', error)
+    return !error
+  } catch (error) {
+    console.error('Exception in trackVisit:', error)
+    return false
   }
+}
 }
 // ===========================================
 // خدمات الرسائل (Messages)
