@@ -118,21 +118,3 @@ export const useAuth = () => {
     isAuthenticated: !!user,
   }
 }
-// أضفها بعد useAuth
-const getUserPermissions = () => {
-  const userPlan = user?.plan_id || 1
-  const userRole = user?.role || 'user'
-  const isAdmin = user?.is_admin || false
-  
-  return {
-    canDelete: userPlan > 1 || isAdmin || userRole === 'admin',
-    canAdd: true, // الجميع يمكنهم الإضافة
-    canEdit: true, // الجميع يمكنهم التعديل
-    canFeature: userPlan > 1 || isAdmin, // تمييز المشاريع للباقة المدفوعة
-    planName: userPlan === 1 ? 'مجانية' : 'مدفوعة',
-    isAdmin: isAdmin || userRole === 'admin'
-  }
-}
-
-// استخدمها في المكون
-const permissions = getUserPermissions()
