@@ -69,35 +69,70 @@ export const DeveloperProvider = ({ children, username }) => {
     fetchDeveloper()
   }, [username])
 
-  // ✅ دالة تسجيل الزيارة (تستخدم الدوال الموجودة)
-  const trackVisit = async (developerId, planId) => {
-    try {
-      // 1️⃣ دائماً زد عدد الزيارات (لكل الباقات)
-      await developerService.incrementViews(developerId) // ✅ دالة موجودة
+  // دوال مساعدة لجلب معلومات الزائر (بدون انتهاك خصوصية)
+const getDeviceType = () => {
+  const ua = navigator.userAgent
+  if (/Mobile|Android|iPhone/i.test(ua)) return 'mobile'
+  if (/Tablet|iPad/i.test(ua)) return 'tablet'
+  return 'desktop'
+}
 
-      // 2️⃣ إذا كانت باقة مدفوعة، سجل تفاصيل الزيارة
-      if (planId > 1) {
-        const visitorData = {
-          visitor_ip: visitorIp,
-          device_type: getDeviceType(),
-          browser: getBrowserName(),
-          referrer: document.referrer || 'direct',
-          user_agent: navigator.userAgent
-        }
+const getBrowserName = () => {
+  const ua = navigator.userAgent
+  if (ua.includes('Chrome')) return 'Chrome'
+  if (ua.includes('Firefox')) return 'Firefox'
+  if (ua.includes('Safari')) return 'Safari'
+  if (ua.includes('Edge')) return 'Edge'
+  return 'Other'
+}
+const trackVisit = async (developerId, planId) => {
+  try {
+    // 1️⃣ زيادة عدد الزيارات (للجميع)
+    await developerService.incrementViews(developerId)
 
-        // جلب الدولة (اختياري)
-        try {
-          const geoResponse = await fetch(`https://ipapi.co/${visitorIp}/json/`)
-          const geoData = await geoResponse.json()
-          visitorData.visitor_country = geoData.country_name
-        } catch (e) {}
-
-        await developerService.trackVisit(developerId, visitorData) // ✅ دالة موجودة
-      }
-    } catch (error) {
-      console.error('Error tracking visit:', error)
+    // 2️⃣ بيانات أساسية للجميع (IP فقط)
+    const visitorData = {
+      visitor_ip: visitorIp,
+      visited_at: new Date().toISOString()
     }
+
+    // 3️⃣ إذا كانت باقة مدفوعة - أضف بيانات تسويقية مفيدة فقط
+    if (planId > 1) {
+      // ✅ معلومات مفيدة للتسويق (بدون انتهاك خصوصية)
+      visitorData.referrer = document.referrer || 'direct'
+      visitorData.device_type = getDeviceType()
+      visitorData.browser = getBrowserName()
+      visitorData.page_visited = window.location.pathname
+      
+      // ✅ الدولة فقط (مهمة للتسويق)
+      if (visitorIp) {
+        try {
+          const response = await fetch(`https://ipapi.co/${visitorIp}/country_name/`)
+          if (response.ok) {
+            visitorData.visitor_country = await response.text()
+          }
+        } catch (e) {}
+      }
+
+      // ✅ معلومات إضافية مفيدة
+      const lastVisit = localStorage.getItem(`last_visit_${developerId}`)
+      visitorData.is_new_visitor = !lastVisit
+      localStorage.setItem(`last_visit_${developerId}`, new Date().toISOString())
+      
+      const month = new Date().getMonth()
+      if (month >= 2 && month <= 4) visitorData.season = 'الربيع'
+      else if (month >= 5 && month <= 7) visitorData.season = 'الصيف'
+      else if (month >= 8 && month <= 10) visitorData.season = 'الخريف'
+      else visitorData.season = 'الشتاء'
+    }
+
+    // 4️⃣ تسجيل الزيارة
+    await developerService.trackVisit(developerId, visitorData)
+    
+  } catch (error) {
+    console.error('Error tracking visit:', error)
   }
+}
 
   // ✅ جلب الإحصائيات المتقدمة (للباقات المدفوعة)
   const fetchAdvancedStats = async (developerId) => {
