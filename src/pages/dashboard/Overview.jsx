@@ -287,7 +287,8 @@ const Overview = () => {
   const [planData, setPlanData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [selectedPeriod, setSelectedPeriod] = useState('week')
-
+// ⬇️ أضف هذا السطر الجديد
+const [marketingStats, setMarketingStats] = useState(null)
   useEffect(() => {
     if (user) {
       fetchAllData()
@@ -315,12 +316,17 @@ const Overview = () => {
       // 3️⃣ جلب إحصائيات المحتوى
       const content = await statsService.getContentStats(user.id)
       setContentStats(content)
-
       // 4️⃣ إذا كانت الباقة مدفوعة، جلب التفاصيل المتقدمة
-      if (plan?.plan_id > 1) {
-        const advanced = await statsService.getAdvancedVisitorStats(user.id)
-        setAdvancedStats(advanced)
-      }
+if (plan?.plan_id > 1) {
+  const advanced = await statsService.getAdvancedVisitorStats(user.id)
+  setAdvancedStats(advanced)
+  
+  // ⬇️ أضف هذه الأسطر الجديدة لجلب إحصائيات التسويق
+  if (statsService.getMarketingStats) {
+    const marketing = await statsService.getMarketingStats(user.id)
+    setMarketingStats(marketing)
+  }
+}
 
       // 5️⃣ إذا كانت الباقة تدعم تحليلات الذكاء الاصطناعي
       if (plan?.plan_id >= 3) {
@@ -569,159 +575,191 @@ const Overview = () => {
         {/* العمود الأيسر: إحصائيات الزوار - تختلف حسب الباقة */}
         <div className="lg:col-span-2 space-y-6">
           {isPaidPlan() ? (
-            // ✅ الباقة المدفوعة: عرض تفاصيل متقدمة
-            <>
-              {advancedStats ? (
-                <>
-                  {/* البطاقة الرئيسية - تحليلات الزوار */}
-                  <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-lg font-semibold text-white">تحليلات الزوار المتقدمة</h3>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setSelectedPeriod('week')}
-                          className={`px-3 py-1 text-sm rounded-lg transition-all ${
-                            selectedPeriod === 'week' 
-                              ? 'bg-[#6366f1] text-white' 
-                              : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                          }`}
-                        >
-                          أسبوع
-                        </button>
-                        <button
-                          onClick={() => setSelectedPeriod('month')}
-                          className={`px-3 py-1 text-sm rounded-lg transition-all ${
-                            selectedPeriod === 'month' 
-                              ? 'bg-[#6366f1] text-white' 
-                              : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                          }`}
-                        >
-                          شهر
-                        </button>
-                      </div>
+  // ✅ الباقة المدفوعة: عرض تفاصيل تسويقية متقدمة
+  <>
+    {marketingStats ? (
+      <>
+        {/* البطاقة الرئيسية - تحليلات تسويقية */}
+        <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <BarChart className="w-5 h-5 text-[#a855f7]" />
+              تحليلات تسويقية متقدمة
+            </h3>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSelectedPeriod('week')}
+                className={`px-3 py-1 text-sm rounded-lg transition-all ${
+                  selectedPeriod === 'week' 
+                    ? 'bg-[#6366f1] text-white' 
+                    : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                }`}
+              >
+                أسبوع
+              </button>
+              <button
+                onClick={() => setSelectedPeriod('month')}
+                className={`px-3 py-1 text-sm rounded-lg transition-all ${
+                  selectedPeriod === 'month' 
+                    ? 'bg-[#6366f1] text-white' 
+                    : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                }`}
+              >
+                شهر
+              </button>
+            </div>
+          </div>
+
+          {/* إحصائيات سريعة */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="text-center p-3 bg-white/5 rounded-xl">
+              <Globe className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
+              <p className="text-xl text-white">{marketingStats.topCountries?.length || 0}</p>
+              <p className="text-xs text-gray-400">دولة</p>
+            </div>
+            <div className="text-center p-3 bg-white/5 rounded-xl">
+              <Smartphone className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
+              <p className="text-xl text-white">{marketingStats.devices?.mobile || 0}</p>
+              <p className="text-xs text-gray-400">جوال</p>
+            </div>
+            <div className="text-center p-3 bg-white/5 rounded-xl">
+              <Monitor className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
+              <p className="text-xl text-white">{marketingStats.devices?.desktop || 0}</p>
+              <p className="text-xs text-gray-400">كمبيوتر</p>
+            </div>
+            <div className="text-center p-3 bg-white/5 rounded-xl">
+              <Target className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
+              <p className="text-xl text-white">{marketingStats.total || 0}</p>
+              <p className="text-xs text-gray-400">زيارة</p>
+            </div>
+          </div>
+
+          {/* أفضل الدول للتسويق */}
+          {marketingStats.topCountries && marketingStats.topCountries.length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-1">
+                <Globe className="w-4 h-4" />
+                أفضل الدول (للاستهداف الجغرافي)
+              </h4>
+              <div className="space-y-2">
+                {marketingStats.topCountries.map(([country, count], i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-sm text-white w-24 truncate">{country}</span>
+                    <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
+                        style={{ width: `${(count / marketingStats.total) * 100}%` }}
+                      />
                     </div>
-
-                    {/* إحصائيات سريعة */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                      <div className="text-center">
-                        <Globe className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                        <p className="text-xl text-white">{advancedStats.countries?.length || 0}</p>
-                        <p className="text-xs text-gray-400">دولة</p>
-                      </div>
-                      <div className="text-center">
-                        <Smartphone className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                        <p className="text-xl text-white">{advancedStats.devices?.mobile || 0}</p>
-                        <p className="text-xs text-gray-400">جوال</p>
-                      </div>
-                      <div className="text-center">
-                        <Monitor className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                        <p className="text-xl text-white">{advancedStats.devices?.desktop || 0}</p>
-                        <p className="text-xs text-gray-400">كمبيوتر</p>
-                      </div>
-                      <div className="text-center">
-                        <Target className="w-5 h-5 text-[#6366f1] mx-auto mb-2" />
-                        <p className="text-xl text-white">{advancedStats.total || 0}</p>
-                        <p className="text-xs text-gray-400">زيارة</p>
-                      </div>
-                    </div>
-
-                    {/* أفضل الدول */}
-                    {advancedStats.countries && advancedStats.countries.length > 0 && (
-                      <div className="mb-6">
-                        <h4 className="text-sm font-medium text-gray-400 mb-3">أفضل الدول</h4>
-                        <div className="space-y-2">
-                          {advancedStats.countries.slice(0, 5).map(([country, count], i) => (
-                            <div key={i} className="flex items-center gap-2">
-                              <span className="text-sm text-white w-24 truncate">{country}</span>
-                              <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
-                                  style={{ width: `${(count / advancedStats.total) * 100}%` }}
-                                />
-                              </div>
-                              <span className="text-xs text-gray-400">{count}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* الأجهزة */}
-                    <div className="mb-6">
-                      <h4 className="text-sm font-medium text-gray-400 mb-3">الأجهزة</h4>
-                      <div className="space-y-2">
-                        {Object.entries(advancedStats.devices || {}).map(([device, count]) => (
-                          count > 0 && (
-                            <div key={device} className="flex items-center gap-2">
-                              <span className="text-sm text-white w-24">
-                                {device === 'mobile' ? 'جوال' : device === 'desktop' ? 'كمبيوتر' : 'تابلت'}
-                              </span>
-                              <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
-                                  style={{ width: `${(count / advancedStats.total) * 100}%` }}
-                                />
-                              </div>
-                              <span className="text-xs text-gray-400">{count}</span>
-                            </div>
-                          )
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* المتصفحات */}
-                    {advancedStats.browsers && advancedStats.browsers.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-400 mb-3">المتصفحات</h4>
-                        <div className="space-y-2">
-                          {advancedStats.browsers.slice(0, 5).map(([browser, count]) => (
-                            <div key={browser} className="flex items-center gap-2">
-                              <span className="text-sm text-white w-24">{browser}</span>
-                              <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
-                                  style={{ width: `${(count / advancedStats.total) * 100}%` }}
-                                />
-                              </div>
-                              <span className="text-xs text-gray-400">{count}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <span className="text-xs text-gray-400">{count} زيارة</span>
                   </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-                  {/* مصادر الزيارات */}
-                  {advancedStats.referrers && advancedStats.referrers.length > 0 && (
-                    <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-                      <h3 className="text-lg font-semibold text-white mb-4">مصادر الزيارات</h3>
-                      <div className="space-y-3">
-                        {advancedStats.referrers.map(([source, count], i) => (
-                          <div key={i} className="flex items-center justify-between">
-                            <span className="text-sm text-gray-300">{source}</span>
-                            <div className="flex items-center gap-3">
-                              <div className="w-32 h-2 bg-white/10 rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
-                                  style={{ width: `${(count / advancedStats.total) * 100}%` }}
-                                />
-                              </div>
-                              <span className="text-xs text-gray-400">{count}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+          {/* مصادر الزيارات (لتحسين SEO) */}
+          {marketingStats.topReferrers && marketingStats.topReferrers.length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-sm font-medium text-gray-400 mb-3">مصادر الزيارات (لتحسين SEO)</h4>
+              <div className="space-y-2">
+                {marketingStats.topReferrers.map(([source, count]) => (
+                  <div key={source} className="flex items-center gap-2">
+                    <span className="text-sm text-white w-24">
+                      {source === 'مباشر' ? '🔗 مباشر' : 
+                       source === 'Google' ? '🔍 جوجل' : 
+                       source === 'Facebook' ? '📘 فيسبوك' : 
+                       source === 'Twitter' ? '🐦 تويتر' : 
+                       source === 'LinkedIn' ? '💼 لينكدإن' : 
+                       source === 'GitHub' ? '🐙 جيت هب' : '🌐 أخرى'}
+                    </span>
+                    <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
+                        style={{ width: `${(count / marketingStats.total) * 100}%` }}
+                      />
                     </div>
-                  )}
-                </>
-              ) : (
-                <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10 text-center">
-                  <Loader className="w-12 h-12 text-[#6366f1] animate-spin mx-auto mb-4" />
-                  <p className="text-gray-400">جاري تحميل الإحصائيات المتقدمة...</p>
+                    <span className="text-xs text-gray-400">{count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* الصفحات الأكثر زيارة */}
+          {marketingStats.topPages && marketingStats.topPages.length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-sm font-medium text-gray-400 mb-3">الصفحات الأكثر زيارة</h4>
+              <div className="space-y-2">
+                {marketingStats.topPages.map(([page, count]) => (
+                  <div key={page} className="flex items-center gap-2">
+                    <span className="text-sm text-white w-24">
+                      {page === 'home' ? '🏠 الرئيسية' : 
+                       page === 'projects' ? '📁 المشاريع' : 
+                       page === 'about' ? '👤 عني' : 
+                       page === 'skills' ? '💻 المهارات' : page}
+                    </span>
+                    <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-[#6366f1] to-[#a855f7]"
+                        style={{ width: `${(count / marketingStats.total) * 100}%` }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-400">{count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* مواسم النشاط */}
+          {marketingStats.seasons && Object.keys(marketingStats.seasons).length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-sm font-medium text-gray-400 mb-3">نشاط المواسم</h4>
+              <div className="grid grid-cols-4 gap-2">
+                {Object.entries(marketingStats.seasons).map(([season, count]) => (
+                  <div key={season} className="bg-white/5 p-2 rounded-lg text-center">
+                    <p className="text-xs text-gray-400">
+                      {season === 'الربيع' ? '🌸' : 
+                       season === 'الصيف' ? '☀️' : 
+                       season === 'الخريف' ? '🍂' : '❄️'}
+                    </p>
+                    <p className="text-sm text-white">{count}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* زوار جدد vs عائدين */}
+          {marketingStats.newVsReturning && (
+            <div className="mb-6">
+              <h4 className="text-sm font-medium text-gray-400 mb-3">الزوار</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white/5 p-3 rounded-lg">
+                  <p className="text-xs text-gray-400">جدد</p>
+                  <p className="text-xl text-green-400">{marketingStats.newVsReturning.new}</p>
                 </div>
-              )}
-            </>
-          ) : (
+                <div className="bg-white/5 p-3 rounded-lg">
+                  <p className="text-xs text-gray-400">عائدين</p>
+                  <p className="text-xl text-[#a855f7]">{marketingStats.newVsReturning.returning}</p>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                معدل العودة: {marketingStats.conversionRate || 0}%
+              </p>
+            </div>
+          )}
+        </div>
+      </>
+    ) : (
+      <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10 text-center">
+        <Loader className="w-12 h-12 text-[#6366f1] animate-spin mx-auto mb-4" />
+        <p className="text-gray-400">جاري تحميل الإحصائيات التسويقية...</p>
+      </div>
+    )}
+  </>
+) : (
             // ✅ الباقة المجانية: عرض إحصائيات مبسطة مع رسالة ترقية
             <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-8 border border-white/10">
               <div className="text-center mb-8">
