@@ -97,7 +97,7 @@ const trackVisit = async (developerId, planId) => {
     }
 
     // 3️⃣ إذا كانت باقة مدفوعة - أضف بيانات تسويقية مفيدة فقط
-    if (planId > 1) {
+    
       // ✅ معلومات مفيدة للتسويق (بدون انتهاك خصوصية)
       visitorData.referrer = document.referrer || 'direct'
       visitorData.device_type = getDeviceType()
@@ -124,7 +124,7 @@ const trackVisit = async (developerId, planId) => {
       else if (month >= 5 && month <= 7) visitorData.season = 'الصيف'
       else if (month >= 8 && month <= 10) visitorData.season = 'الخريف'
       else visitorData.season = 'الشتاء'
-    }
+    
 
     // 4️⃣ تسجيل الزيارة
     await developerService.trackVisit(developerId, visitorData)
