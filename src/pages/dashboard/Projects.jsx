@@ -67,8 +67,8 @@ const Projects = () => {
   // جلب المشاريع
   // =============================================
   useEffect(() => {
-    if (user) fetchProjects()
-  }, [user])
+    fetchProjects()
+  }, [])
 
   const fetchProjects = async () => {
   setLoading(true)
