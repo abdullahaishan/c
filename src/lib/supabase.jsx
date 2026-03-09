@@ -684,20 +684,45 @@ export const portfolioService = {
 // خدمات المشاريع (Projects) - نسخة مصححة ومكتملة
 // ===========================================
 export const projectService = {
-  // ✅ جلب مشاريع مطور معين (الأهم)
-  async getByDeveloperId(developerId) {
-    const { data, error } = await supabase
+// ✅ النسخة المبسطة - تجلب المشاريع مع plan_id فقط
+async getByDeveloperId(developerId) {
+  try {
+    // 1️⃣ جلب المشاريع أولاً
+    const { data: projects, error: projectsError } = await supabase
       .from('projects')
       .select('*')
       .eq('developer_id', developerId)
       .order('display_order', { ascending: true })
     
-    if (error) {
-      console.error('Error fetching projects:', error)
-      throw error
+    if (projectsError) throw projectsError
+
+    // 2️⃣ جلب plan_id فقط من جدول المطورين
+    const { data: planData, error: planError } = await supabase
+      .from('developers')
+      .select('plan_id')  // ✅ فقط plan_id
+      .eq('id', developerId)
+      .single()
+
+    if (planError) {
+      console.warn('⚠️ Could not fetch plan_id:', planError)
+      // إذا فشل الجلب، نفترض أنه في الباقة المجانية
+      return {
+        projects: projects || [],
+        plan_id: 1  // ✅ افتراضي مجاني
+      }
     }
-    return data || []
-  },
+
+    // 3️⃣ إرجاع المشاريع مع plan_id
+    return {
+      projects: projects || [],
+      plan_id: planData?.plan_id || 1  // ✅ plan_id فقط
+    }
+
+  } catch (error) {
+    console.error('❌ Error in getByDeveloperId:', error)
+    throw error
+  }
+},
 // ✅ جلب المشاريع المنشورة فقط (للعرض العام)
 async getPublishedByDeveloperId(developerId) {
   const { data, error } = await supabase
@@ -1363,10 +1388,7 @@ export const aiAnalysisService = {
     return data
   }
 }
-      // ===========================================
-// خدمات رفع الملفات (Storage) - النسخة المصححة
-// ===========================================
-        
+
       // ===========================================
 // خدمات رفع الملفات (Storage) - نسخة كاملة سليمة
 // ===========================================
