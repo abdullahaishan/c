@@ -509,18 +509,7 @@ const getPlatformIcon = (platform) => {
 
       {/* Profile Tab */}
       {activeTab === 'profile' && (
-            
-            <label className="absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-black/50 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-black/70 transition-all">
-              <Upload className="w-4 h-4 text-white" />
-              <span className="text-white text-sm">تغيير الغلاف</span>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleCoverImageChange}
-                className="hidden"
-              />
-            </label>
-          </div>
+  
 
           {/* Profile Image and Username */}
           <div className="flex items-end gap-6 -mt-16 px-6">
