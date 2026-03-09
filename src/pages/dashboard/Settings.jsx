@@ -212,27 +212,33 @@ const Settings = () => {
     }
   }
 
-  // حفظ روابط التواصل
-  const handleSaveSocialLinks = async () => {
-    setSaving(true)
-    setError('')
-    setSuccess('')
+// حفظ روابط التواصل
+const handleSaveSocialLinks = async () => {
+  setSaving(true)
+  setError('')
+  setSuccess('')
 
-    try {
-      for (const [platform, url] of Object.entries(socialLinks)) {
-        if (url) {
-          await socialLinkService.upsert(user.id, platform, url)
-        }
+  try {
+    // المرور على جميع المنصات
+    for (const [platform, url] of Object.entries(socialLinks)) {
+      if (url && url.trim() !== '') {
+        // إذا كان الرابط موجوداً وليس فارغاً → إضافة أو تحديث
+        await socialLinkService.upsert(user.id, platform, url.trim())
+      } else {
+        // إذا كان الرابط فارغاً → حذف الرابط
+        await socialLinkService.delete(user.id, platform)
       }
-      setSuccess('✅ تم تحديث روابط التواصل بنجاح')
-      fetchDeveloper()
-    } catch (err) {
-      console.error('Error updating social links:', err)
-      setError('فشل في تحديث روابط التواصل')
-    } finally {
-      setSaving(false)
     }
+    
+    setSuccess('✅ تم تحديث روابط التواصل بنجاح')
+    fetchDeveloper() // إعادة جلب البيانات للتأكد
+  } catch (err) {
+    console.error('Error updating social links:', err)
+    setError('فشل في تحديث روابط التواصل')
+  } finally {
+    setSaving(false)
   }
+}
 
 // تغيير كلمة المرور في Supabase Auth
 const handleChangePassword = async () => {
