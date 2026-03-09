@@ -30,7 +30,6 @@ import {
 } from 'lucide-react'
 
 const Projects = () => {
-  const { user } = useAuth()
   const navigate = useNavigate()
 
   // =============================================
@@ -41,6 +40,7 @@ const Projects = () => {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [planId, setPlanId] = useState(1) 
   const [editingId, setEditingId] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [previewImage, setPreviewImage] = useState(null)
@@ -63,35 +63,6 @@ const Projects = () => {
   const [featureInput, setFeatureInput] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
 
-  // =============================================
-  // التحقق من صلاحية الباقة
-  // =============================================
-  const checkPlanPermission = () => {
-    const userPlan = user?.plan_id || 1
-    if (userPlan === 1) {
-      setError('❌ هذه الميزة متاحة فقط في الباقة المدفوعة')
-      return false
-    }
-    return true
-  }
-  // دالة التحقق من صلاحية الحذف (تسمح للمشرفين أيضاً)
-const canDeleteProject = () => {
-  const userPlan = user?.plan_id || 1
-  const userRole = user?.role || 'user'
-  
-  // المشرفون يمكنهم الحذف دائماً
-  if (userRole === 'admin' || user?.is_admin === true) {
-    return true
-  }
-  
-  // المستخدمون في الباقة المدفوعة (plan_id > 1) يمكنهم الحذف
-  if (userPlan > 1) {
-    return true
-  }
-  
-  // المستخدمون في الباقة المجانية (plan_id = 1) لا يمكنهم الحذف
-  return false
-}
 
   // =============================================
   // جلب المشاريع
@@ -101,18 +72,53 @@ const canDeleteProject = () => {
   }, [user])
 
   const fetchProjects = async () => {
-    setLoading(true)
-    try {
-      const data = await projectService.getByDeveloperId(user.id)
-      const sorted = (data || []).sort((a, b) => a.display_order - b.display_order)
-      setProjects(sorted)
-    } catch (err) {
-      setError('فشل في جلب المشاريع')
-    } finally {
-      setLoading(false)
+  setLoading(true)
+  try {
+    const userId = localStorage.getItem('user_id')
+    if (!userId) {
+      navigate('/login')
+      return
     }
-  }
 
+    // ✅ استخدام الدالة المعدلة من supabase
+    const result = await projectService.getByDeveloperId(userId)
+    
+    // result يحتوي على:
+    // result.projects - قائمة المشاريع
+    // result.plan_id - رقم الباقة (1 مجاني، 2+ مدفوع)
+    
+    // ترتيب المشاريع
+    const sorted = (result.projects || []).sort((a, b) => a.display_order - b.display_order)
+    
+    setProjects(sorted)
+    setPlanId(result.plan_id || 1) // ✅ تخزين plan_id
+    
+    console.log('📊 User Plan ID:', result.plan_id)
+    
+  } catch (err) {
+    setError('فشل في جلب المشاريع')
+  } finally {
+    setLoading(false)
+  }
+}
+// =============================================
+// ✅ دوال التحكم بالصلاحيات بناءً على plan_id فقط
+// =============================================
+const isPaidPlan = () => {
+  return planId > 1
+}
+
+const canDelete = () => {
+  return planId > 1
+}
+
+const canFeature = () => {
+  return planId > 1
+}
+
+const getPlanName = () => {
+  return planId === 1 ? 'مجانية' : 'مدفوعة'
+}
   // =============================================
   // دوال مساعدة
   // =============================================
@@ -410,10 +416,14 @@ if (formData.image instanceof File) {
       updated.map(p => projectService.update(p.id, { display_order: p.display_order }))
     )
   }
-// حذف مشروع
+
+  
+// =============================================
+// ✅ دالة حذف مشروع (معدلة مع التحقق من plan_id)
+// =============================================
 const handleDeleteProject = async (id) => {
-  // استخدام الدالة الجديدة للتحقق
-  if (!canDeleteProject()) {
+  // التحقق من الصلاحية باستخدام plan_id
+  if (!canDelete()) {
     setError('❌ ميزة حذف المشاريع متاحة فقط في الباقة المدفوعة')
     setTimeout(() => setError(''), 3000)
     return
@@ -435,33 +445,27 @@ const handleDeleteProject = async (id) => {
   if (!result.isConfirmed) return
 
   try {
-    // جلب المشروع للحصول على رابط الصورة قبل الحذف
     const projectToDelete = projects.find(p => p.id === id)
     
-    // حذف المشروع من قاعدة البيانات
     await projectService.delete(id)
     
-    // حذف الصورة من التخزين إذا وجدت
     if (projectToDelete?.image) {
       try {
         const imagePath = projectToDelete.image.split('/developers/')[1]
         if (imagePath) {
           await storageService.deleteFile(imagePath)
-          console.log('✅ تم حذف الصورة:', imagePath)
         }
-      } catch (imageDeleteErr) {
-        console.error('❌ فشل حذف الصورة:', imageDeleteErr)
-        // لا نوقف العملية إذا فشل حذف الصورة
+      } catch (imgErr) {
+        console.error('⚠️ فشل حذف الصورة:', imgErr)
       }
     }
     
-    // تحديث قائمة المشاريع
     setProjects(projects.filter(p => p.id !== id))
     setSuccess('✅ تم حذف المشروع بنجاح')
     
   } catch (err) {
-    console.error('❌ خطأ في حذف المشروع:', err)
-    setError('❌ فشل في حذف المشروع: ' + (err.message || 'خطأ غير معروف'))
+    console.error('❌ خطأ في الحذف:', err)
+    setError('❌ فشل في حذف المشروع')
   } finally {
     setTimeout(() => setSuccess(''), 3000)
     setTimeout(() => setError(''), 3000)
@@ -949,8 +953,8 @@ const handleDeleteProject = async (id) => {
                   <Edit className="w-3 h-3 md:w-4 md:h-4" />
                 </button>
                 
-                {/* زر الحذف - يظهر للباقة المدفوعة أو المشرفين */}
-{canDeleteProject() ? (
+{/* زر الحذف - يعمل فقط للباقة المدفوعة */}
+{canDelete() ? (
   <button
     onClick={() => handleDeleteProject(project.id)}
     className="p-1.5 md:p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg"
@@ -960,7 +964,10 @@ const handleDeleteProject = async (id) => {
   </button>
 ) : (
   <button
-    onClick={() => setError('❌ ميزة الحذف متاحة فقط في الباقة المدفوعة')}
+    onClick={() => {
+      setError('❌ ميزة حذف المشاريع متاحة فقط في الباقة المدفوعة')
+      setTimeout(() => setError(''), 3000)
+    }}
     className="p-1.5 md:p-2 text-gray-600 cursor-not-allowed relative group"
     title="متاح فقط في الباقة المدفوعة"
   >
