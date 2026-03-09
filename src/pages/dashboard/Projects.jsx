@@ -74,6 +74,24 @@ const Projects = () => {
     }
     return true
   }
+  // دالة التحقق من صلاحية الحذف (تسمح للمشرفين أيضاً)
+const canDeleteProject = () => {
+  const userPlan = user?.plan_id || 1
+  const userRole = user?.role || 'user'
+  
+  // المشرفون يمكنهم الحذف دائماً
+  if (userRole === 'admin' || user?.is_admin === true) {
+    return true
+  }
+  
+  // المستخدمون في الباقة المدفوعة (plan_id > 1) يمكنهم الحذف
+  if (userPlan > 1) {
+    return true
+  }
+  
+  // المستخدمون في الباقة المجانية (plan_id = 1) لا يمكنهم الحذف
+  return false
+}
 
   // =============================================
   // جلب المشاريع
@@ -371,38 +389,7 @@ if (formData.image instanceof File) {
   }
 }
 
-  // =============================================
-  // حذف مشروع (للباقة المدفوعة فقط)
-  // =============================================
-  const handleDeleteProject = async (id) => {
-    if (!checkPlanPermission()) return
 
-    const result = await Swal.fire({
-      title: 'هل أنت متأكد؟',
-      text: "لن تتمكن من استعادة هذا المشروع بعد الحذف!",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#6b7280',
-      confirmButtonText: 'نعم، احذف',
-      cancelButtonText: 'إلغاء',
-      background: '#1a1a1a',
-      color: '#fff'
-    })
-
-    if (!result.isConfirmed) return
-
-    try {
-      await projectService.delete(id)
-      setProjects(projects.filter(p => p.id !== id))
-      setSuccess('✅ تم حذف المشروع')
-    } catch (err) {
-      setError('❌ فشل في حذف المشروع')
-    } finally {
-      setTimeout(() => setSuccess(''), 3000)
-      setTimeout(() => setError(''), 3000)
-    }
-  }
 
   // =============================================
   // ترتيب المشاريع
@@ -423,7 +410,63 @@ if (formData.image instanceof File) {
       updated.map(p => projectService.update(p.id, { display_order: p.display_order }))
     )
   }
+// حذف مشروع
+const handleDeleteProject = async (id) => {
+  // استخدام الدالة الجديدة للتحقق
+  if (!canDeleteProject()) {
+    setError('❌ ميزة حذف المشاريع متاحة فقط في الباقة المدفوعة')
+    setTimeout(() => setError(''), 3000)
+    return
+  }
 
+  const result = await Swal.fire({
+    title: 'هل أنت متأكد؟',
+    text: "لن تتمكن من استعادة هذا المشروع بعد الحذف!",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#ef4444',
+    cancelButtonColor: '#6b7280',
+    confirmButtonText: 'نعم، احذف',
+    cancelButtonText: 'إلغاء',
+    background: '#1a1a1a',
+    color: '#fff'
+  })
+
+  if (!result.isConfirmed) return
+
+  try {
+    // جلب المشروع للحصول على رابط الصورة قبل الحذف
+    const projectToDelete = projects.find(p => p.id === id)
+    
+    // حذف المشروع من قاعدة البيانات
+    await projectService.delete(id)
+    
+    // حذف الصورة من التخزين إذا وجدت
+    if (projectToDelete?.image) {
+      try {
+        const imagePath = projectToDelete.image.split('/developers/')[1]
+        if (imagePath) {
+          await storageService.deleteFile(imagePath)
+          console.log('✅ تم حذف الصورة:', imagePath)
+        }
+      } catch (imageDeleteErr) {
+        console.error('❌ فشل حذف الصورة:', imageDeleteErr)
+        // لا نوقف العملية إذا فشل حذف الصورة
+      }
+    }
+    
+    // تحديث قائمة المشاريع
+    setProjects(projects.filter(p => p.id !== id))
+    setSuccess('✅ تم حذف المشروع بنجاح')
+    
+  } catch (err) {
+    console.error('❌ خطأ في حذف المشروع:', err)
+    setError('❌ فشل في حذف المشروع: ' + (err.message || 'خطأ غير معروف'))
+  } finally {
+    setTimeout(() => setSuccess(''), 3000)
+    setTimeout(() => setError(''), 3000)
+  }
+}
   // =============================================
   // فلترة المشاريع
   // =============================================
@@ -906,29 +949,29 @@ if (formData.image instanceof File) {
                   <Edit className="w-3 h-3 md:w-4 md:h-4" />
                 </button>
                 
-                {/* زر الحذف - للباقة المدفوعة فقط */}
-                {user?.plan_id > 1 ? (
-                  <button
-                    onClick={() => handleDeleteProject(project.id)}
-                    className="p-1.5 md:p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg"
-                    title="حذف المشروع"
-                  >
-                    <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setError('❌ ميزة الحذف متاحة فقط في الباقة المدفوعة')}
-                    className="p-1.5 md:p-2 text-gray-600 cursor-not-allowed relative group"
-                    title="متاح فقط في الباقة المدفوعة"
-                  >
-                    <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
-                    <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 
-                                     text-[10px] md:text-xs text-yellow-400 bg-black/80 px-2 py-1 rounded 
-                                     opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-50">
-                      🔒 الباقة المدفوعة فقط
-                    </span>
-                  </button>
-                )}
+                {/* زر الحذف - يظهر للباقة المدفوعة أو المشرفين */}
+{canDeleteProject() ? (
+  <button
+    onClick={() => handleDeleteProject(project.id)}
+    className="p-1.5 md:p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg"
+    title="حذف المشروع"
+  >
+    <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
+  </button>
+) : (
+  <button
+    onClick={() => setError('❌ ميزة الحذف متاحة فقط في الباقة المدفوعة')}
+    className="p-1.5 md:p-2 text-gray-600 cursor-not-allowed relative group"
+    title="متاح فقط في الباقة المدفوعة"
+  >
+    <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
+    <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 
+                     text-[10px] md:text-xs text-yellow-400 bg-black/80 px-2 py-1 rounded 
+                     opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-50">
+      🔒 الباقة المدفوعة فقط
+    </span>
+  </button>
+)}
               </div>
 
               {/* حالة المشروع (متجاوبة) */}
