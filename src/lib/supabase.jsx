@@ -90,38 +90,38 @@ export const likeService = {
       return false;
     }
   },
-  // إضافة إعجاب جديد
-  async addLike(developerId, visitorIp) {
-    try {
-      // التحقق أولاً
-      const alreadyLiked = await this.hasLiked(developerId, visitorIp);
-      if (alreadyLiked) {
-        throw new Error('Already liked');
-      }
-
-      // إضافة الإعجاب
-      const { error: insertError } = await supabase
-        .from('likes')
-        .insert([{
-          developer_id: developerId,
-          visitor_ip: visitorIp
-        }]);
-
-      if (insertError) throw insertError;
-
-      // تحديث عدد الإعجابات في جدول المطورين
-      const { error: updateError } = await supabase.rpc('increment_likes', {
-        developer_id: developerId
-      });
-
-      if (updateError) throw updateError;
-
-      return true;
-    } catch (error) {
-      console.error('Error adding like:', error);
-      throw error;
+  
+async addLike(developerId, visitorIp) {
+  try {
+    // التحقق أولاً باستخدام الدالة المعدلة
+    const alreadyLiked = await this.hasLiked(developerId, visitorIp);
+    if (alreadyLiked) {
+      throw new Error('Already liked');
     }
-  },
+
+    // إضافة الإعجاب
+    const { error: insertError } = await supabase
+      .from('likes')
+      .insert([{
+        developer_id: developerId,
+        visitor_ip: visitorIp
+      }]);
+
+    if (insertError) throw insertError;
+
+    // تحديث عدد الإعجابات في جدول المطورين
+    const { error: updateError } = await supabase.rpc('increment_likes', {
+      developer_id: developerId
+    });
+
+    if (updateError) throw updateError;
+
+    return true;
+  } catch (error) {
+    console.error('Error adding like:', error);
+    throw error;
+  }
+},
 
   // جلب عدد الإعجابات
   async getLikesCount(developerId) {
