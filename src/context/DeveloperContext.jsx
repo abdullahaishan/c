@@ -8,7 +8,7 @@ export const useDeveloper = () => {
   if (!context) {
     throw new Error('useDeveloper must be used within DeveloperProvider')
   }
-  return context
+ return context
 }
 
 export const DeveloperProvider = ({ children, username }) => {
@@ -16,24 +16,38 @@ export const DeveloperProvider = ({ children, username }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [visitorIp, setVisitorIp] = useState(null)
+  const [visitorCountry, setVisitorCountry] = useState(null)
+  const [visitorCity, setVisitorCity] = useState(null)
   const [advancedStats, setAdvancedStats] = useState(null)
 
-  // جلب IP الزائر
+  // جلب IP والموقع في الخلفية - لا يؤخر عرض المطور
   useEffect(() => {
-    const getVisitorIp = async () => {
+    const getVisitorInfo = async () => {
       try {
-        const response = await fetch('https://api.ipify.org?format=json')
-        const { ip } = await response.json()
+        // جلب IP
+        const ipResponse = await fetch('https://api.ipify.org?format=json')
+        const { ip } = await ipResponse.json()
         setVisitorIp(ip)
+        
+        // جلب الموقع من IP (اختياري)
+        try {
+          const geoResponse = await fetch(`https://ipapi.co/${ip}/json/`)
+          const geoData = await geoResponse.json()
+          setVisitorCountry(geoData.country_name)
+          setVisitorCity(geoData.city)
+        } catch (e) {
+          // تجاهل أخطاء جلب الموقع
+        }
       } catch (error) {
-        console.error('Error getting visitor IP:', error)
+        console.error('Error getting visitor info:', error)
         setVisitorIp('unknown')
       }
     }
-    getVisitorIp()
+    
+    getVisitorInfo()
   }, [])
 
-  // جلب بيانات المطور وتسجيل الزيارة
+  // جلب بيانات المطور فقط - بدون انتظار IP
   useEffect(() => {
     if (!username) return
 
@@ -50,12 +64,10 @@ export const DeveloperProvider = ({ children, username }) => {
         } else {
           setDeveloper(data)
           
-          // تأكد من وجود IP قبل تسجيل الزيارة
-          if (!visitorIp) {
-            await new Promise(resolve => setTimeout(resolve, 1000))
+          // تسجيل الزيارة في الخلفية (لا ننتظرها)
+          if (visitorIp) {
+            trackVisit(data.id, data.plan_id)
           }
-          
-          await trackVisit(data.id, data.plan_id)
           
           if (data.plan_id > 1) {
             fetchAdvancedStats(data.id)
@@ -71,7 +83,7 @@ export const DeveloperProvider = ({ children, username }) => {
     }
 
     fetchDeveloper()
-  }, [username, visitorIp])
+  }, [username])
 
   // دوال مساعدة
   const getDeviceType = () => {
@@ -90,49 +102,28 @@ export const DeveloperProvider = ({ children, username }) => {
     return 'Other'
   }
 
+  // تسجيل الزيارة في الخلفية
   const trackVisit = async (developerId, planId) => {
     try {
-      // تأكد من وجود IP
-      let ip = visitorIp
-      if (!ip || ip === 'unknown') {
-        try {
-          const response = await fetch('https://api.ipify.org?format=json')
-          const { ip: newIp } = await response.json()
-          ip = newIp
-          setVisitorIp(newIp)
-        } catch (e) {
-          ip = 'unknown'
-        }
-      }
-
       // زيادة عدد الزيارات
       await developerService.incrementViews(developerId)
 
-      // بيانات أساسية للجميع
+      // بيانات أساسية
       const visitorData = {
-        visitor_ip: ip,
+        visitor_ip: visitorIp || 'unknown',
         visited_at: new Date().toISOString()
       }
 
-      // بيانات إضافية للباقة المدفوعة فقط
+      // بيانات إضافية للباقة المدفوعة
       if (planId > 1) {
         visitorData.referrer = document.referrer || 'direct'
         visitorData.device_type = getDeviceType()
         visitorData.browser = getBrowserName()
         visitorData.page_visited = window.location.pathname
         visitorData.os = navigator.platform || 'unknown'
-        
-        // جلب الدولة
-        if (ip && ip !== 'unknown') {
-          try {
-            const response = await fetch(`https://ipapi.co/${ip}/country_name/`)
-            if (response.ok) {
-              visitorData.visitor_country = await response.text()
-            }
-          } catch (e) {}
-        }
+        visitorData.visitor_country = visitorCountry
+        visitorData.visitor_city = visitorCity
 
-        // معلومات إضافية
         const lastVisit = localStorage.getItem(`last_visit_${developerId}`)
         visitorData.is_new_visitor = !lastVisit
         localStorage.setItem(`last_visit_${developerId}`, new Date().toISOString())
@@ -144,11 +135,11 @@ export const DeveloperProvider = ({ children, username }) => {
         else visitorData.season = 'الشتاء'
       }
 
-      // تسجيل الزيارة
-      await developerService.trackVisit(developerId, visitorData)
+      // تسجيل الزيارة (لا ننتظر النتيجة)
+      developerService.trackVisit(developerId, visitorData).catch(e => {})
       
     } catch (error) {
-      console.error('Error tracking visit:', error)
+      // تجاهل أخطاء التتبع
     }
   }
 
