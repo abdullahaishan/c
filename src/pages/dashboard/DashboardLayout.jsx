@@ -251,15 +251,14 @@ const DashboardLayout = () => {
 
   const navigation = [
     { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Settings Profile', href: '/dashboard/settings', icon: Settings },
     { name: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
     { name: 'Skills', href: '/dashboard/skills', icon: Code },
     { name: 'Certificates', href: '/dashboard/certificates', icon: Award },
     { name: 'Experience', href: '/dashboard/experience', icon: Briefcase },
     { name: 'Education', href: '/dashboard/education', icon: GraduationCap },
     { name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
-    { name: 'AI Builder', href: '/app/builder', icon: Sparkles },
     { name: 'Plan Status', href: '/dashboard/plan-status', icon: Crown },
-    { name: 'Settings', href: '/dashboard/settings', icon: Settings },
   ]
 
   const isActive = (path) => location.pathname === path
