@@ -155,38 +155,7 @@ const Settings = () => {
     }
   }
 
-  const handleCoverImageChange = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-
-    setUploading(true)
-    setError('')
-    setSuccess('')
-
-    try {
-      const result = await storjService.uploadCoverImage(
-        file,
-        user.id,
-        profileData.cover_image
-      )
-
-      const { error: updateError } = await supabase
-        .from('developers')
-        .update({ cover_image: result.url })
-        .eq('id', user.id)
-
-      if (updateError) throw updateError
-
-      setProfileData({ ...profileData, cover_image: result.url })
-      setSuccess(`✅ تم رفع الغلاف بنجاح`)
-
-    } catch (err) {
-      console.error('❌ خطأ في رفع الغلاف:', err)
-      setError('فشل في رفع الغلاف: ' + err.message)
-    } finally {
-      setUploading(false)
-    }
-  }
+  
 
   const handleResumeUpload = async (e) => {
     const file = e.target.files[0]
@@ -265,32 +234,54 @@ const Settings = () => {
     }
   }
 
-  // تغيير كلمة المرور
-  const handleChangePassword = async () => {
-    if (passwordData.new !== passwordData.confirm) {
-      setError('كلمة المرور الجديدة غير متطابقة')
-      return
-    }
-
-    if (passwordData.new.length < 6) {
-      setError('كلمة المرور يجب أن تكون 6 أحرف على الأقل')
-      return
-    }
-
-    setSaving(true)
-    setError('')
-    setSuccess('')
-
-    try {
-      setSuccess('✅ تم تغيير كلمة المرور بنجاح')
-      setPasswordData({ current: '', new: '', confirm: '' })
-    } catch (err) {
-      console.error('Error changing password:', err)
-      setError('فشل في تغيير كلمة المرور')
-    } finally {
-      setSaving(false)
-    }
+// تغيير كلمة المرور في Supabase Auth
+const handleChangePassword = async () => {
+  // التحقق من المدخلات
+  if (!passwordData.current || !passwordData.new || !passwordData.confirm) {
+    setError('جميع الحقول مطلوبة')
+    return
   }
+
+  if (passwordData.new !== passwordData.confirm) {
+    setError('كلمة المرور الجديدة غير متطابقة')
+    return
+  }
+
+  if (passwordData.new.length < 6) {
+    setError('كلمة المرور يجب أن تكون 6 أحرف على الأقل')
+    return
+  }
+
+  setSaving(true)
+  setError('')
+  setSuccess('')
+
+  try {
+    // ✅ استخدام Supabase Auth لتغيير كلمة المرور
+    const { error } = await supabase.auth.updateUser({
+      password: passwordData.new
+    })
+
+    if (error) throw error
+
+    setSuccess('✅ تم تغيير كلمة المرور بنجاح')
+    setPasswordData({ current: '', new: '', confirm: '' })
+
+  } catch (err) {
+    console.error('❌ Error changing password:', err)
+    
+    // رسائل خطأ مفهومة
+    if (err.message.includes('New password should be different')) {
+      setError('كلمة المرور الجديدة يجب أن تكون مختلفة عن الحالية')
+    } else if (err.message.includes('Password should be at least 6 characters')) {
+      setError('كلمة المرور يجب أن تكون 6 أحرف على الأقل')
+    } else {
+      setError('فشل في تغيير كلمة المرور: ' + err.message)
+    }
+  } finally {
+    setSaving(false)
+  }
+}
 
   // ===========================================
   // دوال اسم المستخدم
@@ -512,20 +503,6 @@ const getPlatformIcon = (platform) => {
 
       {/* Profile Tab */}
       {activeTab === 'profile' && (
-        <div className="space-y-6">
-          {/* Cover Image */}
-          <div className="relative h-48 rounded-2xl overflow-hidden bg-gradient-to-r from-[#6366f1]/20 to-[#a855f7]/20">
-            {profileData.cover_image ? (
-              <img
-                src={profileData.cover_image}
-                alt="Cover"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <span className="text-white/30">صورة الغلاف</span>
-              </div>
-            )}
             
             <label className="absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-black/50 backdrop-blur-sm rounded-lg cursor-pointer hover:bg-black/70 transition-all">
               <Upload className="w-4 h-4 text-white" />
