@@ -10,7 +10,6 @@ export const useDeveloper = () => {
   }
   return context
 }
-
 export const DeveloperProvider = ({ children, username }) => {
   const [developer, setDeveloper] = useState(null)
   const [loading, setLoading] = useState(false)
