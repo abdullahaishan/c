@@ -1776,6 +1776,110 @@ async register(userData) {
 // خدمات الإحصائيات والتحليلات - StatsService
 // ===========================================
 export const statsService = {
+  // ===========================================
+// إحصائيات متقدمة للمطورين المدفوعين (جديد)
+// ===========================================
+async getMarketingStats(developerId) {
+  try {
+    const last90Days = new Date()
+    last90Days.setDate(last90Days.getDate() - 90)
+
+    const { data: visitors, error } = await supabase
+      .from('visitors')
+      .select('*')
+      .eq('developer_id', developerId)
+      .gte('visited_at', last90Days.toISOString())
+      .order('visited_at', { ascending: false })
+
+    if (error) throw error
+
+    // تحليل متقدم للتسويق
+    const marketingStats = {
+      countries: {},
+      referrers: {},
+      pages: {},
+      seasons: {},
+      newVsReturning: { new: 0, returning: 0 },
+      peakHours: Array(24).fill(0),
+      dailyTrend: {},
+      monthlyTrend: {},
+      devices: { mobile: 0, desktop: 0, tablet: 0 },
+      browsers: {}
+    }
+
+    visitors?.forEach(visit => {
+      // الدول
+      if (visit.visitor_country) {
+        marketingStats.countries[visit.visitor_country] = (marketingStats.countries[visit.visitor_country] || 0) + 1
+      }
+
+      // المصادر
+      const source = this.extractReferrerSource(visit.referrer)
+      marketingStats.referrers[source] = (marketingStats.referrers[source] || 0) + 1
+
+      // الصفحات
+      if (visit.page_visited) {
+        const page = visit.page_visited.split('/').pop() || 'home'
+        marketingStats.pages[page] = (marketingStats.pages[page] || 0) + 1
+      }
+
+      // الموسم
+      if (visit.season) {
+        marketingStats.seasons[visit.season] = (marketingStats.seasons[visit.season] || 0) + 1
+      }
+
+      // زوار جدد vs عائدين
+      if (visit.is_new_visitor) {
+        marketingStats.newVsReturning.new++
+      } else {
+        marketingStats.newVsReturning.returning++
+      }
+
+      // أوقات الذروة
+      const hour = new Date(visit.visited_at).getHours()
+      marketingStats.peakHours[hour]++
+
+      // اتجاه يومي
+      const date = new Date(visit.visited_at).toLocaleDateString('ar')
+      marketingStats.dailyTrend[date] = (marketingStats.dailyTrend[date] || 0) + 1
+
+      // اتجاه شهري
+      const month = new Date(visit.visited_at).toLocaleDateString('ar', { month: 'long', year: 'numeric' })
+      marketingStats.monthlyTrend[month] = (marketingStats.monthlyTrend[month] || 0) + 1
+
+      // الأجهزة
+      if (visit.device_type) {
+        marketingStats.devices[visit.device_type] = (marketingStats.devices[visit.device_type] || 0) + 1
+      }
+
+      // المتصفحات
+      if (visit.browser) {
+        marketingStats.browsers[visit.browser] = (marketingStats.browsers[visit.browser] || 0) + 1
+      }
+    })
+
+    return {
+      total: visitors?.length || 0,
+      ...marketingStats,
+      topCountries: Object.entries(marketingStats.countries)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10),
+      topReferrers: Object.entries(marketingStats.referrers)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5),
+      topPages: Object.entries(marketingStats.pages)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5),
+      conversionRate: marketingStats.newVsReturning.new > 0 
+        ? Math.round((marketingStats.newVsReturning.returning / marketingStats.newVsReturning.new) * 100) 
+        : 0,
+      peakHour: marketingStats.peakHours.indexOf(Math.max(...marketingStats.peakHours))
+    }
+  } catch (error) {
+    console.error('Error in getMarketingStats:', error)
+    return null
+  }
+},
   // 📊 إحصائيات أساسية للمطور
   async getDeveloperStats(developerId) {
     try {
