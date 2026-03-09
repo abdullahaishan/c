@@ -10,30 +10,86 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-// ===========================================
-// خدمات الإعجابات (Likes)
-// ===========================================
-export const likeService = {
-  // التحقق مما إذا كان الزائر قد أعجب بالفعل
-  async hasLiked(developerId, visitorIp) {
-  try {
-    const { count, error } = await supabase
-      .from('likes')
-      .select('*', { count: 'exact', head: true })
-      .eq('developer_id', developerId)
-      .eq('visitor_ip', visitorIp);
 
-    if (error) throw error;
-    
-    // ✅ إذا كان count أكبر من 0، يعني أنه أعجب سابقاً
-    return count > 0;
-    
-  } catch (error) {
-    console.error('Error checking like:', error);
-    return false;
+const generateSessionId = () => {
+  // التحقق من وجود معرف في sessionStorage
+  let sessionId = sessionStorage.getItem('visitor_session_id');
+  
+  if (!sessionId) {
+    // إنشاء معرف جديد
+    sessionId = 'session_' + Math.random().toString(36).substring(2, 15) + 
+                Math.random().toString(36).substring(2, 15);
+    sessionStorage.setItem('visitor_session_id', sessionId);
   }
-},
+  
+  return sessionId;
+};
 
+// دالة جلب IP الزائر مع خوادم احتياطية
+export const getVisitorIp = async () => {
+  // قائمة الخدمات التي سنحاول جلب IP منها
+  const services = [
+    { url: 'https://api.ipify.org?format=json', path: 'ip' },
+    { url: 'https://api.my-ip.io/ip.json', path: 'ip' },
+    { url: 'https://api.ip.sb/jsonip', path: 'ip' },
+    { url: 'https://jsonip.com', path: 'ip' }
+  ];
+  
+  // تجربة كل خدمة بالترتيب
+  for (const service of services) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 ثواني timeout
+      
+      const response = await fetch(service.url, {
+        signal: controller.signal,
+        mode: 'cors'
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) continue;
+      
+      const data = await response.json();
+      if (data && data.ip) {
+        console.log(`✅ تم جلب IP من ${service.url}:`, data.ip);
+        return data.ip;
+      }
+    } catch (error) {
+    }
+  }
+  
+  return generateSessionId();
+};
+
+  
+export const likeService = {
+  // استبدل دالة hasLiked الموجودة بهذه النسخة المحسنة
+  async hasLiked(developerId, visitorIp) {
+    try {
+      // إذا كان المعرف غير صالح، نسمح باللايك مؤقتاً
+      if (!visitorIp || visitorIp === 'unknown' || visitorIp === 'undefined') {
+        console.warn('⚠️ معرف زائر غير صالح:', visitorIp);
+        return false;
+      }
+      
+      const { data, error } = await supabase
+        .from('likes')
+        .select('id')
+        .eq('developer_id', developerId)
+        .eq('visitor_ip', visitorIp)
+        .maybeSingle();
+
+      if (error) throw error;
+      
+      // التحقق الصحيح من وجود id
+      return data && data.id ? true : false;
+      
+    } catch (error) {
+      console.error('❌ خطأ في التحقق من اللايك:', error);
+      return false;
+    }
+  },
   // إضافة إعجاب جديد
   async addLike(developerId, visitorIp) {
     try {
