@@ -271,20 +271,3 @@ const getSkillsByCategory = (category) => {
     </DeveloperContext.Provider>
   )
 }
-
-// دوال مساعدة صغيرة
-const getDeviceType = () => {
-  const ua = navigator.userAgent
-  if (/Mobile|Android|iPhone/i.test(ua)) return 'mobile'
-  if (/Tablet|iPad/i.test(ua)) return 'tablet'
-  return 'desktop'
-}
-
-const getBrowserName = () => {
-  const ua = navigator.userAgent
-  if (ua.includes('Chrome')) return 'Chrome'
-  if (ua.includes('Firefox')) return 'Firefox'
-  if (ua.includes('Safari')) return 'Safari'
-  if (ua.includes('Edge')) return 'Edge'
-  return 'Other'
-}
