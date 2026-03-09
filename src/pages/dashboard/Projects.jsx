@@ -31,7 +31,8 @@ import {
 
 const Projects = () => {
   const navigate = useNavigate()
-const { user } = useAuth()  
+  const { user } = useAuth()  
+
   // =============================================
   // State management
   // =============================================
@@ -63,62 +64,67 @@ const { user } = useAuth()
   const [featureInput, setFeatureInput] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
 
-
   // =============================================
-  // جلب المشاريع
+  // التحقق من وجود المستخدم وجلب المشاريع
   // =============================================
   useEffect(() => {
+    if (!user) {
+      // إذا لم يكن هناك مستخدم، نتحقق من localStorage
+      const userId = localStorage.getItem('user_id')
+      if (!userId) {
+        navigate('/login')
+        return
+      }
+    }
     fetchProjects()
-  }, [])
+  }, [user]) // ✅ نعتمد على user في الـ useEffect
 
   const fetchProjects = async () => {
-  setLoading(true)
-  try {
-    const userId = localStorage.getItem('user_id')
-    if (!userId) {
-      navigate('/login')
-      return
+    setLoading(true)
+    try {
+      // ✅ استخدام user.id من useAuth أولاً
+      let userId = user?.id
+      
+      // إذا لم يكن هناك user، نحاول من localStorage
+      if (!userId) {
+        userId = localStorage.getItem('user_id')
+      }
+      
+      if (!userId) {
+        navigate('/login')
+        return
+      }
+
+      const result = await projectService.getByDeveloperId(userId)
+      
+      // ترتيب المشاريع
+      const sorted = (result.projects || []).sort((a, b) => a.display_order - b.display_order)
+      
+      setProjects(sorted)
+      setPlanId(result.plan_id || 1)
+      
+      console.log('📊 User Plan ID:', result.plan_id)
+      
+    } catch (err) {
+      console.error('❌ Error fetching projects:', err)
+      setError('فشل في جلب المشاريع')
+    } finally {
+      setLoading(false)
     }
-
-    // ✅ استخدام الدالة المعدلة من supabase
-    const result = await projectService.getByDeveloperId(userId)
-    
-    // result يحتوي على:
-    // result.projects - قائمة المشاريع
-    // result.plan_id - رقم الباقة (1 مجاني، 2+ مدفوع)
-    
-    // ترتيب المشاريع
-    const sorted = (result.projects || []).sort((a, b) => a.display_order - b.display_order)
-    
-    setProjects(sorted)
-    setPlanId(result.plan_id || 1) // ✅ تخزين plan_id
-    
-    console.log('📊 User Plan ID:', result.plan_id)
-    
-  } catch (err) {
-    setError('فشل في جلب المشاريع')
-  } finally {
-    setLoading(false)
   }
-}
-// =============================================
-// ✅ دوال التحكم بالصلاحيات بناءً على plan_id فقط
-// =============================================
-const isPaidPlan = () => {
-  return planId > 1
-}
 
-const canDelete = () => {
-  return planId > 1
-}
+  // =============================================
+  // دوال التحكم بالصلاحيات
+  // =============================================
+  const canDelete = () => {
+    // ✅ نستخدم planId من المشاريع أو user.plan_id
+    return planId > 1
+  }
 
-const canFeature = () => {
-  return planId > 1
-}
+  const getPlanName = () => {
+    return planId === 1 ? 'مجانية' : 'مدفوعة'
+  }
 
-const getPlanName = () => {
-  return planId === 1 ? 'مجانية' : 'مدفوعة'
-}
   // =============================================
   // دوال مساعدة
   // =============================================
@@ -129,10 +135,27 @@ const getPlanName = () => {
       .replace(/^-|-$/g, '')
   }
 
+  // ✅ دالة آمنة للحصول على userId
+  const getUserId = () => {
+    // استخدام user.id من useAuth أولاً
+    if (user?.id) return user.id
+    
+    // إذا لم يكن موجوداً، نحاول من localStorage
+    const userId = localStorage.getItem('user_id')
+    return userId
+  }
+
   const handleImageUpload = async (file, projectId = 'new') => {
     if (!file) return null
+    
+    const userId = getUserId()
+    if (!userId) {
+      navigate('/login')
+      return null
+    }
+    
     try {
-      const url = await storageService.uploadProjectImage(file, user.id, projectId)
+      const url = await storageService.uploadProjectImage(file, userId, projectId)
       return url
     } catch (err) {
       setError('فشل في رفع الصورة')
@@ -236,166 +259,159 @@ const getPlanName = () => {
   // إضافة مشروع جديد
   // =============================================
   const handleAddProject = async () => {
-  if (!formData.title || !formData.description) {
-    setError('العنوان والوصف مطلوبان')
-    return
-  }
-
-
-
-  setSaving(true)
-  setError('')
-  setSuccess('')
-
-  try {
-    const slug = generateSlug(formData.title)
-    
-    // رفع الصورة
-    let imageResult = null
-    if (formData.image) {
-      try {
-        imageResult = await storageService.uploadProjectImage(formData.image, user.id)
-      } catch (uploadErr) {
-        setError('❌ ' + (uploadErr.message || JSON.stringify(uploadErr)))
-        setSaving(false)
-        return
-      }
+    if (!formData.title || !formData.description) {
+      setError('العنوان والوصف مطلوبان')
+      return
     }
 
-    // إنشاء المشروع
-    const projectData = {
-      title: formData.title,
-      slug,
-      description: formData.description,
-      content: formData.content || formData.description,
-      technologies: formData.technologies,
-      github_url: formData.github_url || null,
-      live_url: formData.live_url || null,
-      features: formData.features,
-      image: imageResult?.url || null,
-      display_order: projects.length,
-      status: formData.status,
-      is_featured: formData.is_featured,
-      developer_id: user.id
+    const userId = getUserId()
+    if (!userId) {
+      navigate('/login')
+      return
     }
 
-    const created = await projectService.create(user.id, projectData)
-    
-    // نقل الصورة إذا كانت في مجلد مؤقت
-    if (created.id && imageResult?.isTemp && imageResult?.path) {
-      const finalImageUrl = await storageService.moveProjectImage(
-        imageResult.path, 
-        user.id, 
-        created.id
-      )
+    setSaving(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const slug = generateSlug(formData.title)
       
-      if (finalImageUrl) {
-        await projectService.update(created.id, { image: finalImageUrl })
-        created.image = finalImageUrl
-      }
-    }
-
-    setProjects([...projects, created])
-    resetForm()
-    setSuccess('✅ تم إضافة المشروع بنجاح')
-    
-  } catch (err) {
-    console.error('خطأ في إضافة المشروع:', err)
-    setError(err.message || '❌ فشل في إضافة المشروع')
-  } finally {
-    setSaving(false)
-    setTimeout(() => setSuccess(''), 3000)
-    setTimeout(() => setError(''), 3000)
-  }
-}
-  // =============================================
-// تحديث مشروع موجود (مع حذف الصورة القديمة)
-// =============================================
-const handleUpdateProject = async () => {
-  if (!formData.title || !formData.description) {
-    setError('العنوان والوصف مطلوبان')
-    return
-  }
-
-  setSaving(true)
-  setError('')
-  setSuccess('')
-
-  try {
-    // العثور على المشروع القديم قبل التحديث
-    const oldProject = projects.find(p => p.id === editingId)
-    const oldImageUrl = oldProject?.image || null
-
-    // رفع الصورة الجديدة فقط إذا تم اختيار ملف
-    let imageUrl = formData.image // الصورة الحالية في النموذج (قد تكون رابط أو null)
-
-    // في handleUpdateProject، عند رفع الصورة
-if (formData.image instanceof File) {
-  try {
-    console.log('رفع صورة جديدة للمشروع:', editingId)
-    const uploadResult = await storageService.uploadProjectImage(formData.image, user.id, editingId)
-    // ✅ استخدم uploadResult.url وليس النتيجة مباشرة
-    imageUrl = uploadResult.url
-    console.log('تم رفع الصورة:', imageUrl)
-  } catch (uploadErr) {
-    console.error('خطأ في رفع الصورة:', uploadErr)
-    setError('❌ ' + (uploadErr.message || JSON.stringify(uploadErr)))
-    setSaving(false)
-    return
-  }
-}
-
-    // بيانات التحديث
-    const updates = {
-      title: formData.title,
-      description: formData.description,
-      content: formData.content,
-      technologies: formData.technologies,
-      github_url: formData.github_url || null,
-      live_url: formData.live_url || null,
-      features: formData.features,
-      image: imageUrl,
-      status: formData.status,
-      is_featured: formData.is_featured,
-      category: formData.category
-    }
-
-    // تحديث المشروع
-    const updated = await projectService.update(editingId, updates)
-    
-    // **حذف الصورة القديمة إذا وجدت وتم رفع صورة جديدة**
-    if (oldImageUrl && formData.image instanceof File) {
-      try {
-        // استخراج المسار من الرابط
-        const oldPath = oldImageUrl.split('/developers/')[1]
-        if (oldPath) {
-          await storageService.deleteFile(oldPath)
-          console.log('تم حذف الصورة القديمة:', oldPath)
+      // رفع الصورة
+      let imageResult = null
+      if (formData.image) {
+        try {
+          imageResult = await storageService.uploadProjectImage(formData.image, userId)
+        } catch (uploadErr) {
+          setError('❌ ' + (uploadErr.message || 'فشل رفع الصورة'))
+          setSaving(false)
+          return
         }
-      } catch (deleteErr) {
-        console.error('فشل حذف الصورة القديمة:', deleteErr)
-        // لا نوقف العملية إذا فشل الحذف
       }
+
+      // إنشاء المشروع
+      const projectData = {
+        title: formData.title,
+        slug,
+        description: formData.description,
+        content: formData.content || formData.description,
+        technologies: formData.technologies,
+        github_url: formData.github_url || null,
+        live_url: formData.live_url || null,
+        features: formData.features,
+        image: imageResult?.url || null,
+        display_order: projects.length,
+        status: formData.status,
+        is_featured: formData.is_featured,
+        developer_id: userId
+      }
+
+      const created = await projectService.create(userId, projectData)
+      
+      // نقل الصورة إذا كانت في مجلد مؤقت
+      if (created.id && imageResult?.isTemp && imageResult?.path) {
+        const finalImageUrl = await storageService.moveProjectImage(
+          imageResult.path, 
+          userId, 
+          created.id
+        )
+        
+        if (finalImageUrl) {
+          await projectService.update(created.id, { image: finalImageUrl })
+          created.image = finalImageUrl
+        }
+      }
+
+      setProjects([...projects, created])
+      resetForm()
+      setSuccess('✅ تم إضافة المشروع بنجاح')
+      
+    } catch (err) {
+      console.error('خطأ في إضافة المشروع:', err)
+      setError(err.message || '❌ فشل في إضافة المشروع')
+    } finally {
+      setSaving(false)
+      setTimeout(() => setSuccess(''), 3000)
+      setTimeout(() => setError(''), 3000)
     }
-    
-    // تحديث قائمة المشاريع
-    setProjects(projects.map(p => p.id === editingId ? updated : p))
-    
-    // إعادة تعيين النموذج
-    resetForm()
-    setSuccess('✅ تم تحديث المشروع بنجاح')
-    
-  } catch (err) {
-    console.error('خطأ في تحديث المشروع:', err)
-    setError('❌ فشل في تحديث المشروع: ' + (err.message || JSON.stringify(err)))
-  } finally {
-    setSaving(false)
-    setTimeout(() => setSuccess(''), 3000)
-    setTimeout(() => setError(''), 3000)
   }
-}
 
+  // =============================================
+  // تحديث مشروع موجود
+  // =============================================
+  const handleUpdateProject = async () => {
+    if (!formData.title || !formData.description) {
+      setError('العنوان والوصف مطلوبان')
+      return
+    }
 
+    const userId = getUserId()
+    if (!userId) {
+      navigate('/login')
+      return
+    }
+
+    setSaving(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const oldProject = projects.find(p => p.id === editingId)
+      const oldImageUrl = oldProject?.image || null
+
+      let imageUrl = formData.image
+
+      if (formData.image instanceof File) {
+        try {
+          const uploadResult = await storageService.uploadProjectImage(formData.image, userId, editingId)
+          imageUrl = uploadResult.url
+        } catch (uploadErr) {
+          setError('❌ ' + (uploadErr.message || 'فشل رفع الصورة'))
+          setSaving(false)
+          return
+        }
+      }
+
+      const updates = {
+        title: formData.title,
+        description: formData.description,
+        content: formData.content,
+        technologies: formData.technologies,
+        github_url: formData.github_url || null,
+        live_url: formData.live_url || null,
+        features: formData.features,
+        image: imageUrl,
+        status: formData.status,
+        is_featured: formData.is_featured,
+        category: formData.category
+      }
+
+      const updated = await projectService.update(editingId, updates)
+      
+      if (oldImageUrl && formData.image instanceof File) {
+        try {
+          const oldPath = oldImageUrl.split('/developers/')[1]
+          if (oldPath) {
+            await storageService.deleteFile(oldPath)
+          }
+        } catch (deleteErr) {
+          console.error('فشل حذف الصورة القديمة:', deleteErr)
+        }
+      }
+      
+      setProjects(projects.map(p => p.id === editingId ? updated : p))
+      resetForm()
+      setSuccess('✅ تم تحديث المشروع بنجاح')
+      
+    } catch (err) {
+      console.error('خطأ في تحديث المشروع:', err)
+      setError('❌ فشل في تحديث المشروع')
+    } finally {
+      setSaving(false)
+      setTimeout(() => setSuccess(''), 3000)
+      setTimeout(() => setError(''), 3000)
+    }
+  }
 
   // =============================================
   // ترتيب المشاريع
@@ -412,65 +428,69 @@ if (formData.image instanceof File) {
     updated.forEach((p, i) => p.display_order = i)
     setProjects(updated)
 
-    await Promise.all(
-      updated.map(p => projectService.update(p.id, { display_order: p.display_order }))
-    )
-  }
-
-  
-// =============================================
-// ✅ دالة حذف مشروع (معدلة مع التحقق من plan_id)
-// =============================================
-const handleDeleteProject = async (id) => {
-  // التحقق من الصلاحية باستخدام plan_id
-  if (!canDelete()) {
-    setError('❌ ميزة حذف المشاريع متاحة فقط في الباقة المدفوعة')
-    setTimeout(() => setError(''), 3000)
-    return
-  }
-
-  const result = await Swal.fire({
-    title: 'هل أنت متأكد؟',
-    text: "لن تتمكن من استعادة هذا المشروع بعد الحذف!",
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#ef4444',
-    cancelButtonColor: '#6b7280',
-    confirmButtonText: 'نعم، احذف',
-    cancelButtonText: 'إلغاء',
-    background: '#1a1a1a',
-    color: '#fff'
-  })
-
-  if (!result.isConfirmed) return
-
-  try {
-    const projectToDelete = projects.find(p => p.id === id)
-    
-    await projectService.delete(id)
-    
-    if (projectToDelete?.image) {
-      try {
-        const imagePath = projectToDelete.image.split('/developers/')[1]
-        if (imagePath) {
-          await storageService.deleteFile(imagePath)
-        }
-      } catch (imgErr) {
-        console.error('⚠️ فشل حذف الصورة:', imgErr)
-      }
+    try {
+      await Promise.all(
+        updated.map(p => projectService.update(p.id, { display_order: p.display_order }))
+      )
+    } catch (err) {
+      console.error('خطأ في ترتيب المشاريع:', err)
+      setError('فشل في ترتيب المشاريع')
     }
-    
-    setProjects(projects.filter(p => p.id !== id))
-    setSuccess('✅ تم حذف المشروع بنجاح')
-    
-  } catch (err) {
-    console.error('❌ خطأ في الحذف:', err)
-    setError('❌ فشل في حذف المشروع')
-  } finally {
-    setTimeout(() => setSuccess(''), 3000)
-    setTimeout(() => setError(''), 3000)
   }
-}
+
+  // =============================================
+  // حذف مشروع
+  // =============================================
+  const handleDeleteProject = async (id) => {
+    if (!canDelete()) {
+      setError('❌ ميزة حذف المشاريع متاحة فقط في الباقة المدفوعة')
+      setTimeout(() => setError(''), 3000)
+      return
+    }
+
+    const result = await Swal.fire({
+      title: 'هل أنت متأكد؟',
+      text: "لن تتمكن من استعادة هذا المشروع بعد الحذف!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'نعم، احذف',
+      cancelButtonText: 'إلغاء',
+      background: '#1a1a1a',
+      color: '#fff'
+    })
+
+    if (!result.isConfirmed) return
+
+    try {
+      const projectToDelete = projects.find(p => p.id === id)
+      
+      await projectService.delete(id)
+      
+      if (projectToDelete?.image) {
+        try {
+          const imagePath = projectToDelete.image.split('/developers/')[1]
+          if (imagePath) {
+            await storageService.deleteFile(imagePath)
+          }
+        } catch (imgErr) {
+          console.error('⚠️ فشل حذف الصورة:', imgErr)
+        }
+      }
+      
+      setProjects(projects.filter(p => p.id !== id))
+      setSuccess('✅ تم حذف المشروع بنجاح')
+      
+    } catch (err) {
+      console.error('❌ خطأ في الحذف:', err)
+      setError('❌ فشل في حذف المشروع')
+    } finally {
+      setTimeout(() => setSuccess(''), 3000)
+      setTimeout(() => setError(''), 3000)
+    }
+  }
+
   // =============================================
   // فلترة المشاريع
   // =============================================
@@ -495,9 +515,7 @@ const handleDeleteProject = async (id) => {
   return (
     <div className="space-y-4 md:space-y-6 lg:space-y-8 p-3 md:p-4 lg:p-6 max-w-full overflow-x-hidden">
       
-      {/* =========================================
-          الهيدر مع الإحصائيات (متجاوب)
-      ========================================= */}
+      {/* الهيدر مع الإحصائيات */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-2">المشاريع</h1>
@@ -517,9 +535,19 @@ const handleDeleteProject = async (id) => {
         </div>
       </div>
 
-      {/* =========================================
-          رسائل النجاح والخطأ
-      ========================================= */}
+      {/* رسالة الباقة الحالية */}
+      <div className="bg-white/5 backdrop-blur-xl rounded-xl p-3 border border-white/10">
+        <div className="flex items-center justify-between">
+          <span className="text-gray-400">الباقة الحالية:</span>
+          <span className={`font-bold px-3 py-1 rounded-lg ${
+            canDelete() ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
+          }`}>
+            {getPlanName()}
+          </span>
+        </div>
+      </div>
+
+      {/* رسائل النجاح والخطأ */}
       {error && (
         <div className="flex items-center gap-2 p-3 md:p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm md:text-base">
           <AlertCircle className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
@@ -540,9 +568,7 @@ const handleDeleteProject = async (id) => {
         </div>
       )}
 
-      {/* =========================================
-          زر إظهار النموذج
-      ========================================= */}
+      {/* زر إظهار النموذج */}
       {!showForm && (
         <button
           onClick={() => setShowForm(true)}
@@ -553,9 +579,7 @@ const handleDeleteProject = async (id) => {
         </button>
       )}
 
-      {/* =========================================
-          نموذج إضافة/تعديل المشروع (متجاوب)
-      ========================================= */}
+      {/* نموذج إضافة/تعديل المشروع */}
       {showForm && (
         <div className="bg-white/5 backdrop-blur-xl rounded-xl md:rounded-2xl p-4 md:p-6 border border-white/10">
           <div className="flex items-center justify-between mb-4 md:mb-6">
@@ -580,15 +604,10 @@ const handleDeleteProject = async (id) => {
             </button>
           </div>
 
-          {/* على الشاشات الصغيرة: عمود واحد، على الكبيرة: عمودين */}
+          {/* باقي النموذج كما هو ... */}
           <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4 md:gap-6">
-            
-            {/* =====================================
-                العمود الأيمن (المعلومات الأساسية)
-            ===================================== */}
+            {/* العمود الأيمن */}
             <div className="space-y-3 md:space-y-4">
-              
-              {/* عنوان المشروع */}
               <div>
                 <label className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-400 mb-1 md:mb-2">
                   <Tag className="w-3 h-3 md:w-4 md:h-4" />
@@ -603,7 +622,6 @@ const handleDeleteProject = async (id) => {
                 />
               </div>
 
-              {/* وصف مختصر */}
               <div>
                 <label className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-400 mb-1 md:mb-2">
                   <ListChecks className="w-3 h-3 md:w-4 md:h-4" />
@@ -618,7 +636,6 @@ const handleDeleteProject = async (id) => {
                 />
               </div>
 
-              {/* وصف تفصيلي */}
               <div>
                 <label className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-400 mb-1 md:mb-2">
                   <FileText className="w-3 h-3 md:w-4 md:h-4" />
@@ -629,11 +646,10 @@ const handleDeleteProject = async (id) => {
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                   rows="4"
                   className="w-full p-2 md:p-3 text-sm md:text-base bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
-                  placeholder="شرح مفصل للمشروع، التحديات، الحلول..."
+                  placeholder="شرح مفصل للمشروع..."
                 />
               </div>
 
-              {/* روابط المشروع */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-400 mb-1 md:mb-2">
@@ -664,12 +680,8 @@ const handleDeleteProject = async (id) => {
               </div>
             </div>
 
-            {/* =====================================
-                العمود الأيسر (التقنيات والميزات)
-            ===================================== */}
+            {/* العمود الأيسر */}
             <div className="space-y-3 md:space-y-4">
-              
-              {/* التصنيف */}
               <div>
                 <label className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-400 mb-1 md:mb-2">
                   <Hash className="w-3 h-3 md:w-4 md:h-4" />
@@ -680,11 +692,10 @@ const handleDeleteProject = async (id) => {
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   className="w-full p-2 md:p-3 text-sm md:text-base bg-white/10 border border-white/20 rounded-lg text-white focus:border-[#6366f1] outline-none transition"
-                  placeholder="مثال: ويب، موبايل، ذكاء اصطناعي"
+                  placeholder="مثال: ويب، موبايل"
                 />
               </div>
 
-              {/* التقنيات المستخدمة */}
               <div>
                 <label className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-400 mb-1 md:mb-2">
                   <Code className="w-3 h-3 md:w-4 md:h-4" />
@@ -721,7 +732,6 @@ const handleDeleteProject = async (id) => {
                 </div>
               </div>
 
-              {/* الميزات الرئيسية */}
               <div>
                 <label className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-400 mb-1 md:mb-2">
                   <Star className="w-3 h-3 md:w-4 md:h-4" />
@@ -758,7 +768,6 @@ const handleDeleteProject = async (id) => {
                 </div>
               </div>
 
-              {/* صورة المشروع */}
               <div>
                 <label className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-400 mb-1 md:mb-2">
                   <ImageIcon className="w-3 h-3 md:w-4 md:h-4" />
@@ -797,7 +806,6 @@ const handleDeleteProject = async (id) => {
                 </div>
               </div>
 
-              {/* حالة المشروع ومميز */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-gray-400 mb-1 md:mb-2">
@@ -872,9 +880,7 @@ const handleDeleteProject = async (id) => {
         </div>
       )}
 
-      {/* =========================================
-          فلاتر المشاريع (متجاوبة)
-      ========================================= */}
+      {/* فلاتر المشاريع */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h2 className="text-lg md:text-xl font-semibold text-white">المشاريع الحالية</h2>
         <div className="flex flex-wrap gap-2">
@@ -911,9 +917,7 @@ const handleDeleteProject = async (id) => {
         </div>
       </div>
 
-      {/* =========================================
-          عرض المشاريع (متجاوب)
-      ========================================= */}
+      {/* عرض المشاريع */}
       {filteredProjects.length === 0 ? (
         <div className="text-center py-8 md:py-12 bg-white/5 rounded-xl md:rounded-2xl">
           <FolderKanban className="w-12 h-12 md:w-16 md:h-16 text-gray-600 mx-auto mb-3 md:mb-4" />
@@ -926,7 +930,7 @@ const handleDeleteProject = async (id) => {
               key={project.id}
               className="bg-white/5 backdrop-blur-xl rounded-xl md:rounded-2xl p-4 md:p-6 border border-white/10 hover:border-[#6366f1]/50 transition-all group relative"
             >
-              {/* أزرار التحكم (متجاوبة) */}
+              {/* أزرار التحكم */}
               <div className="absolute top-2 md:top-4 right-2 md:right-4 flex items-center gap-1 md:gap-2">
                 <div className="flex flex-col">
                   {projects.findIndex(p => p.id === project.id) > 0 && (
@@ -953,35 +957,35 @@ const handleDeleteProject = async (id) => {
                   <Edit className="w-3 h-3 md:w-4 md:h-4" />
                 </button>
                 
-{/* زر الحذف - يعمل فقط للباقة المدفوعة */}
-{canDelete() ? (
-  <button
-    onClick={() => handleDeleteProject(project.id)}
-    className="p-1.5 md:p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg"
-    title="حذف المشروع"
-  >
-    <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
-  </button>
-) : (
-  <button
-    onClick={() => {
-      setError('❌ ميزة حذف المشاريع متاحة فقط في الباقة المدفوعة')
-      setTimeout(() => setError(''), 3000)
-    }}
-    className="p-1.5 md:p-2 text-gray-600 cursor-not-allowed relative group"
-    title="متاح فقط في الباقة المدفوعة"
-  >
-    <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
-    <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 
-                     text-[10px] md:text-xs text-yellow-400 bg-black/80 px-2 py-1 rounded 
-                     opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-50">
-      🔒 الباقة المدفوعة فقط
-    </span>
-  </button>
-)}
+                {/* زر الحذف */}
+                {canDelete() ? (
+                  <button
+                    onClick={() => handleDeleteProject(project.id)}
+                    className="p-1.5 md:p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg"
+                    title="حذف المشروع"
+                  >
+                    <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setError('❌ ميزة حذف المشاريع متاحة فقط في الباقة المدفوعة')
+                      setTimeout(() => setError(''), 3000)
+                    }}
+                    className="p-1.5 md:p-2 text-gray-600 cursor-not-allowed relative group"
+                    title="متاح فقط في الباقة المدفوعة"
+                  >
+                    <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
+                    <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 
+                                     text-[10px] md:text-xs text-yellow-400 bg-black/80 px-2 py-1 rounded 
+                                     opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-50">
+                      🔒 الباقة المدفوعة فقط
+                    </span>
+                  </button>
+                )}
               </div>
 
-              {/* حالة المشروع (متجاوبة) */}
+              {/* حالة المشروع */}
               <div className="absolute top-2 md:top-4 left-2 md:left-4 flex gap-1 md:gap-2">
                 {project.status === 'published' ? (
                   <span className="flex items-center gap-1 px-1.5 md:px-2 py-0.5 md:py-1 bg-green-500/20 text-green-400 rounded-lg text-[10px] md:text-xs">
@@ -1002,7 +1006,7 @@ const handleDeleteProject = async (id) => {
                 )}
               </div>
 
-              {/* محتوى المشروع (متجاوب) */}
+              {/* محتوى المشروع */}
               <div className="mt-10 md:mt-12 cursor-pointer" onClick={() => navigate(`/project/${project.id}`)}>
                 {project.image && (
                   <img
