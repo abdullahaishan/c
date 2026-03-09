@@ -533,31 +533,41 @@ async getAboutData(username) {
   },
 
 
-  // تسجيل زيارة
-  // تسجيل زيارة (محدث)
+// تسجيل زيارة (نسخة كاملة بكل الحقول)
 async trackVisit(developerId, visitorData) {
   try {
+    const insertData = {
+      developer_id: developerId,
+      visitor_ip: visitorData.visitor_ip,
+      visited_at: visitorData.visited_at || new Date().toISOString()
+    };
+
+    // الحقول الأساسية
+    if (visitorData.visitor_country) insertData.visitor_country = visitorData.visitor_country;
+    if (visitorData.visitor_city) insertData.visitor_city = visitorData.visitor_city;
+    if (visitorData.referrer) insertData.referrer = visitorData.referrer;
+    if (visitorData.device_type) insertData.device_type = visitorData.device_type;
+    if (visitorData.browser) insertData.browser = visitorData.browser;
+    if (visitorData.os) insertData.os = visitorData.os;
+    
+    // الحقول الجديدة للتحليلات التسويقية
+    if (visitorData.page_visited) insertData.page_visited = visitorData.page_visited;
+    if (visitorData.is_new_visitor !== undefined) insertData.is_new_visitor = visitorData.is_new_visitor;
+    if (visitorData.season) insertData.season = visitorData.season;
+
     const { error } = await supabase
       .from('visitors')
-      .insert([{
-        developer_id: developerId,
-        visitor_ip: visitorData.visitor_ip,
-        visitor_country: visitorData.visitor_country || null,
-        referrer: visitorData.referrer || null,
-        visited_at: visitorData.visited_at || new Date().toISOString(),
-        device_type: visitorData.device_type || null,
-        browser: visitorData.browser || null,
-        page_visited: visitorData.page_visited || null,
-        session_start: visitorData.session_start || null,
-        is_new_visitor: visitorData.is_new_visitor || null,
-        season: visitorData.season || null
-      }])
+      .insert([insertData]);
     
-    if (error) console.error('Error tracking visit:', error)
-    return !error
+    if (error) {
+      console.error('Error tracking visit:', error);
+      return false;
+    }
+    
+    return true;
   } catch (error) {
-    console.error('Exception in trackVisit:', error)
-    return false
+    console.error('Exception in trackVisit:', error);
+    return false;
   }
 }
 }
@@ -1779,7 +1789,7 @@ export const statsService = {
   // ===========================================
 // إحصائيات متقدمة للمطورين المدفوعين (جديد)
 // ===========================================
-      // 📊 إحصائيات تسويقية متقدمة (للمطورين المدفوعين)
+// 📊 إحصائيات تسويقية متقدمة (للمطورين المدفوعين)
 async getMarketingStats(developerId) {
   try {
     const last90Days = new Date()
@@ -1787,61 +1797,171 @@ async getMarketingStats(developerId) {
 
     const { data: visitors, error } = await supabase
       .from('visitors')
-      .select('visitor_country, referrer, device_type, browser, page_visited, is_new_visitor, season, visited_at')
+      .select('*')  // نجلب كل الحقول
       .eq('developer_id', developerId)
       .gte('visited_at', last90Days.toISOString())
       .order('visited_at', { ascending: false })
 
     if (error) throw error
 
-    // تحليل البيانات للتسويق
+    // تحليل متقدم للتسويق
     const stats = {
+      // أساسيات
+      total: visitors?.length || 0,
+      
+      // تحليل الدول
       countries: {},
-      referrers: {},
+      
+      // تحليل مصادر الزيارات
+      referrers: { 'مباشر': 0, 'Google': 0, 'Facebook': 0, 'LinkedIn': 0, 'Twitter': 0, 'GitHub': 0, 'أخرى': 0 },
+      
+      // تحليل الأجهزة
       devices: { mobile: 0, desktop: 0, tablet: 0 },
+      
+      // تحليل المتصفحات
       browsers: {},
+      
+      // تحليل الصفحات (الأعمدة الجديدة)
       pages: {},
+      
+      // تحليل الزوار (الأعمدة الجديدة)
       newVsReturning: { new: 0, returning: 0 },
-      seasons: {},
+      
+      // تحليل المواسم (الأعمدة الجديدة)
+      seasons: { 'الربيع': 0, 'الصيف': 0, 'الخريف': 0, 'الشتاء': 0 },
+      
+      // تحليل المدن (إذا كانت متوفرة)
+      cities: {},
+      
+      // تحليل أيام الأسبوع
+      weekDays: Array(7).fill(0),
+      
+      // تحليل ساعات الذروة
+      peakHours: Array(24).fill(0),
+      
+      // الاتجاه اليومي
       dailyTrend: {}
-    }
+    };
 
     visitors?.forEach(v => {
-      if (v.visitor_country) stats.countries[v.visitor_country] = (stats.countries[v.visitor_country] || 0) + 1
-      if (v.referrer) {
-        const source = v.referrer.includes('google') ? 'Google' : 
-                       v.referrer.includes('facebook') ? 'Facebook' :
-                       v.referrer === 'direct' ? 'مباشر' : 'آخر'
-        stats.referrers[source] = (stats.referrers[source] || 0) + 1
+      // 1️⃣ تحليل الدول
+      if (v.visitor_country) {
+        stats.countries[v.visitor_country] = (stats.countries[v.visitor_country] || 0) + 1;
       }
-      if (v.device_type) stats.devices[v.device_type]++
-      if (v.browser) stats.browsers[v.browser] = (stats.browsers[v.browser] || 0) + 1
-      if (v.page_visited) {
-        const page = v.page_visited.split('/').pop() || 'home'
-        stats.pages[page] = (stats.pages[page] || 0) + 1
-      }
-      if (v.is_new_visitor) stats.newVsReturning.new++
-      else stats.newVsReturning.returning++
-      if (v.season) stats.seasons[v.season] = (stats.seasons[v.season] || 0) + 1
       
-      const date = new Date(v.visited_at).toLocaleDateString('ar')
-      stats.dailyTrend[date] = (stats.dailyTrend[date] || 0) + 1
-    })
+      // 2️⃣ تحليل المدن (إذا كانت متوفرة)
+      if (v.visitor_city) {
+        stats.cities[v.visitor_city] = (stats.cities[v.visitor_city] || 0) + 1;
+      }
+      
+      // 3️⃣ تحليل مصادر الزيارات
+      if (v.referrer) {
+        if (v.referrer.includes('google')) stats.referrers['Google']++;
+        else if (v.referrer.includes('facebook')) stats.referrers['Facebook']++;
+        else if (v.referrer.includes('linkedin')) stats.referrers['LinkedIn']++;
+        else if (v.referrer.includes('twitter')) stats.referrers['Twitter']++;
+        else if (v.referrer.includes('github')) stats.referrers['GitHub']++;
+        else if (v.referrer === 'direct') stats.referrers['مباشر']++;
+        else stats.referrers['أخرى']++;
+      } else {
+        stats.referrers['مباشر']++;
+      }
+      
+      // 4️⃣ تحليل الأجهزة
+      if (v.device_type) {
+        stats.devices[v.device_type] = (stats.devices[v.device_type] || 0) + 1;
+      }
+      
+      // 5️⃣ تحليل المتصفحات
+      if (v.browser) {
+        stats.browsers[v.browser] = (stats.browsers[v.browser] || 0) + 1;
+      }
+      
+      // 6️⃣ تحليل الصفحات (العمود الجديد)
+      if (v.page_visited) {
+        const page = v.page_visited.split('/').pop() || 'home';
+        stats.pages[page] = (stats.pages[page] || 0) + 1;
+      }
+      
+      // 7️⃣ تحليل الزوار الجدد vs العائدين (العمود الجديد)
+      if (v.is_new_visitor) {
+        stats.newVsReturning.new++;
+      } else {
+        stats.newVsReturning.returning++;
+      }
+      
+      // 8️⃣ تحليل المواسم (العمود الجديد)
+      if (v.season) {
+        stats.seasons[v.season] = (stats.seasons[v.season] || 0) + 1;
+      }
+      
+      // 9️⃣ تحليل أيام الأسبوع
+      const day = new Date(v.visited_at).getDay();
+      stats.weekDays[day]++;
+      
+      // 🔟 تحليل ساعات الذروة
+      const hour = new Date(v.visited_at).getHours();
+      stats.peakHours[hour]++;
+      
+      // الاتجاه اليومي
+      const date = new Date(v.visited_at).toLocaleDateString('ar-CA');
+      stats.dailyTrend[date] = (stats.dailyTrend[date] || 0) + 1;
+    });
 
+    // ترتيب النتائج
     return {
-      total: visitors?.length || 0,
-      topCountries: Object.entries(stats.countries).sort((a,b) => b[1]-a[1]).slice(0,5),
-      topReferrers: Object.entries(stats.referrers).sort((a,b) => b[1]-a[1]),
+      total: stats.total,
+      
+      // أهم 10 دول
+      topCountries: Object.entries(stats.countries)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10),
+      
+      // أهم 5 مدن
+      topCities: Object.entries(stats.cities)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5),
+      
+      // مصادر الزيارات
+      referrers: stats.referrers,
+      
+      // الأجهزة
       devices: stats.devices,
-      topBrowsers: Object.entries(stats.browsers).sort((a,b) => b[1]-a[1]).slice(0,3),
-      topPages: Object.entries(stats.pages).sort((a,b) => b[1]-a[1]).slice(0,3),
+      
+      // أهم 5 متصفحات
+      topBrowsers: Object.entries(stats.browsers)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5),
+      
+      // أهم 5 صفحات
+      topPages: Object.entries(stats.pages)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5),
+      
+      // الزوار الجدد vs العائدين
       newVsReturning: stats.newVsReturning,
+      
+      // المواسم
       seasons: stats.seasons,
-      dailyTrend: stats.dailyTrend
-    }
+      
+      // أفضل أيام النشاط
+      bestWeekDays: stats.weekDays.map((count, index) => ({
+        day: ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'][index],
+        count
+      })).sort((a, b) => b.count - a.count),
+      
+      // ساعة الذروة
+      peakHour: stats.peakHours.indexOf(Math.max(...stats.peakHours)),
+      
+      // الاتجاه اليومي (آخر 30 يوم)
+      dailyTrend: Object.entries(stats.dailyTrend)
+        .sort((a, b) => new Date(b[0]) - new Date(a[0]))
+        .slice(0, 30)
+    };
+    
   } catch (error) {
-    console.error('Error in getMarketingStats:', error)
-    return null
+    console.error('Error in getMarketingStats:', error);
+    return null;
   }
 },
   // 📊 إحصائيات أساسية للمطور
