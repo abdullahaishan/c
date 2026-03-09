@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../hooks/useAuth'  
 import { projectService, storageService } from '../../lib/supabase'
 import Swal from 'sweetalert2'
 import {
@@ -30,7 +31,7 @@ import {
 
 const Projects = () => {
   const navigate = useNavigate()
-
+const { user } = useAuth()  
   // =============================================
   // State management
   // =============================================
