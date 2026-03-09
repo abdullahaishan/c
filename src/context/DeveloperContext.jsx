@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react'
+import React, { createContext, useState, useContext, useEffect, useRef } from 'react'
 import { developerService, likeService, statsService } from '../lib/supabase'
 
 const DeveloperContext = createContext()
@@ -8,46 +8,89 @@ export const useDeveloper = () => {
   if (!context) {
     throw new Error('useDeveloper must be used within DeveloperProvider')
   }
- return context
+  return context
 }
 
 export const DeveloperProvider = ({ children, username }) => {
   const [developer, setDeveloper] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [visitorIp, setVisitorIp] = useState(null)
+  const [visitorId, setVisitorId] = useState(null)
   const [visitorCountry, setVisitorCountry] = useState(null)
   const [visitorCity, setVisitorCity] = useState(null)
   const [advancedStats, setAdvancedStats] = useState(null)
+  
+  const visitRecorded = useRef(false)
+  const locationAttempted = useRef(false)
 
-  // جلب IP والموقع في الخلفية - لا يؤخر عرض المطور
-  useEffect(() => {
-    const getVisitorInfo = async () => {
-      try {
-        // جلب IP
-        const ipResponse = await fetch('https://api.ipify.org?format=json')
-        const { ip } = await ipResponse.json()
-        setVisitorIp(ip)
-        
-        // جلب الموقع من IP (اختياري)
-        try {
-          const geoResponse = await fetch(`https://ipapi.co/${ip}/json/`)
-          const geoData = await geoResponse.json()
-          setVisitorCountry(geoData.country_name)
-          setVisitorCity(geoData.city)
-        } catch (e) {
-          // تجاهل أخطاء جلب الموقع
-        }
-      } catch (error) {
-        console.error('Error getting visitor info:', error)
-        setVisitorIp('unknown')
-      }
+  // دالة إنشاء بصمة فريدة للمتصفح
+  const generateFingerprint = () => {
+    const components = [
+      navigator.userAgent,
+      navigator.language,
+      screen.colorDepth,
+      screen.width + 'x' + screen.height,
+      new Date().getTimezoneOffset(),
+      navigator.hardwareConcurrency || 'unknown',
+      navigator.deviceMemory || 'unknown',
+      !!window.indexedDB,
+      !!window.openDatabase,
+      !!navigator.cookieEnabled
+    ]
+    
+    const fingerprint = components.join('|||')
+    let hash = 0
+    for (let i = 0; i < fingerprint.length; i++) {
+      hash = ((hash << 5) - hash) + fingerprint.charCodeAt(i)
+      hash = hash & hash
     }
     
-    getVisitorInfo()
+    return 'fp_' + Math.abs(hash).toString(36)
+  }
+
+  // جلب الموقع في الخلفية (لا يمنع أي شيء)
+  const fetchLocationInBackground = async () => {
+    if (locationAttempted.current) return
+    
+    locationAttempted.current = true
+    
+    try {
+      // محاولة ipapi أولاً (يعطي مدينة)
+      const response = await fetch('https://ipapi.co/json/')
+      const data = await response.json()
+      
+      if (data.country_name) {
+        setVisitorCountry(data.country_name)
+        setVisitorCity(data.city || null)
+      }
+    } catch (e) {
+      // إذا فشل ipapi، جرب Cloudflare
+      try {
+        const cfResponse = await fetch('https://1.1.1.1/cdn-cgi/trace')
+        const text = await cfResponse.text()
+        const lines = text.split('\n')
+        const cfData = {}
+        lines.forEach(line => {
+          const [key, value] = line.split('=')
+          if (key) cfData[key] = value
+        })
+        if (cfData.loc) {
+          setVisitorCountry(cfData.loc)
+          // Cloudflare لا يعطي مدينة
+        }
+      } catch (cfError) {
+        // كل شيء فشل - نستمر بدون موقع
+      }
+    }
+  }
+
+  // جلب معرف الزائر فوراً
+  useEffect(() => {
+    const fp = generateFingerprint()
+    setVisitorId(fp)
   }, [])
 
-  // جلب بيانات المطور فقط - بدون انتظار IP
+  // جلب بيانات المطور - يتم فوراً
   useEffect(() => {
     if (!username) return
 
@@ -64,12 +107,12 @@ export const DeveloperProvider = ({ children, username }) => {
         } else {
           setDeveloper(data)
           
-          // تسجيل الزيارة في الخلفية (لا ننتظرها)
-          if (visitorIp) {
-            trackVisit(data.id, data.plan_id)
-          }
+          // 1️⃣ زيادة عدد الزيارات فوراً (بدون انتظار)
+          developerService.incrementViews(data.id).catch(e => {})
           
+          // 2️⃣ جلب الموقع في الخلفية (للمدفوع فقط)
           if (data.plan_id > 1) {
+            fetchLocationInBackground()
             fetchAdvancedStats(data.id)
           }
         }
@@ -85,7 +128,100 @@ export const DeveloperProvider = ({ children, username }) => {
     fetchDeveloper()
   }, [username])
 
-  // دوال مساعدة
+  // تسجيل الزيارة في الخلفية - يتم مرة واحدة فقط
+  useEffect(() => {
+    if (!developer || !visitorId || visitRecorded.current) return
+    
+    visitRecorded.current = true
+    
+    const recordVisit = async () => {
+      try {
+        // البيانات الأساسية للجميع
+        const visitorData = {
+          visitor_ip: visitorId,
+          visited_at: new Date().toISOString()
+        }
+
+        // بيانات إضافية للباقة المدفوعة فقط (قد تكون null إذا لم يجلب الموقع بعد)
+        if (developer.plan_id > 1) {
+          visitorData.referrer = document.referrer || 'direct'
+          visitorData.device_type = getDeviceType()
+          visitorData.browser = getBrowserName()
+          visitorData.page_visited = window.location.pathname
+          visitorData.os = navigator.platform || 'unknown'
+          
+          // إضافة الموقع إذا كان متوفراً (قد يكون null)
+          if (visitorCountry) visitorData.visitor_country = visitorCountry
+          if (visitorCity) visitorData.visitor_city = visitorCity
+
+          // هل الزائر جديد أم عائد؟
+          const lastVisit = localStorage.getItem(`last_visit_${developer.id}`)
+          visitorData.is_new_visitor = !lastVisit
+          localStorage.setItem(`last_visit_${developer.id}`, new Date().toISOString())
+          
+          // الموسم الحالي
+          const month = new Date().getMonth()
+          if (month >= 2 && month <= 4) visitorData.season = 'الربيع'
+          else if (month >= 5 && month <= 7) visitorData.season = 'الصيف'
+          else if (month >= 8 && month <= 10) visitorData.season = 'الخريف'
+          else visitorData.season = 'الشتاء'
+        }
+
+        // تسجيل الزيارة في الخلفية (حتى لو خرج المستخدم)
+        if (navigator.sendBeacon) {
+          // استخدام sendBeacon للتسجيل حتى بعد الخروج
+          const blob = new Blob([JSON.stringify({
+            developerId: developer.id,
+            visitorData
+          })], { type: 'application/json' })
+          navigator.sendBeacon('/api/track-visit', blob)
+        } else {
+          // إذا لم يدعم sendBeacon، استخدم fetch عادي
+          developerService.trackVisit(developer.id, visitorData).catch(e => {})
+        }
+        
+      } catch (error) {
+        // تجاهل الأخطاء - لا نريد التأثير على المستخدم
+      }
+    }
+
+    recordVisit()
+  }, [developer, visitorId, visitorCountry, visitorCity])
+
+  // تحديث بيانات الزيارة إذا تم جلب الموقع لاحقاً
+  useEffect(() => {
+    if (!developer || !visitorId || !visitorCountry || developer.plan_id <= 1) return
+    
+    const updateLocation = async () => {
+      try {
+        // جلب آخر زيارة للمستخدم
+        const { data: lastVisit } = await supabase
+          .from('visitors')
+          .select('id')
+          .eq('developer_id', developer.id)
+          .eq('visitor_ip', visitorId)
+          .order('visited_at', { ascending: false })
+          .limit(1)
+          .single()
+        
+        if (lastVisit?.id) {
+          await supabase
+            .from('visitors')
+            .update({
+              visitor_country: visitorCountry,
+              visitor_city: visitorCity
+            })
+            .eq('id', lastVisit.id)
+        }
+      } catch (e) {
+        // تجاهل أخطاء التحديث
+      }
+    }
+    
+    updateLocation()
+  }, [visitorCountry, visitorCity])
+
+  // دوال مساعدة لتحديد نوع الجهاز والمتصفح
   const getDeviceType = () => {
     const ua = navigator.userAgent
     if (/Mobile|Android|iPhone/i.test(ua)) return 'mobile'
@@ -100,47 +236,6 @@ export const DeveloperProvider = ({ children, username }) => {
     if (ua.includes('Safari')) return 'Safari'
     if (ua.includes('Edge')) return 'Edge'
     return 'Other'
-  }
-
-  // تسجيل الزيارة في الخلفية
-  const trackVisit = async (developerId, planId) => {
-    try {
-      // زيادة عدد الزيارات
-      await developerService.incrementViews(developerId)
-
-      // بيانات أساسية
-      const visitorData = {
-        visitor_ip: visitorIp || 'unknown',
-        visited_at: new Date().toISOString()
-      }
-
-      // بيانات إضافية للباقة المدفوعة
-      if (planId > 1) {
-        visitorData.referrer = document.referrer || 'direct'
-        visitorData.device_type = getDeviceType()
-        visitorData.browser = getBrowserName()
-        visitorData.page_visited = window.location.pathname
-        visitorData.os = navigator.platform || 'unknown'
-        visitorData.visitor_country = visitorCountry
-        visitorData.visitor_city = visitorCity
-
-        const lastVisit = localStorage.getItem(`last_visit_${developerId}`)
-        visitorData.is_new_visitor = !lastVisit
-        localStorage.setItem(`last_visit_${developerId}`, new Date().toISOString())
-        
-        const month = new Date().getMonth()
-        if (month >= 2 && month <= 4) visitorData.season = 'الربيع'
-        else if (month >= 5 && month <= 7) visitorData.season = 'الصيف'
-        else if (month >= 8 && month <= 10) visitorData.season = 'الخريف'
-        else visitorData.season = 'الشتاء'
-      }
-
-      // تسجيل الزيارة (لا ننتظر النتيجة)
-      developerService.trackVisit(developerId, visitorData).catch(e => {})
-      
-    } catch (error) {
-      // تجاهل أخطاء التتبع
-    }
   }
 
   // جلب الإحصائيات المتقدمة
@@ -159,10 +254,10 @@ export const DeveloperProvider = ({ children, username }) => {
 
   // دالة اللايك
   const handleLike = async () => {
-    if (!developer || !visitorIp) return { success: false, error: 'No developer or IP' }
+    if (!developer || !visitorId) return { success: false, error: 'No visitor ID' }
 
     try {
-      await likeService.addLike(developer.id, visitorIp)
+      await likeService.addLike(developer.id, visitorId)
       
       setDeveloper(prev => ({
         ...prev,
