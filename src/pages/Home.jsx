@@ -106,22 +106,23 @@ const LikeButton = ({ developerId, initialLikes }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const checkLike = async () => {
-      if (!developerId) return;
-      
-      const visitorIp = await fetch('https://api.ipify.org?format=json')
-        .then(res => res.json())
-        .then(data => data.ip)
-        .catch(() => 'unknown');
+  const checkLike = async () => {
+    if (!developerId) return;
+    
+    const visitorIp = await fetch('https://api.ipify.org?format=json')
+      .then(res => res.json())
+      .then(data => data.ip)
+      .catch(() => 'unknown');
 
-      const hasLiked = await likeService.hasLiked(developerId, visitorIp);
-      setLiked(hasLiked);
-    };
+    const hasLiked = await likeService.hasLiked(developerId, visitorIp);
+    // ✅ تأكد من أن hasLiked هو boolean
+    setLiked(hasLiked === true);
+  };
 
-    if (developerId) {
-      checkLike();
-    }
-  }, [developerId]);
+  if (developerId) {
+    checkLike();
+  }
+}, [developerId]);
 
   const handleLike = async () => {
     if (!developerId) return;
