@@ -1318,7 +1318,7 @@ export const socialLinkService = {
     
     if (error) throw error
     return data[0]
-  }
+  },
   // في socialLinkService، أضف هذه الدالة
 async delete(developerId, platform) {
   try {
