@@ -3,10 +3,9 @@ import { Download, Heart } from "lucide-react";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import { useDeveloper } from '../context/DeveloperContext';
-import { likeService } from '../lib/supabase';
+import { likeService, getVisitorIp } from '../lib/supabase'; // ✅ أضف getVisitorIp هنا
 
 import Swal from 'sweetalert2';
-
 // مكون النص المتحرك
 const AnimatedText = memo(({ skills }) => {
   const [text, setText] = useState("");
@@ -99,31 +98,41 @@ const ProfileImage = memo(({ image }) => {
   );
 });
 
-// مكون زر الإعجاب
+    // مكون زر الإعجاب - نسخة كاملة محدثة
 const LikeButton = ({ developerId, initialLikes }) => {
   const [likes, setLikes] = useState(initialLikes || 0);
   const [liked, setLiked] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // التحقق من حالة اللايك عند تحميل المكون
   useEffect(() => {
-  const checkLike = async () => {
-    if (!developerId) return;
-    
-    const visitorIp = await fetch('https://api.ipify.org?format=json')
-      .then(res => res.json())
-      .then(data => data.ip)
-      .catch(() => 'unknown');
+    const checkLike = async () => {
+      if (!developerId) return;
+      
+      try {
+        // استخدام الدالة الجديدة من supabase
+        const visitorIdentifier = await getVisitorIp();
+        
+        console.log('🔍 معرف الزائر:', visitorIdentifier); // للتأكد من القيمة
+        
+        const hasLiked = await likeService.hasLiked(developerId, visitorIdentifier);
+        setLiked(hasLiked);
+        
+        // جلب عدد اللايكات الحالي
+        const currentLikes = await likeService.getLikesCount(developerId);
+        setLikes(currentLikes);
+        
+      } catch (error) {
+        console.error('❌ خطأ في التحقق من اللايك:', error);
+      }
+    };
 
-    const hasLiked = await likeService.hasLiked(developerId, visitorIp);
-    // ✅ تأكد من أن hasLiked هو boolean
-    setLiked(hasLiked === true);
-  };
+    if (developerId) {
+      checkLike();
+    }
+  }, [developerId]);
 
-  if (developerId) {
-    checkLike();
-  }
-}, [developerId]);
-
+  // دالة معالجة اللايك
   const handleLike = async () => {
     if (!developerId) return;
     
@@ -142,12 +151,14 @@ const LikeButton = ({ developerId, initialLikes }) => {
 
     setLoading(true);
     try {
-      const visitorIp = await fetch('https://api.ipify.org?format=json')
-        .then(res => res.json())
-        .then(data => data.ip)
-        .catch(() => 'unknown');
-
-      await likeService.addLike(developerId, visitorIp);
+      // استخدام الدالة الجديدة من supabase
+      const visitorIdentifier = await getVisitorIp();
+      
+      console.log('❤️ محاولة لايك بالمعرف:', visitorIdentifier);
+      
+      await likeService.addLike(developerId, visitorIdentifier);
+      
+      // تحديث الحالة
       setLiked(true);
       setLikes(prev => prev + 1);
 
@@ -160,17 +171,25 @@ const LikeButton = ({ developerId, initialLikes }) => {
         background: '#030014',
         color: '#ffffff'
       });
+      
     } catch (error) {
-      console.error('Error liking:', error);
+      console.error('❌ خطأ في اللايك:', error);
+      
+      // رسالة خطأ مناسبة
+      let errorMessage = 'Failed to record your like.';
+      if (error.message === 'Already liked') {
+        errorMessage = 'You have already liked this profile.';
+        setLiked(true); // تحديث الحالة إذا كان قد أعجب بالفعل
+      }
+      
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: error.message === 'Already liked' 
-          ? 'You have already liked this profile.' 
-          : 'Failed to record your like.',
+        text: errorMessage,
         background: '#030014',
         color: '#ffffff'
       });
+      
     } finally {
       setLoading(false);
     }
@@ -186,9 +205,12 @@ const LikeButton = ({ developerId, initialLikes }) => {
           : 'bg-white/5 text-gray-400 hover:bg-pink-500/20 hover:text-pink-400'
       }`}
     >
-      <Heart 
-        className={`w-5 h-5 transition-all ${liked ? 'fill-pink-400' : ''}`} 
-      />
+      {loading ? (
+        // أيقونة تحميل بسيطة
+        <div className="w-5 h-5 border-2 border-pink-400 border-t-transparent rounded-full animate-spin"></div>
+      ) : (
+        <Heart className={`w-5 h-5 transition-all ${liked ? 'fill-pink-400' : ''}`} />
+      )}
       <span className="text-sm font-medium">{likes}</span>
       
       <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-black/90 text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
