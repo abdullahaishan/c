@@ -68,24 +68,18 @@ const Projects = () => {
   // التحقق من وجود المستخدم وجلب المشاريع
   // =============================================
   useEffect(() => {
+  // تأخير بسيط للتأكد من تحميل كل شيء
+  const timer = setTimeout(() => {
     fetchProjects()
-  }, [user]) 
-
+  }, 100)
+  
+  return () => clearTimeout(timer)
+}, [])  // ❌ لا تعتمد على user إطلاقاً
   const fetchProjects = async () => {
     setLoading(true)
     try {
       // ✅ استخدام user.id من useAuth أولاً
       let userId = user?.id
-      
-      // إذا لم يكن هناك user، نحاول من localStorage
-      if (!userId) {
-        userId = localStorage.getItem('user_id')
-      }
-      
-      if (!userId) {
-        navigate('/login')
-        return
-      }
 
       const result = await projectService.getByDeveloperId(userId)
       
