@@ -505,10 +505,10 @@ const Footer = () => {
               <a href="#" className="text-gray-400 hover:text-white transition">
                 <Linkedin className="w-5 h-5" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-white transition">
+              <a href="https://www.facebook.com/abdullah.aishan.2025" className="text-gray-400 hover:text-white transition">
                 <Facebook className="w-5 h-5" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-white transition">
+              <a href="https://www.instagram.com/portfoliov5" className="text-gray-400 hover:text-white transition">
                 <Instagram className="w-5 h-5" />
               </a>
             </div>
