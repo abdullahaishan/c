@@ -117,49 +117,59 @@ export const DeveloperProvider = ({ children, username }) => {
   }, [username])
 
   // تسجيل الزيارة (مرة واحدة فقط)
-  useEffect(() => {
-    if (!developer || !visitorId || visitRecorded.current) return
-    
-    visitRecorded.current = true
+  // تسجيل الزيارة (مرة واحدة فقط)
+useEffect(() => {
+  if (!developer || !visitorId || visitRecorded.current) return
+  
+  visitRecorded.current = true
 
-    const recordVisit = async () => {
-      try {
-        const visitorData = {
-          visitor_ip: visitorId,
-          visited_at: new Date().toISOString()
-        }
+  const recordVisit = async () => {
+    try {
+      // ✅ الطريقة الصحيحة للتحقق من وجود زيارات سابقة
+      const { count, error: countError } = await supabase
+        .from('visitors')
+        .select('*', { count: 'exact', head: true })
+        .eq('developer_id', developer.id)
+        .eq('visitor_ip', visitorId)
 
-        if (developer.plan_id > 1) {
-          visitorData.referrer = document.referrer || 'direct'
-          visitorData.device_type = getDeviceType()
-          visitorData.browser = getBrowserName()
-          visitorData.page_visited = window.location.pathname
-          visitorData.os = navigator.platform || 'unknown'
-          
-          if (visitorCountry) visitorData.visitor_country = visitorCountry
-          if (visitorCity) visitorData.visitor_city = visitorCity
+      if (countError) throw countError
 
-          const lastVisit = localStorage.getItem(`last_visit_${developer.id}`)
-          visitorData.is_new_visitor = !lastVisit
-          localStorage.setItem(`last_visit_${developer.id}`, new Date().toISOString())
-          
-          const month = new Date().getMonth()
-          if (month >= 2 && month <= 4) visitorData.season = 'الربيع'
-          else if (month >= 5 && month <= 7) visitorData.season = 'الصيف'
-          else if (month >= 8 && month <= 10) visitorData.season = 'الخريف'
-          else visitorData.season = 'الشتاء'
-        }
-
-        await developerService.trackVisit(developer.id, visitorData)
-        
-      } catch (error) {
-        console.error('Error recording visit:', error)
+      const visitorData = {
+        visitor_ip: visitorId,
+        visited_at: new Date().toISOString()
       }
+
+      if (developer.plan_id > 1) {
+        visitorData.referrer = document.referrer || 'direct'
+        visitorData.device_type = getDeviceType()
+        visitorData.browser = getBrowserName()
+        visitorData.page_visited = window.location.pathname
+        visitorData.os = navigator.platform || 'unknown'
+        
+        if (visitorCountry) visitorData.visitor_country = visitorCountry
+        if (visitorCity) visitorData.visitor_city = visitorCity
+
+        // ✅ التحديد الصحيح: جديد إذا كان count = 0
+        visitorData.is_new_visitor = count === 0
+
+        const month = new Date().getMonth()
+        if (month >= 2 && month <= 4) visitorData.season = 'الربيع'
+        else if (month >= 5 && month <= 7) visitorData.season = 'الصيف'
+        else if (month >= 8 && month <= 10) visitorData.season = 'الخريف'
+        else visitorData.season = 'الشتاء'
+      }
+
+      // ✅ تسجيل الزيارة
+      await developerService.trackVisit(developer.id, visitorData)
+    
+      
+    } catch (error) {
+      console.error('Error recording visit:', error)
     }
+  }
 
-    recordVisit()
-  }, [developer, visitorId, visitorCountry, visitorCity])
-
+  recordVisit()
+}, [developer, visitorId, visitorCountry, visitorCity])
   // تحديث الموقع إذا تم جلبها لاحقاً
   useEffect(() => {
     if (!developer || !visitorId || !visitorCountry || developer.plan_id <= 1) return
